@@ -12,7 +12,7 @@ int main(int argc, char **argv, char **envp) {
     VTOP*             dut  = new VTOP;
 
     dut->trace(fstp, 0);
-    fstp->open("build/adder-spec.fst");
+    fstp->open("build/" TEST ".fst");
 
     while (!ctxp->gotFinish()) {
         ctxp->timeInc(1);
