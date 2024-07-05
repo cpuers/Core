@@ -1,0 +1,16 @@
+*
+!*/
+!.gitignore
+!Makefile
+!*.mk
+!*.c
+!*.cpp
+!*.cc
+!*.h
+!*.hpp
+!*.v
+!*.vh
+!*.sv
+build/
+
+!/.corerc
