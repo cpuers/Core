@@ -1,0 +1,14 @@
+site_name: Core Documentation
+theme:
+  name: material
+
+plugins:
+  - search
+
+nav:
+  - Home: 'index.md'
+  - Design:
+    - TLB: 'tlb.md'
+    - Cache: 'cache.md'
+  - Framework: 'framework.md'
+  - About: 'about.md'
