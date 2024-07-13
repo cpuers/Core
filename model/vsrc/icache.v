@@ -13,7 +13,7 @@ module icache_v1 (
     output  [31:0]  rd_addr,
     input           rd_rdy,
     input           ret_valid,
-    input   [31:0]  ret_data,
+    input   [31:0]  ret_data
 );
     wire    [19:0]  tag;
     wire    [ 7:0]  idx;
@@ -146,7 +146,10 @@ module icache_v1 (
 
             request_buffer_idx <= 8'd0;
             request_buffer_tag <= 20'd0;
-            refill_buffer <= 128'd0;
+            refill_buffer[0] <= 32'd0;
+            refill_buffer[1] <= 32'd0;
+            refill_buffer[2] <= 32'd0;
+            refill_buffer[3] <= 32'd0;
             refill_count <= 2'd0;
         end else case (state)
             state_idle: begin
