@@ -72,7 +72,11 @@ LD   = g++
 binary: $(BINARY)
 
 run: $(BINARY)
-	@$(BINARY)
+	@if $(BINARY) ; then \
+        printf '\x1b[0m[%20s] \x1b[32;1mPASSED\033[0m\n' '$(NAME)' ; \
+    else \
+        printf '\x1b[0m[%20s] \x1b[31;1mFAILED\033[0m\n' '$(NAME)' ; \
+    fi
 
 wave: $(WAVE)
 	@gtkwave --save $(WAVE_CFG) $(WAVE)

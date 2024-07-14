@@ -44,7 +44,6 @@ int main(int argc, char **argv, char **envp) {
 
     while (!ctxp->gotFinish()) {
         ctxp->timeInc(1);
-        std::cout << "At " << ctxp->time() << ".\n";
         dut->clock = !dut->clock;
 
         if (!dut->clock) {

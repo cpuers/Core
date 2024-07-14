@@ -1,3 +1,4 @@
+/* verilator lint_off DECLFILENAME */
 module encoder_4_2(
     input  [3:0] in,
     output [1:0] out

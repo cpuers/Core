@@ -1,5 +1,5 @@
 `include "config.vh"
-
+/* verilator lint_off DECLFILENAME */
 module tlb_async (
     input           clock,
     input           reset,

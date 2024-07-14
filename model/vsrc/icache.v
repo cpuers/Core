@@ -1,3 +1,4 @@
+/* verilator lint_off DECLFILENAME */
 module icache_v1 (
     input           clock,
     input           reset,
