@@ -1,4 +1,4 @@
-`include "defines.v"
+`include "define.v"
 
 module ID_stage (
     input clk,

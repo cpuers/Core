@@ -18,7 +18,7 @@ module EXM_stage(
     output es_to_ws_valid,
     output [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus,
     output        flush_IF,
-    output        flush_ID,
+    output        flush_ID
 );
 
 reg                          es_valid;
@@ -130,7 +130,7 @@ Alu u_alu (
     .alu_src2  (src2),
     .alu_result(alu_result),
     .zero      (zero),
-    .less      (less),
+    .less      (less)
 );
 
 Mul u_mul(
@@ -139,7 +139,7 @@ Mul u_mul(
     .use_high     (use_high),
     .multiplicand (src1),
     .multiplier   (src2),
-    .result       (mul_result),
+    .result       (mul_result)
 );
 
 Div u_div(
@@ -148,7 +148,7 @@ Div u_div(
     .use_mod      (use_mod),
     .dividend     (src1),
     .divisor      (src2),
-    .result       (div_result),
+    .result       (div_result)
 );
 
 wire [31:0] rdata;
@@ -156,13 +156,13 @@ Agu u_agu(
     .clk        (clk),
     .reset      (reset),
     .is_unsigned(is_unsigned),
-    .mem_we     (mem_we && es_valid ? bit_width : 4'h0;),
+    .mem_we     (mem_we && es_valid ? bit_width : 4'h0),
     .mem_rd     (res_from_mem),
     .src1       (src1),
     .src2       (src2),  
     .wdata      (rkd_value),
     .rdata      (rdata),
-    .mem_result (mem_result),
+    .mem_result (mem_result)
 );
 
 BranchCond u_branch (
@@ -182,7 +182,7 @@ BranchCond u_branch (
     .imm(imm),
     .pre_fail(pre_fail),
     .flush_IF(flush_IF),
-    .flush_ID(flush_ID),
+    .flush_ID(flush_ID)
 );
 
 assign final_result = res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
@@ -195,7 +195,7 @@ assign es_to_ws_bus = {
 
 assign EXM_forward_bus = gr_we ? {
   final_result,  //32  ?
-  dest,   //5
+  dest   //5
 } : 37'b0;
 
 assign br_bus = reset ? 0 : {pre_fail, jump_target};
