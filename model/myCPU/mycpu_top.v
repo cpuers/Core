@@ -73,8 +73,10 @@ wire ds_to_es_valid2;
 wire es_to_ws_valid1;
 wire es_to_ws_valid2;
 
-wire flush_IF;
-wire flush_ID;
+wire flush_IF1;
+wire flush_IF2;
+wire flush_ID1;
+wire flush_ID2;
 
 wire [`DS_TO_ES_BUS_WD-1:0] EXE_instr0;
 wire [`DS_TO_ES_BUS_WD-1:0] EXE_instr1;
@@ -156,8 +158,8 @@ EXM_stage EXM_stage1(
     .br_bus             (br_bus1),
     .es_to_ws_valid     (es_to_ws_valid1),
     .es_to_ws_bus       (es_to_ws_bus1),
-    .flush_IF           (flush_IF),
-    .flush_ID           (flush_ID),
+    .flush_IF           (flush_IF1),
+    .flush_ID           (flush_ID1),
 );
 EXM_stage EXM_stage2(
     .clk                (aclk),
@@ -166,7 +168,7 @@ EXM_stage EXM_stage2(
     .ws_allowin         (ws_allowin),
     .es_allowin         (es_allowin2),
 
-    .ds_to_es_valid     (ds_to_es_valid2),
+    .ds_to_es_valid     (ds_to_es_valid2 & ~flush_IF1),
     .ds_to_es_bus       (ds_to_es_bus2),
 
     .forward_data1      (exm_forward_data1),
@@ -176,8 +178,8 @@ EXM_stage EXM_stage2(
     .br_bus             (br_bus2),
     .es_to_ws_valid     (es_to_ws_valid2),
     .es_to_ws_bus       (es_to_ws_bus2),
-    .flush_IF           (flush_IF),
-    .flush_ID           (flush_ID),
+    .flush_IF           (flush_IF2),
+    .flush_ID           (flush_ID2),
 );
 
 wb_stage wb_stage(

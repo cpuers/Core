@@ -56,7 +56,7 @@ always @(posedge clk) begin
         ws_valid <= 1'b0;
     end
     else if (ws_allowin) begin
-        ws_valid <= es_to_ws_valid;
+        ws_valid <= es_to_ws_valid1 & es_to_ws_valid2;
     end
 
     if (es_to_ws_valid1 && es_to_ws_valid2 && ws_allowin) begin
@@ -65,11 +65,11 @@ always @(posedge clk) begin
     end
 end
 
-assign rf_we1    = ws_gr_we1 && ws_valid1;
+assign rf_we1    = ws_gr_we1 && ws_valid;
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
-assign rf_we2    = ws_gr_we2 && ws_valid2;
+assign rf_we2    = ws_gr_we2 && ws_valid;
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
 
