@@ -231,8 +231,8 @@ module BranchCond (
     output wire        need_jump,
     output wire [31:0] jump_target,
     output wire        pre_fail,
-    input  wire        flush_IF,
-    input  wire        flush_ID,
+    output wire        flush_IF,
+    output wire        flush_ID,
 );
   assign need_jump = may_jump & 
                    ~(use_less & ~(need_less & less| ~need_less & ~ less)) &
