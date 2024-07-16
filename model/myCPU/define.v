@@ -20,4 +20,6 @@
 
 `define BR_BUS_WD 33
 `define ES_TO_WS_BUS_WD 70
+`define EXM_DCACHE_RD 34
+`define EXM_DCACHE_WD 106
 `endif

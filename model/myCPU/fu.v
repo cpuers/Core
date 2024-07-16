@@ -107,71 +107,47 @@ module Agu(
     input reset,
     input is_unsigned,
     input size,
-    input [3:0] mem_we,
+    input mem_we,
+    input [3:0] mem_ewe,
     input mem_rd,
     input [31:0] src1,
     input [31:0] src2,
     input [31:0] wdata,
-    output [31:0] rdata,
-    output [31:0] mem_result,
+    output [`EXM_DCACHE_WD] dcache_wdata_bus
 );
+
+wire        dcache_valid = mem_we | mem_rd;
+wire        dcache_op = (mem_rd) ? 1'b0 :1'b1;       // 0: read, 1: write
+wire [31:0] dcache_addr;
+wire        dcache_uncached = 1'b0;
+wire [ 3:0] dcache_awstrb = mem_ewe;
+wire [31:0] dcache_wdata = wdata;
+wire        dcache_cacop_en = 1'b0;
+wire [ 1:0] dcache_cacop_code = 2'b0; // code[4:3]
+wire [31:0] dcache_cacop_addr = 32'b0;
 
 wire [31:0] adder_a;
 wire [31:0] adder_b;
 wire        adder_cin;
-wire [31:0] adder_result;
 wire        adder_cout;
 
 assign adder_a   = src1;
 assign adder_b   = (op_sub | op_slt | op_sltu) ? ~src2 : src2;  //src1 - src2 rj-rk
 assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
-assign {adder_cout, adder_result} = adder_a + adder_b + adder_cin;
+assign {adder_cout, dcache_addr} = adder_a + adder_b + adder_cin;
 
-dcache u_dcache(
-    .clk            (clk           ),  //
-    .reset          (reset          ), //
-//to from cpu
-    .valid          (data_valid     ),
-    .op             (data_op        ),  
-    .size           (size      ), //
-    .wdata          (wdata     ),      //
-    .addr_ok        (data_addr_ok   ),
-    .data_ok        (data_data_ok   ),
-    .rdata          (rdata     ),      //
-    .uncache_en     (data_uncache_en),
-    .dcacop_op_en   (dcacop_op_en   ),
-    .cacop_op_mode  (cacop_op_mode  ),
-    .preld_hint     (preld_hint     ),
-    .preld_en       (preld_en       ),
-    .tlb_excp_cancel_req (data_tlb_excp_cancel_req),
-    .sc_cancel_req  (sc_cancel_req  ),
-	.dcache_empty   (dcache_empty   ),
-//to from axi 
-    .rd_req         (data_rd_req    ), 
-    .rd_type        (data_rd_type   ), 
-    .rd_addr        (adder_result   ), //
-    .rd_rdy         (data_rd_rdy    ), 
-    .ret_valid      (data_ret_valid ),    
-    .ret_last       (data_ret_last  ), 
-    .ret_data       (data_ret_data  ), 
-    .wr_req         (data_wr_req    ), 
-    .wr_type        (data_wr_type   ), 
-    .wr_addr        (adder_result   ), //
-    .wr_wstrb       (data_wr_wstrb  ), 
-    .wr_data        (data_wr_data   ), 
-    .wr_rdy         (data_wr_rdy    ),
-    .cache_miss     (ms_dcache_miss )
-);
+assign dcache_wdata_bus = {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
+        dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr};
 
-wire [31:0] read_res_b;
-wire [31:0] read_res_h;
-assign read_res_b = adder_result[1:0]==2'b00 ? rdata: 
-                    adder_result[1:0]==2'b01 ? {{24{rdata[15]}},rdata[15:8]}:
-                    adder_result[1:0]==2'b10 ? {{24{rdata[23]}},rdata[23:16]}:{{24{rdata[31]}},rdata[31:24]};
-assign read_res_h = adder_result[1:0]==2'b00 ? rdata : {{24{rdata[31]}},rdata[31:16]};          
-assign mem_result =  bit_width[3]? rdata:
-                     bit_width[1] ? {{16{read_res_h[15]&(~is_unsigned)}},read_res_h[15:0]}:
-                                       {{24{read_res_b[7]&(~is_unsigned)}},read_res_b[7:0]};
+// wire [31:0] read_res_b;
+// wire [31:0] read_res_h;
+// assign read_res_b = adder_result[1:0]==2'b00 ? rdata: 
+//                     adder_result[1:0]==2'b01 ? {{24{rdata[15]}},rdata[15:8]}:
+//                     adder_result[1:0]==2'b10 ? {{24{rdata[23]}},rdata[23:16]}:{{24{rdata[31]}},rdata[31:24]};
+// assign read_res_h = adder_result[1:0]==2'b00 ? rdata : {{24{rdata[31]}},rdata[31:16]};          
+// assign mem_result =  bit_width[3]? rdata:
+//                      bit_width[1] ? {{16{read_res_h[15]&(~is_unsigned)}},read_res_h[15:0]}:
+//                                        {{24{read_res_b[7]&(~is_unsigned)}},read_res_b[7:0]};
 
 
 endmodule
