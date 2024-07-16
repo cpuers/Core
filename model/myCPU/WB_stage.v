@@ -1,4 +1,4 @@
-`include "defines.v"
+`include "define.v"
 module WB_stage(
     input clk,
     input reset,
@@ -10,7 +10,7 @@ module WB_stage(
     input [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus1,
     input [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus2,
 
-    output [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus,
+    output [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus
 );
 
 reg         ws_valid;
@@ -78,7 +78,7 @@ assign ws_to_rf_bus = {rf_we1   ,  //37:37
                        rf_wdata1,   //31:0
                        rf_we2   ,  //37:37
                        rf_waddr2,  //36:32
-                       rf_wdata2,
+                       rf_wdata2
                       };
 
 endmodule

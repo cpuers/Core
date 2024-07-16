@@ -1,4 +1,4 @@
-`include "defines.v"
+`include "define.v"
 
 module IF_stage0 (
     input clk,
@@ -13,7 +13,7 @@ module IF_stage0 (
     output        valid,
     output [31:0] iaddr,
 
-    input                      addr_ok,
+    input addr_ok,
 
     //for IF1
     output [`IF0_TO_IF1_BUS_WD -1:0] if0_if1_bus,
@@ -58,14 +58,9 @@ module IF_stage0 (
   always @(posedge clk) begin
     if (rst | flush_IF) begin
       if0_to_if1_r <= 0;
-    end
-    else if (!valid) 
-    begin
-        if0_to_if1_r <= if0_to_if1_r;    
-    end 
-    else 
-
-    begin
+    end else if (!valid) begin
+      if0_to_if1_r <= if0_to_if1_r;
+    end else begin
       if0_to_if1_r <= if0_to_if1_w;
     end
   end
@@ -79,13 +74,13 @@ module IF_stage1 (
 
     input [`IF0_TO_IF1_BUS_WD-1:0] if0_if1_bus,
 
-    output [              3:0][`IB_DATA_BUS_WD-1:0] if1_to_ib,
-    input  [ `IB_WIDTH_LOG2:0]                      can_push_size,
-    output [              2:0]                      push_num,
-    input                                           data_ok,
-    input  [`FS_ICACHE_WD-1:0]                      rdata,
-    input                                           if0_valid,
-    output                                          if1_ready
+    output [4*`IB_DATA_BUS_WD-1:0] if1_to_ib,
+    input  [     `IB_WIDTH_LOG2:0] can_push_size,
+    output [                  2:0] push_num,
+    input                          data_ok,
+    input  [    `FS_ICACHE_WD-1:0] rdata,
+    input                          if0_valid,
+    output                         if1_ready
 );
 
   reg  [ 3:0] store_buf  [`IB_DATA_BUS_WD-1:0];
@@ -160,13 +155,13 @@ module IF_stage1 (
     end
   end
 
-  assign if1_ready = buf_empty &(if0_valid & !data_ok);
+  assign if1_ready = buf_empty & (if0_valid & !data_ok);
   assign push_num = can_push ? (buf_empty ? instr_num : buf_num) : 3'd0;
 
-  assign if1_to_ib[0] = valid_instr[0];
-  assign if1_to_ib[1] = valid_instr[1];
-  assign if1_to_ib[2] = valid_instr[2];
+  assign if1_to_ib[`IB_DATA_BUS_WD-1:0] = valid_instr[0];
+  assign if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD] = valid_instr[1];
+  assign if1_to_ib[3*`IB_DATA_BUS_WD-1:2*`IB_DATA_BUS_WD] = valid_instr[2];
 
-  assign if1_to_ib[3] = valid_instr[3];
+  assign if1_to_ib[4*`IB_DATA_BUS_WD-1:3*`IB_DATA_BUS_WD] = valid_instr[3];
 
 endmodule

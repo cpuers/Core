@@ -1,5 +1,6 @@
 `include "config.vh"
 /* verilator lint_off DECLFILENAME */
+/* verilator lint_off MULTITOP */
 module tlb_async (
     input           clock,
     input           reset,
@@ -48,7 +49,7 @@ module tlb_async (
     input           inv_en,
     input   [ 4:0]  inv_op,
     input   [ 9:0]  inv_asid,
-    input   [19:0]  inv_vpn
+    input   [18:0]  inv_vppn
 );
     genvar i;
     integer j;
@@ -62,30 +63,9 @@ module tlb_async (
     reg     [27:0]      tlbelo1 [0:`TLBENTRY-1]; 
 
     wire                g       [0:`TLBENTRY-1];
-    wire    [19:0]      ppn0    [0:`TLBENTRY-1];
-    wire    [ 1:0]      plv0    [0:`TLBENTRY-1];
-    wire    [ 1:0]      mat0    [0:`TLBENTRY-1];
-    wire                d0      [0:`TLBENTRY-1];
-    wire                v0      [0:`TLBENTRY-1];
-    wire    [19:0]      ppn1    [0:`TLBENTRY-1];
-    wire    [ 1:0]      plv1    [0:`TLBENTRY-1];
-    wire    [ 1:0]      mat1    [0:`TLBENTRY-1];
-    wire                d1      [0:`TLBENTRY-1];
-    wire                v1      [0:`TLBENTRY-1];
-
     generate
         for (i = 0; i < `TLBENTRY; i = i + 1) begin
             assign g   [i]  = tlbelo0[i][6];
-            assign ppn0[i]  = tlbelo0[i][27:8];
-            assign plv0[i]  = tlbelo0[i][3:2];
-            assign mat0[i]  = tlbelo0[i][5:4];
-            assign d0  [i]  = tlbelo0[i][1];
-            assign v0  [i]  = tlbelo0[i][0];
-            assign ppn1[i]  = tlbelo1[i][27:8];
-            assign plv1[i]  = tlbelo1[i][3:2];
-            assign mat1[i]  = tlbelo1[i][5:4];
-            assign d1  [i]  = tlbelo1[i][1];
-            assign v1  [i]  = tlbelo1[i][0];
         end
     endgenerate
 
@@ -98,7 +78,7 @@ module tlb_async (
     assign r_tlbelo1    = tlbelo1   [r_idx];
 
     // ifetch
-    wire            if_hit          [0:`TLBENTRY-1];
+    wire [`TLBENTRY-1:0] if_hit;
     wire    [27:0]  if_sel_pg       [0:`TLBENTRY-1];
     reg     [27:0]  if_entry;                           // COMBINATION LOGIC
     generate
@@ -123,7 +103,7 @@ module tlb_async (
     assign if_ppn = if_entry[27:8];
 
     // load / store
-    wire            ls_hit          [0:`TLBENTRY-1];
+    wire [`TLBENTRY-1:0] ls_hit;
     wire    [27:0]  ls_sel_pg       [0:`TLBENTRY-1];
     reg     [27:0]  ls_entry;                           // COMBINATION LOGIC
     generate
@@ -161,15 +141,13 @@ module tlb_async (
                     (inv_op == 5'h3 && !g[i]) |
                     (inv_op == 5'h4 && !g[i] && asid[i] == inv_asid) |
                     (inv_op == 5'h5 && !g[i] && asid[i] == inv_asid 
-                        && vppn[i] == inv_vpn[19:1]) |
+                        && vppn[i] == inv_vppn) |
                     (inv_op == 5'h6 && g[i] && asid[i] == inv_asid
-                        && vppn[i] == inv_vpn[19:1])
+                        && vppn[i] == inv_vppn)
                 ));
             always @(posedge clock) begin
-                if (inv_en) begin
-                    if (sel[i]) begin
-                        e[i] <= 1'b0;
-                    end                    
+                if (reset | (inv_en & sel[i])) begin
+                    e[i] <= 1'b0;
                 end
                 else if (w_en) begin
                     if (sel[i]) begin
@@ -187,6 +165,7 @@ module tlb_async (
 endmodule
 
 
+/* verilator lint_off UNUSED */
 module tlb_sync(
     input           clock,
     input           reset,
@@ -235,10 +214,9 @@ module tlb_sync(
     input           inv_en,
     input   [ 4:0]  inv_op,
     input   [ 9:0]  inv_asid,
-    input   [19:0]  inv_vpn
+    input   [18:0]  inv_vppn
 );
     genvar i;
-    integer j;
 
     // tlb
     reg     [18:0]      vppn    [0:`TLBENTRY-1];    
@@ -249,30 +227,9 @@ module tlb_sync(
     reg     [27:0]      tlbelo1 [0:`TLBENTRY-1]; 
 
     wire                g       [0:`TLBENTRY-1];
-    wire    [19:0]      ppn0    [0:`TLBENTRY-1];
-    wire    [ 1:0]      plv0    [0:`TLBENTRY-1];
-    wire    [ 1:0]      mat0    [0:`TLBENTRY-1];
-    wire                d0      [0:`TLBENTRY-1];
-    wire                v0      [0:`TLBENTRY-1];
-    wire    [19:0]      ppn1    [0:`TLBENTRY-1];
-    wire    [ 1:0]      plv1    [0:`TLBENTRY-1];
-    wire    [ 1:0]      mat1    [0:`TLBENTRY-1];
-    wire                d1      [0:`TLBENTRY-1];
-    wire                v1      [0:`TLBENTRY-1];
-
     generate
         for (i = 0; i < `TLBENTRY; i = i + 1) begin
             assign g   [i]  = tlbelo0[i][6];
-            assign ppn0[i]  = tlbelo0[i][27:8];
-            assign plv0[i]  = tlbelo0[i][3:2];
-            assign mat0[i]  = tlbelo0[i][5:4];
-            assign d0  [i]  = tlbelo0[i][1];
-            assign v0  [i]  = tlbelo0[i][0];
-            assign ppn1[i]  = tlbelo1[i][27:8];
-            assign plv1[i]  = tlbelo1[i][3:2];
-            assign mat1[i]  = tlbelo1[i][5:4];
-            assign d1  [i]  = tlbelo1[i][1];
-            assign v1  [i]  = tlbelo1[i][0];
         end
     endgenerate
 
@@ -287,7 +244,7 @@ module tlb_sync(
     // ifetch
     reg     [19:0]                  if_vpn_r;
     reg     [ 1:0]                  if_priv_r;
-    wire                            if_hit      [0:`TLBENTRY-1];
+    wire [`TLBENTRY-1:0] if_hit;
     reg                             if_hit_r;
     wire [$clog2(`TLBENTRY)-1:0]    if_idx_w;
     reg  [$clog2(`TLBENTRY)-1:0]    if_idx_r;
@@ -310,14 +267,14 @@ module tlb_sync(
     assign if_valid = if_hit_r & if_entry[0];
     assign if_idx = if_idx_r;
     assign if_entry = if_vpn_r[0] ? tlbelo1[if_idx_r] : tlbelo1[if_idx_r];
-    assign if_unpriv = if_entry[3:2] < if_priv;
+    assign if_unpriv = if_entry[3:2] < if_priv_r;
     assign if_uncached = (if_entry[5:4] == 2'd0);
     assign if_ppn = if_entry[27:8];
 
     // load / store
     reg     [19:0]                  ls_vpn_r;
     reg     [ 1:0]                  ls_priv_r;
-    wire                            ls_hit      [0:`TLBENTRY-1];
+    wire [`TLBENTRY-1:0] ls_hit;
     reg                             ls_hit_r;
     wire [$clog2(`TLBENTRY)-1:0]    ls_idx_w;
     reg  [$clog2(`TLBENTRY)-1:0]    ls_idx_r;
@@ -340,7 +297,7 @@ module tlb_sync(
     assign ls_valid = ls_hit_r & ls_entry[0];
     assign ls_idx = ls_idx_r;
     assign ls_entry = ls_vpn_r[0] ? tlbelo1[ls_idx_r] : tlbelo1[ls_idx_r];
-    assign ls_unpriv = ls_entry[3:2] < ls_priv;
+    assign ls_unpriv = ls_entry[3:2] < ls_priv_r;
     assign ls_uncached = (ls_entry[5:4] == 2'd0);
     assign ls_ppn = ls_entry[27:8];
 
@@ -359,15 +316,13 @@ module tlb_sync(
                     (inv_op == 5'h3 && !g[i]) |
                     (inv_op == 5'h4 && !g[i] && asid[i] == inv_asid) |
                     (inv_op == 5'h5 && !g[i] && asid[i] == inv_asid 
-                        && vppn[i] == inv_vpn[19:1]) |
+                        && vppn[i] == inv_vppn) |
                     (inv_op == 5'h6 && g[i] && asid[i] == inv_asid
-                        && vppn[i] == inv_vpn[19:1])
+                        && vppn[i] == inv_vppn)
                 ));
             always @(posedge clock) begin
-                if (inv_en) begin
-                    if (sel[i]) begin
-                        e[i] <= 1'b0;
-                    end                    
+                if (reset | (inv_en & sel[i])) begin
+                    e[i] <= 1'b0;
                 end
                 else if (w_en) begin
                     if (sel[i]) begin

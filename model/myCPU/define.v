@@ -18,4 +18,6 @@
 `define BR_BUS_WD 33
 `define ES_TO_WS_BUS_WD 70
 
+`define BR_BUS_WD 33
+`define ES_TO_WS_BUS_WD 70
 `endif
