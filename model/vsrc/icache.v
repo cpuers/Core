@@ -1,4 +1,102 @@
 /* verilator lint_off DECLFILENAME */
+/* verilator lint_off MULTITOP */
+
+module icache_dummy(
+    input           clock,
+    input           reset,
+
+    // cpu ifetch
+    /// read address (ar) channel
+    input           arvalid,      // in cpu, valid no dep on ok;
+    output          arready,    // in cache, addr_ok can dep on valid
+    input   [31:0]  araddr,
+    /* verilator lint_off UNUSED */
+    input           uncached,
+    /* verilator lint_on UNUSED */
+    /// read data (r) channel
+    output          rvalid,
+    output [127:0]  rdata,
+    // cpu cacop
+    /* verilator lint_off UNUSED */
+    input           cacop_en,
+    input   [ 1:0]  cacop_code, // code[4:3]
+    input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
+    
+    // axi bridge
+    output          rd_req,
+    output  [ 2:0]  rd_type,
+    output  [31:0]  rd_addr,
+    input           rd_rdy,
+    input           ret_valid,
+    input           ret_last,
+    input   [31:0]  ret_data
+);
+    localparam      state_idle = 0;
+    localparam      state_request = 1;  // wait axi rd_ready
+    localparam      state_receive = 2;  // wait axi ret_last
+    reg     [ 2:0]  state;
+    wire state_is_idle = (state == state_idle);
+    wire state_is_request = (state == state_request);
+
+    reg     [31:0]  request_buffer;
+
+    reg     [31:0]  buffer  [ 0:2];
+    reg     [ 1:0]  buffer_cnt;
+
+    wire            buffer_receive_end;
+    assign buffer_receive_end = 
+        (state == state_receive) && (ret_last | (buffer_cnt == 2'd3));
+
+    assign arready = (state == state_idle) & arvalid;
+    assign rvalid = buffer_receive_end;
+    assign rdata = {buffer[0], buffer[1], buffer[2], ret_data};
+
+    assign rd_req = 
+        (state_is_idle && arvalid) || 
+        (state_is_request);
+    assign rd_type = 3'b100;
+    assign rd_addr =
+        ({32{state_is_idle}} & araddr) |
+        ({32{state_is_request}} & request_buffer);
+
+    /* State Machine */
+    always @(posedge clock) begin
+        if (reset) begin
+            state <= state_idle;
+            request_buffer <= 0;
+            buffer_cnt <= 0;
+        end else case (state)
+            state_idle: begin
+                if (arvalid) begin
+                    state <= state_request;
+                    request_buffer <= araddr;
+                end
+            end
+            state_request: begin
+                if (rd_rdy) begin
+                    state <= state_receive;
+                    buffer_cnt <= 0;
+                end
+            end
+            state_receive: begin
+                if (ret_valid) begin
+                    if (buffer_receive_end) begin
+                        state <= state_idle;
+                    end else begin
+                        buffer[buffer_cnt] <= ret_data;
+                        buffer_cnt <= buffer_cnt + 1;
+                    end
+                end
+            end
+            default: begin
+                state <= state_idle;
+            end
+        endcase
+    end
+endmodule
+
+
 module icache_v1 (
     input           clock,
     input           reset,

@@ -12,6 +12,7 @@ module IF_stage0 (
     //for cache
     output        valid,
     output [31:0] iaddr,
+    output uncached,
 
     input addr_ok,
 
@@ -82,6 +83,7 @@ module IF_stage1 (
     input                          if0_valid,
     output                         if1_ready
 );
+assign uncached = 1'b0;
 
   reg  [ 3:0] store_buf  [`IB_DATA_BUS_WD-1:0];
 
@@ -90,7 +92,7 @@ module IF_stage1 (
   wire [31:0] fs_pc;
   wire [ 2:0] instr_num;
   assign {pc_valid, pc_is_jump, fs_pc} = if0_if1_bus;
-
+  
   assign instr_num = {1'b0, ~fs_pc[3:2]} + 3'b1;
   reg [2:0] buf_num;
   reg buf_empty;

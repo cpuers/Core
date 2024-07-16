@@ -101,7 +101,7 @@ module core_top #(
 
   //FIX ME
   wire [                   31:0] iaddr;
-  wire                           if_addr_ok;
+  wire                           icache_addr_ok;
   wire                           icache_data_ok;
   wire [      `FS_ICACHE_WD-1:0] icache_rdata;
 
@@ -161,7 +161,34 @@ module core_top #(
       .pc_is_jump(pbu_pc_is_jump),
       .pc_valid(pbu_pc_valid)
   );
-  IF_stage IF_stage (
+icache_dummy icache_dummy(
+    .clock(clk),
+    .reset(reset),
+
+    .arvalid(if0_valid),      // in cpu, valid no dep on ok;
+    .arready(icache_addr_ok),    // in cache, addr_ok can dep on valid
+    .araddr(iaddr),
+    .uncached(iuncached),
+
+    .rvalid(icache_data_ok),
+    .rdata(icache_rdata),
+
+    //TODO
+    .cacop_en(dcache_cacop_en),
+    .cacop_code(dcache_cacop_code), // code[4:3]
+    .cacop_addr(dcache_cacop_addr),
+    /* verilator lint_on UNUSED */
+    
+    // axi bridge
+    .rd_req(),
+    .rd_type(),
+    .rd_addr(),
+    .rd_rdy(),
+    .ret_valid(),
+    .ret_last(),
+    .ret_data()
+);
+  IF_stage0 IF_stage0 (
       .clk      (clk),
       .flush_IF (flush_IF1 | flush_IF2),
       .rst      (reset),
@@ -171,8 +198,9 @@ module core_top #(
       //for cache
       .valid    (if0_valid),
       .iaddr    (iaddr),
+      .uncached(iuncached),
 
-      .addr_ok    (if_addr_ok),
+      .addr_ok    (icache_addr_ok),
       //for IF1
       .if0_if1_bus(if0_if1_bus),
       .IF1_ready  (if1_ready),
@@ -333,20 +361,21 @@ module core_top #(
       .cacop_addr(dcaceh_cacop_addr),
   
       .// axi bridge
-      .rd_req,
-      .rd_type,
-      .rd_addr,
-      .rd_rdy,
-      .ret_valid,
-      .ret_last,
-      .ret_data,
-      .wr_req,
-      .wr_type,
-      .wr_addr,
-      .wr_wstrb,
-      .wr_data,
-      .wr_rdy
+      .rd_req(),
+      .rd_type(),
+      .rd_addr(),
+      .rd_rdy(),
+      .ret_valid(),
+      .ret_last(),
+      .ret_data(),
+      .wr_req(),
+      .wr_type(),
+      .wr_addr(),
+      .wr_wstrb(),
+      .wr_data(),
+      .wr_rdy()
   );  
   //regfile
+
 
 endmodule

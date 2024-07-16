@@ -1,4 +1,4 @@
-VSRCS = $(shell find vsrc -name "*.v" -or -name "*.sv")
+VSRCS := $(VSRCS_TEST) $(shell find vsrc -name '*.v' -or -name '*.sv')
 INC_PATH += vsrc
 
 # Rules for hardware model

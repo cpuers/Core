@@ -32,13 +32,17 @@ ifneq ($(FW),)
     $(shell ln -sf -T $(FW_DIR) framework)
     ifeq ($(wildcard framework/framework.mk),)
         SRCS += $(shell find framework/ -name '*.cpp')
-        INC_PATH += framework/
+        VSRCS += $(shell find framework/ -name '*.v')
+        INC_PATH += framework/ $(abspath framework/)
     else 
         -include framework/framework.mk
     endif
     SRCS += $(shell find $(CORE_HOME)/framework/common/ -name '*.cpp')
+    VSRCS += $(shell find $(CORE_HOME)/framework/common/ -name '*.v')
     INC_PATH += $(CORE_HOME)/framework/common
 endif
+
+VSRCS := $(sort $(realpath $(VSRCS)))
 
 BINARY_REL = build/$(NAME)
 BINARY     = $(abspath $(BINARY_REL))
@@ -98,7 +102,7 @@ $(DST_DIR)/%.o: %.S
 	@$(AS) $(ASFLAGS) -c -o $@ $(realpath $<)
 
 $(LIBS): %:
-	@$(MAKE) -s -C $(CORE_HOME)/$* TOP=$(TOP) archive
+	@$(MAKE) -s -C $(CORE_HOME)/$* TOP=$(TOP) VSRCS_TEST="$(VSRCS)" archive
 
 $(ARCHIVE): $(OBJS)
 	@echo + AR "->" $(shell realpath $@ --relative-to .)
@@ -120,6 +124,7 @@ archive: $(ARCHIVE)
 
 clean:
 	rm -rf $(WORK_DIR)/build/
+	rm -f $(WORK_DIR)/framework
 .PHONY: clean
 
 CLEAN_ALL = $(dir $(shell find . -mindepth 2 -name Makefile))

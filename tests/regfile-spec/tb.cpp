@@ -17,27 +17,27 @@ Testbench::Testbench(int argc, char **argv) {
 Testbench::~Testbench() {}
 
 u64 Testbench::reset(Vregfile *dut) {
-    dut->wen = 1;
-    dut->wdata = 0;
+    dut->wen1 = 1;
+    dut->wdata1 = 0;
 
     for (u8 i = 1; i < 32; i ++) {
-        dut->rd = i;
+        dut->rd1 = i;
         dut->eval();        
     }
 
-    dut->wen = 0;
+    dut->wen1 = 0;
 
     return 4;
 }
 
 bool Testbench::step(Vregfile *dut, u64 time) {
-    dut->rd = rand() % 32;
+    dut->rd1 = rand() % 32;
     dut->rs1 = rand() % 32;
     dut->rs2 = rand() % 32;
-    dut->wdata = rand();
-    dut->wen = rand() & 1;
+    dut->wdata1 = rand();
+    dut->wen1 = rand() & 1;
 
-    if (dut->wen) mem[dut->rd] = dut->wdata;
+    if (dut->wen1) mem[dut->rd1] = dut->wdata1;
     mem[0] = 0;
 
     return time > 10000;
@@ -49,14 +49,14 @@ bool Testbench::check(Vregfile *dut, u64 time) {
     if (!flag) {
         std::cerr << "Checking " << (int)dut->rs1
             << ", Expected " << mem[dut->rs1]
-            << ", Result " << dut->rs1data;
+            << ", Result " << dut->rs1data << '\n';
         return flag;
     }
     flag &= dut->rs2data == mem[dut->rs2];
     if (!flag) {
         std::cerr << "Checking " << (int)dut->rs2
             << ", Expected " << mem[dut->rs2]
-            << ", Result " << dut->rs2data;
+            << ", Result " << dut->rs2data << '\n';
     }
     return flag;
 }
