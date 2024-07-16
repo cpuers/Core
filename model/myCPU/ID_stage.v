@@ -30,7 +30,7 @@ module ID_stage (
 
 );
   wire EXE_instr0_valid_w;
-  wire IF_instr1_valid_w;
+  wire EXE_instr1_valid_w;
 
   reg [`DS_TO_ES_BUS_WD:0] EXE_instr0_r;
   reg [`DS_TO_ES_BUS_WD:0] EXE_instr1_r;
@@ -74,7 +74,7 @@ module ID_stage (
       .rf_raddr1(read_addr0),
       .rf_raddr2(read_addr1),
       .rf_rdata1(read_data0),
-      .rf_rdata2(read_addr1),
+      .rf_rdata2(read_data1),
       .rg_en(instr0_gr_we),
       .use_rj(instr0_use_rj),
       .use_rkd(instr0_use_rkd),
@@ -88,7 +88,7 @@ module ID_stage (
       .rf_raddr1(read_addr2),
       .rf_raddr2(read_addr3),
       .rf_rdata1(read_data2),
-      .rf_rdata2(read_addr3),
+      .rf_rdata2(read_data3),
       .rg_en(instr1_gr_we),
       .use_rj(instr1_use_rj),
       .use_rkd(instr1_use_rkd),
@@ -117,7 +117,7 @@ module ID_stage (
 endmodule
 
 module ID_decoder (
-    input [`IB_DATA_BUS_WD:0] fs_to_ds_bus,
+    input [`IB_DATA_BUS_WD-2:0] fs_to_ds_bus,
     //to es
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
 
@@ -126,12 +126,12 @@ module ID_decoder (
     output rg_en,
     output use_rj,
     output use_rkd,
-    output dest,
+    output [4:0] dest,
     output may_jump,
     output [4:0] rf_raddr1,
     input [31:0] rf_rdata1,
-    input [4:0] rf_raddr2,
-    output [31:0] rf_rdata2
+    output [4:0] rf_raddr2,
+    input [31:0] rf_rdata2
 );
   wire        use_src1;
 
@@ -384,7 +384,7 @@ module ID_decoder (
   assign src2_is_4 = inst_jirl | inst_bl;
 
   assign imm = need_si20 ? {i20[19:0], 12'b0}         :
-             need_ui5  ? rk                         :
+             need_ui5  ? rkd_value                     :
              need_si26 ? {{6{i26[25]}},i26[25:0]}   :
              need_si16 ? {{16{i16[15]}},i16[15:0]}  :
              need_si12 ? {{20{i12[11]}}, i12[11:0]} : {{{20{1'b0}}, i12[11:0]}};

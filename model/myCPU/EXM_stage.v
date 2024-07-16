@@ -19,9 +19,6 @@ module EXM_stage(
     output [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus,
     output        flush_IF,
     output        flush_ID,
-
-    input [`EXM_DCACHE_RD] dcache_rdata_bus;
-    output [`EXM_DCACHE_WD] dcache_wdata_bus;
 );
 
 reg                          es_valid;
@@ -66,10 +63,6 @@ wire [                 31:0] mul_result;
 wire [                 31:0] div_result;
 wire [                 31:0] mem_result;
 wire [                 31:0] final_result;
-
-wire                          dcache_ready;
-wire                          dcache_rvalid;
-wire [                 31:0]  dcache_rdata;
 
 assign {
     alu_op,  // 12  操作类型
@@ -159,20 +152,17 @@ Div u_div(
 );
 
 wire [31:0] rdata;
-
-assign {dcache_ready,dcache_rvalid,dcache_rdata} = dcache_rdata_bus;
-assign mem_result = (dcache_ready & dcache_rvalid) ? dcache_rdata : 32'b0;
 Agu u_agu(
     .clk        (clk),
     .reset      (reset),
     .is_unsigned(is_unsigned),
-    .mem_we     (mem_we && es_valid),
-    .mem_ewe    (mem_we && es_valid ? bit_width : 4'h0)
+    .mem_we     (mem_we && es_valid ? bit_width : 4'h0),
     .mem_rd     (res_from_mem),
     .src1       (src1),
     .src2       (src2),  
     .wdata      (rkd_value),
-    .dcache_wdata_bus (dcache_wdata_bus)
+    .rdata      (rdata),
+    .mem_result (mem_result)
 );
 
 BranchCond u_branch (

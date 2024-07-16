@@ -20,7 +20,7 @@ module InstrBuffer (
   wire [`IB_WIDTH_LOG2-1:0] pop_num;
   always @(posedge clk) begin
     if (rst | flush) begin
-      buffer_size <= `IB_WIDTH_LOG2'h0;
+      buffer_size <= {1'b0,`IB_WIDTH_LOG2'h0};
     end else begin
       buffer_size <= buffer_size + {2'b0, push_num} - {3'b0, (&pop_op ? 2'd2 : pop_op)};  // FIX ME
     end
