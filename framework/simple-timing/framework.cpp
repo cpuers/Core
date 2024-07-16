@@ -42,6 +42,7 @@ int main(int argc, char **argv, char **envp) {
 
     reset();
 
+    bool success = true;
     while (!ctxp->gotFinish()) {
         ctxp->timeInc(1);
         dut->clock = !dut->clock;
@@ -57,6 +58,7 @@ int main(int argc, char **argv, char **envp) {
 
         if (dut->clock) {
             if (!tb->check(dut, ctxp->time())) {
+                success = false;
                 break;
             }
         }
@@ -73,5 +75,5 @@ int main(int argc, char **argv, char **envp) {
     delete fstp;
     delete ctxp;
     delete tb;
-    return 0;
+    return success ? 0 : 1;
 }
