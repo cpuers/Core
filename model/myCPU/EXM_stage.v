@@ -30,7 +30,7 @@ wire                         es_ready_go;
 reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
 
 wire [                 11:0] alu_op;
-wire [                  3:0] es_bit_width;
+wire [                  3:0] bit_width;
 wire                         may_jump;  // 1 
 wire                         use_rj_value;  // 1
 wire                         use_less;  // 1
