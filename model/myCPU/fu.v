@@ -1,3 +1,4 @@
+`include "define.v"
 module Alu(
   input  wire [11:0] alu_op,
   input  wire [31:0] alu_src1,
@@ -158,7 +159,7 @@ module Mul(
   input use_high,
   input [31:0] multiplicand,
   input [31:0] multiplier,
-  output [31:0] result,
+  output [31:0] result
 
 );
   signed [63:0] product;
@@ -176,10 +177,10 @@ module Div(
   input [31:0] divisor,
   output [31:0] result,
 );
-  signed [31:0] quotient,
-  signed [31:0] remainder,
-  wire [31:0] uquotient,
-  wire [31:0] uremainder,
+  signed [31:0] quotient;
+  signed [31:0] remainder;
+  wire [31:0] uquotient;
+  wire [31:0] uremainder;
   assign quotient  = dividend / divisor;
   assign remainder = dividend % divisor;
 
@@ -208,7 +209,7 @@ module BranchCond (
     output wire [31:0] jump_target,
     output wire        pre_fail,
     output wire        flush_IF,
-    output wire        flush_ID,
+    output wire        flush_ID
 );
   assign need_jump = may_jump & 
                    ~(use_less & ~(need_less & less| ~need_less & ~ less)) &
