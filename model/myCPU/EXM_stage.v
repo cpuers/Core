@@ -176,7 +176,7 @@ Agu u_agu(
     .src1       (src1),
     .src2       (src2),  
     .wdata      (rkd_value),
-    .dcache_wdata_bus (dcache_wdata_bus)
+    .dcache_wdata_bus(dcache_wdata_bus)
 );
 
 BranchCond u_branch (
