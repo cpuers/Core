@@ -71,9 +71,12 @@ module InstrBuffer (
         end
         2'b01: begin
           head_ptr <= head_ptr + 1;
+          buffer[head_ptr][`IB_DATA_BUS_WD-1] <= 1'b0;
         end
         2'b11: begin
           head_ptr <= head_ptr + 2;
+           buffer[head_ptr][`IB_DATA_BUS_WD-1] <= 1'b0;
+           buffer[head_ptr+1][`IB_DATA_BUS_WD-1] <= 1'b0;
         end
         default: begin
           head_ptr <= head_ptr;
