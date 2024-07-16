@@ -1,4 +1,5 @@
 `include "define.v"
+`include "fu.v"
 
 module EXM_stage(
     input clk,
@@ -20,8 +21,8 @@ module EXM_stage(
     output        flush_IF,
     output        flush_ID,
 
-    input [`EXM_DCACHE_RD] dcache_rdata_bus,
-    output [`EXM_DCACHE_WD] dcache_wdata_bus
+    input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
+    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
 );
 
 reg                          es_valid;
@@ -47,7 +48,9 @@ wire [                 31:0] imm;
 wire [                  4:0] rf_raddr1;
 wire [                  4:0] rf_raddr2;
 wire [                 31:0] rj_value;
+wire [                 31:0] rj_value_t;
 wire [                 31:0] rkd_value;
+wire [                 31:0] rkd_value_t;
 wire [                 31:0] es_pc;
 wire                         is_jump;
 wire                         res_from_mem;
@@ -71,6 +74,11 @@ wire                          dcache_ready;
 wire                          dcache_rvalid;
 wire [                 31:0]  dcache_rdata;
 
+wire                          need_jump;
+wire [31:0] jump_target;
+wire zero;
+wire less;
+
 assign {
     alu_op,  // 12  操作类型
     bit_width,  // 4  访存宽度 ls
@@ -89,8 +97,8 @@ assign {
     imm,  // 32  立即数
     rf_raddr1,  //5    操作数1寄存器rj地址
     rf_raddr2,  //5    操作数2寄存器rk\rd地址
-    rj_value,  // 32   操作数1（绝对跳转的地址
-    rkd_value,  // 32  操作数2
+    rj_value_t,  // 32   操作数1（绝对跳转的地址
+    rkd_value_t,  // 32  操作数2
     es_pc,  // 32   这条指令pc
     is_jump,  //1
     res_from_mem,  //1  读内存 load
@@ -121,8 +129,8 @@ always @(posedge clk) begin
     end
 end
 
-assign rj_value = (forward_data1[4:0]==rf_raddr1) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr1) ? forward_data2[36:5] :rj_value;
-assign rkd_value = (forward_data1[4:0]==rf_raddr2) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr2) ? forward_data2[36:5] :rkd_value;
+assign rj_value = (forward_data1[4:0]==rf_raddr1) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr1) ? forward_data2[36:5] :rj_value_t;
+assign rkd_value = (forward_data1[4:0]==rf_raddr2) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr2) ? forward_data2[36:5] :rkd_value_t;
 assign src1 = src1_is_pc ? es_pc : rj_value;
 assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 
@@ -160,9 +168,10 @@ assign mem_result = (dcache_ready & dcache_rvalid) ? dcache_rdata : 32'b0;
 Agu u_agu(
     .clk        (clk),
     .reset      (reset),
+    .alu_op     (alu_op),
     .is_unsigned(is_unsigned),
     .mem_we     (mem_we && es_valid),
-    .mem_ewe    (mem_we && es_valid ? bit_width : 4'h0)
+    .mem_ewe    (mem_we && es_valid ? bit_width : 4'h0),
     .mem_rd     (res_from_mem),
     .src1       (src1),
     .src2       (src2),  
@@ -198,10 +207,7 @@ assign es_to_ws_bus = {
     es_pc  //31:0  32
   };
 
-assign EXM_forward_bus = gr_we ? {
-  final_result,  //32  ?
-  dest   //5
-} : 37'b0;
+assign EXM_forward_bus = gr_we ? {final_result, dest} : `FORWAED_BUS_WD'b0;
 
 assign br_bus = reset ? 0 : {pre_fail, jump_target};
 endmodule

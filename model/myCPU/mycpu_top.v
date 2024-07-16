@@ -105,9 +105,9 @@ module core_top #(
   wire                           icache_data_ok;
   wire [      `FS_ICACHE_WD-1:0] icache_rdata;
 
-  wire [`EXM_DCACHE_RD] dcache_rdata_bus;
-  wire [`EXM_DCACHE_WD] dcache_wdata1_bus;
-  wire [`EXM_DCACHE_WD] dcache_wdata2_bus;
+  wire [`EXM_DCACHE_RD -1:0] dcache_rdata_bus;
+  wire [`EXM_DCACHE_WD -1:0] dcache_wdata1_bus;
+  wire [`EXM_DCACHE_WD -1:0] dcache_wdata2_bus;
 
   wire        dcache_valid; 
   wire        dcache_ready;
@@ -302,8 +302,8 @@ icache_dummy icache_dummy(
       .es_to_ws_bus  (es_to_ws_bus1),
       .flush_IF      (flush_IF1),
       .flush_ID      (flush_ID2),
-      .dcache_rdata  (dcache_rdata_bus),
-      .dcache_wdata  (dcache_wdata1_bus)
+      .dcache_rdata_bus  (dcache_rdata_bus),
+      .dcache_wdata_bus  (dcache_wdata1_bus)
   );
   EXM_stage EXM_stage2 (
       .clk  (aclk),
@@ -324,8 +324,8 @@ icache_dummy icache_dummy(
       .es_to_ws_bus  (es_to_ws_bus2),
       .flush_IF      (flush_IF1),
       .flush_ID      (flush_ID2),
-      .dcache_rdata  (dcache_rdata_bus),
-      .dcache_wdata  (dcache_wdata1_bus)
+      .dcache_rdata_bus  (dcache_rdata_bus),
+      .dcache_wdata_bus  (dcache_wdata1_bus)
   );
 
   wb_stage wb_stage (
@@ -343,25 +343,25 @@ icache_dummy icache_dummy(
       .clock(clk),
       .reset(reset),
   
-      .// cpu load / store
-      ./// common control (c) channel
+      // cpu load / store
+      /// common control (c) channel
       .valid(dcache_valid),
       .ready(dcache_ready),
       .op(dcache_op),         // 0: read, 1: write
       .addr(dcache_addr),
       .uncached(dcache_uncache),
-      ./// read data (r) channel
+      /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
-      ./// write address (aw) channel
+      /// write address (aw) channel
       .awstrb(dcache_awstrb),
-      ./// write data (w) channel
+      /// write data (w) channel
       .wdata(dcache_wdata),
       .cacop_en(dcache_cacop_en),
       .cacop_code(dcache_cacop_code), // code[4:3]
       .cacop_addr(dcache_cacop_addr),
   
-      .// axi bridge
+      // axi bridge
       .rd_req(),
       .rd_type(),
       .rd_addr(),
