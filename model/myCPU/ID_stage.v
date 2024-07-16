@@ -66,6 +66,8 @@ module ID_stage (
   wire instr1_use_rkd;
   wire instr0_may_jump;
   wire instr1_may_jump;
+  wire instr0_is_ls;
+  wire instr1_is_ls;
   ID_decoder ID_decoder0 (
       .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-2:0]),
       .ds_to_es_bus(EXE_instr0),
@@ -77,7 +79,8 @@ module ID_stage (
       .use_rj(instr0_use_rj),
       .use_rkd(instr0_use_rkd),
       .dest(instr0_dest),
-      .may_jump(instr0_may_jump)
+      .may_jump(instr0_may_jump),
+      .is_ls(instr0_is_ls)
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -90,7 +93,8 @@ module ID_stage (
       .use_rj(instr1_use_rj),
       .use_rkd(instr1_use_rkd),
       .dest(instr1_dest),
-      .may_jump(instr1_may_jump)
+      .may_jump(instr1_may_jump),
+      .is_ls(instr1_is_ls)
   );
 
   // 判断发射逻辑
@@ -103,7 +107,9 @@ module ID_stage (
                         ((|instr0_dest) & 
                           instr0_gr_we 
                         &((instr0_dest==read_addr2 & instr1_use_rj) |
-                         (instr1_dest==read_addr3 & instr1_use_rkd)));
+                         (instr1_dest==read_addr3 & instr1_use_rkd))) |
+                         instr0_is_ls |instr1_is_ls
+                         ;
   assign IF_pop_op[0] = IF_instr0_valid & EXE_ready;
   assign IF_pop_op[1] = IF_instr1_valid & EXE_ready;
   assign EXE_instr0_valid_w = IB_empty & IF_instr0_valid;
@@ -116,6 +122,7 @@ module ID_decoder (
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
 
     // judge RAW 
+    output is_ls,
     output rg_en,
     output use_rj,
     output use_rkd,
@@ -417,7 +424,7 @@ module ID_decoder (
   assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu;
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
   assign dest = dst_is_r1 ? 5'd1 : rd;
-
+  assign is_ls = |bit_width;
   assign rf_raddr1 = rj;
   assign rf_raddr2 = src_reg_is_rd ? rd : rk;
 
