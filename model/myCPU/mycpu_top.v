@@ -128,6 +128,7 @@ module core_top #(
           dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = (dcache_wdata1_bus[105]) ? dcache_wdata1_bus : dcache_wdata2_bus;
   assign need_jump = (br_bus1[32]) ? br_bus1[32] : (br_bus2[32]) ? br_bus2[32] : 1'b0;
   assign jump_pc = (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
+  
   wire [  4*`IB_DATA_BUS_WD-1:0] if1_to_ib;
   wire [       `IB_WIDTH_LOG2:0] can_push_size;
   wire [                    2:0] push_num;
@@ -346,19 +347,19 @@ icache_dummy icache_dummy(
       ./// common control (c) channel
       .valid(dcache_valid),
       .ready(dcache_ready),
-      .op(dcaceh_op),         // 0: read, 1: write
-      .addr(dcaceh_addr),
-      .uncached(dcaceh_uncache),
+      .op(dcache_op),         // 0: read, 1: write
+      .addr(dcache_addr),
+      .uncached(dcache_uncache),
       ./// read data (r) channel
-      .rvalid(dcaceh_rvalid),
-      .rdata(dcaceh_rdata),
+      .rvalid(dcache_rvalid),
+      .rdata(dcache_rdata),
       ./// write address (aw) channel
-      .awstrb(dcaceh_awstrb),
+      .awstrb(dcache_awstrb),
       ./// write data (w) channel
-      .wdata(dcaceh_wdata),
-      .cacop_en(dcaceh_cacop_en),
-      .cacop_code(dcaceh_cacop_code), // code[4:3]
-      .cacop_addr(dcaceh_cacop_addr),
+      .wdata(dcache_wdata),
+      .cacop_en(dcache_cacop_en),
+      .cacop_code(dcache_cacop_code), // code[4:3]
+      .cacop_addr(dcache_cacop_addr),
   
       .// axi bridge
       .rd_req(),
