@@ -20,8 +20,8 @@ module EXM_stage(
     output        flush_IF,
     output        flush_ID,
 
-    input [`EXM_DCACHE_RD] dcache_rdata_bus;
-    output [`EXM_DCACHE_WD] dcache_wdata_bus;
+    input [`EXM_DCACHE_RD] dcache_rdata_bus,
+    output [`EXM_DCACHE_WD] dcache_wdata_bus
 );
 
 reg                          es_valid;
