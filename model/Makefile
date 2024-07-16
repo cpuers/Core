@@ -1,5 +1,6 @@
-VSRCS := $(VSRCS_TEST) $(shell find vsrc -name '*.v' -or -name '*.sv')
-INC_PATH += vsrc
+VSRCS := $(VSRCS_TEST) $(shell find vsrc -name '*.v' -or -name '*.sv') \
+    $(shell find myCPU -name '*.v' -or -name '*.sv')
+INC_PATH += vsrc myCPU
 
 # Rules for hardware model
 
