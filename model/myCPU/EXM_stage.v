@@ -74,14 +74,12 @@ wire [                 31:0]  dcache_rdata;
 assign {
     alu_op,  // 12  操作类型
     bit_width,  // 4  访存宽度 ls
-
     may_jump,  // 1   跳转 分支处理 ---
     use_rj_value,  // 1  绝对跳转
     use_less,  // 1    跳转需要   0无意义
     need_less,  // 1   1 1 1跳   1 0 0跳
     use_zero,  // 1
     need_zero,  // 1
-
     src1_is_pc,  // 1   操作数1为pc
     src2_is_imm,  // 1  操作数2为立即数
     src2_is_4,  // 1    操作数2为pc+
@@ -89,22 +87,19 @@ assign {
     mem_we,  // 1   写内存 store
     dest,  // 5   目的地址
     imm,  // 32  立即数
-
     rf_raddr1,  //5    操作数1寄存器rj地址
     rf_raddr2,  //5    操作数2寄存器rk\rd地址
-
     rj_value,  // 32   操作数1（绝对跳转的地址
     rkd_value,  // 32  操作数2
     es_pc,  // 32   这条指令pc
     is_jump,  //1
     res_from_mem,  //1  读内存 load
-
     use_mul,
     use_high,
     is_unsigned,
     use_div,
     use_mod
-  } = ds_to_es_bus_r;
+} = ds_to_es_bus_r;
 
 assign es_ready_go = 1'b1;
 assign es_allowin = !es_valid || es_ready_go && ws_allowin;
@@ -160,7 +155,7 @@ Div u_div(
 
 wire [31:0] rdata;
 
-assign {dcache_ready,dcache_rvalid,dcache_rdata} = dcache_rdata_bus;
+assign {dcache_ready, dcache_rvalid, dcache_rdata} = dcache_rdata_bus;
 assign mem_result = (dcache_ready & dcache_rvalid) ? dcache_rdata : 32'b0;
 Agu u_agu(
     .clk        (clk),
