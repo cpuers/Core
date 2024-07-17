@@ -30,7 +30,8 @@ $(shell mkdir -p $(DST_DIR))
 ARCHIVE  = $(WORK_DIR)/build/lib$(TOP).a
 
 INCFLAGS = $(addprefix -I, $(INC_PATH))
-BUILD_FLAGS = --build -j -MMD -O3 -cc -Wall --trace-fst
+BUILD_FLAGS = --build -j -MMD -O3 -cc -Wall --trace-fst \
+                --Wno-DECLFILENAME
 VERILATOR_FLAGS = $(BUILD_FLAGS) $(INCFLAGS)
 
 $(ARCHIVE): $(VSRCS)

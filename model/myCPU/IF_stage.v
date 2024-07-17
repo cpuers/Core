@@ -1,4 +1,4 @@
-`include "define.v"
+`include "define.vh"
 
 module IF_stage0 (
     input clk,

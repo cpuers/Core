@@ -1,4 +1,5 @@
-`include "define.v"
+`include "define.vh"
+
 module WB_stage(
     input clk,
     input reset,

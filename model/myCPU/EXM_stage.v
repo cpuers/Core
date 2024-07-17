@@ -1,5 +1,4 @@
-`include "define.v"
-`include "fu.v"
+`include "define.vh"
 
 module EXM_stage(
     input clk,

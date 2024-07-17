@@ -1,4 +1,4 @@
-`include "define.v"
+`include "define.vh"
 
 module InstrBuffer (
     input                          clk,
