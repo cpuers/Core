@@ -1,5 +1,4 @@
 /* verilator lint_off DECLFILENAME */
-/* verilator lint_off MULTITOP */
 
 /* verilator lint_off UNUSED */
 module dcache_dummy (

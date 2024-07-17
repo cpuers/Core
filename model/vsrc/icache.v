@@ -1,5 +1,4 @@
 /* verilator lint_off DECLFILENAME */
-/* verilator lint_off MULTITOP */
 
 module icache_dummy(
     input           clock,
@@ -7,8 +6,8 @@ module icache_dummy(
 
     // cpu ifetch
     /// read address (ar) channel
-    input           arvalid,      // in cpu, valid no dep on ok;
-    output          arready,    // in cache, addr_ok can dep on valid
+    input           arvalid,      // in cpu, valid no dep on ready;
+    output          arready,    // in cache, ready can dep on valid
     input   [31:0]  araddr,
     /* verilator lint_off UNUSED */
     input           uncached,
@@ -293,4 +292,39 @@ module icache_v1 (
             end
         endcase
     end
+endmodule
+
+module icache_v2(
+    input           clock,
+    input           reset,
+
+    // cpu ifetch
+    /// read address (ar) channel
+    input           arvalid,      // in cpu, valid no dep on ready;
+    output          arready,    // in cache, ready can dep on valid
+    input   [31:0]  araddr,
+    /* verilator lint_off UNUSED */
+    input           uncached,
+    /* verilator lint_on UNUSED */
+    /// read data (r) channel
+    output          rvalid,
+    output [127:0]  rdata,
+    // cpu cacop
+    /* verilator lint_off UNUSED */
+    input           cacop_en,
+    input   [ 1:0]  cacop_code, // code[4:3]
+    input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
+    
+    // axi bridge
+    output          rd_req,
+    output  [ 2:0]  rd_type,
+    output  [31:0]  rd_addr,
+    input           rd_rdy,
+    input           ret_valid,
+    input           ret_last,
+    input   [31:0]  ret_data
+);
+    
+
 endmodule

@@ -1,8 +1,8 @@
 `ifdef TEST
 
 module sram_sim #(
-    parameter ADDR_WIDTH = 8;
-    parameter DATA_WIDTH = 16;
+    parameter ADDR_WIDTH = 8,
+    parameter DATA_WIDTH = 16
 ) (
     input                       clka,
     input                       ena,
@@ -17,17 +17,18 @@ module sram_sim #(
     initial begin
         integer i;
         for (i = 0; i < (1<<ADDR_WIDTH); i = i + 1) begin
-            mem[i] = DATA_WIDTH'0;
+            mem[i] = {DATA_WIDTH{1'b0}};
         end
     end
 
-    always @(posedge clk) begin
+    always @(posedge clka) begin
         buffer <= 0;
         if (ena) begin
-            mem[addra] <= dina;
-        end
-        if (wea) begin
             buffer <= mem[addra];
+            if (wea) begin
+                buffer <= dina;
+                mem[addra] <= dina;
+            end
         end
     end
 

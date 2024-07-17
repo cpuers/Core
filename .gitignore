@@ -13,5 +13,6 @@
 !*.vh
 !*.sv
 build/
+obj_dir/
 
 !/.corerc
