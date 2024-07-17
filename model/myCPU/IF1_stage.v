@@ -27,9 +27,11 @@ module IF_stage1 (
   reg [2:0] buf_num;
   reg buf_empty;
   wire can_push;
-  wire [`IB_WIDTH_LOG2:0] total_size;
-  assign total_size = can_push_size + (buf_empty ? {2'b0, instr_num} : {2'b0, buf_num});
-  assign can_push   = ~total_size[`IB_WIDTH_LOG2];
+  /* verilator lint_off PINCONNECTEMPTY */
+  wire  total_size;
+  /* verilator lint_off PINCONNECTEMPTY */
+  assign total_size = {can_push_size + (buf_empty ? {2'b0, instr_num} : {2'b0, buf_num})}[`IB_WIDTH_LOG2];
+  assign can_push   = ~total_size;
 
   always @(*) begin
     case (instr_num)
@@ -75,7 +77,8 @@ module IF_stage1 (
           buf_num   <= buf_num;
         end
       end else begin
-        if (can_push) begin
+        if (can_push) 
+        begin
           buf_empty <= 1'b1;
           buf_num   <= 3'b0;
         end else begin
@@ -86,8 +89,8 @@ module IF_stage1 (
     end
   end
 
-  assign if1_ready = buf_empty & (if0_valid & !data_ok);
-  assign push_num = can_push ? (buf_empty ? instr_num : buf_num) : 3'd0;
+  assign if1_ready = buf_empty &  & !data_ok;
+  assign push_num = can_push ? (buf_empty ? (if0_valid? instr_num : 3'd0) : buf_num) : 3'd0;
 
   assign if1_to_ib[`IB_DATA_BUS_WD-1:0] = store_buf[0];
   assign if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD] = store_buf[1];

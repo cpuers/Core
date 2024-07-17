@@ -161,7 +161,7 @@ module core_top #(
   wire [       `IB_WIDTH_LOG2:0] can_push_size;
   wire [                    2:0] push_num;
   wire [                   31:0] if0_pc;
-  wire                           pbu_next_pc;
+  wire [                   31:0]                        pbu_next_pc;
   wire [                    3:0] pbu_pc_is_jump;
   wire [                    3:0] pbu_pc_valid;
   wire [    `IB_DATA_BUS_WD-1:0] IF_instr0;
@@ -182,6 +182,7 @@ module core_top #(
   wire                           rf_we2;
   wire [                    4:0] rf_waddr2;  //36:32
   wire [                   31:0] rf_wdata2;
+  wire iuncached;
   assign {rf_we1, rf_waddr1, rf_wdata1, rf_we2, rf_waddr2, rf_wdata2} = ws_to_rf_bus;
   wire [1:0] IB_pop_op;
   BPU BPU (
@@ -191,7 +192,7 @@ module core_top #(
       .pc_valid(pbu_pc_valid)
   );
 icache_dummy icache_dummy(
-    .clock(clk),
+    .clock(aclk),
     .reset(reset),
 
     .arvalid(if0_valid),      // in cpu, valid no dep on ok;
@@ -218,7 +219,7 @@ icache_dummy icache_dummy(
     .ret_data(inst_ret_data)
 );
   IF_stage0 IF_stage0 (
-      .clk      (clk),
+      .clk      (aclk),
       .flush_IF (flush_IF1 | flush_IF2),
       .rst      (reset),
       // jump_signal
@@ -240,7 +241,7 @@ icache_dummy icache_dummy(
       .pre_nextpc (pbu_next_pc)
   );
   IF_stage1 IF_stage1 (
-      .clk(clk),
+      .clk(aclk),
       .rst(reset),
       .flush_IF(flush_IF1 | flush_IF2),
       .if0_if1_bus(if0_if1_bus),
@@ -254,8 +255,8 @@ icache_dummy icache_dummy(
       .if1_ready(if1_ready)
   );
   InstrBuffer InstrBuffer (
-      .clk(clk),
-      .rst(rst),
+      .clk(aclk),
+      .rst(reset),
       .flush(flush_IF1 | flush_IF2),
       .if1_to_ib(if1_to_ib),
       .push_num(push_num),
@@ -267,8 +268,8 @@ icache_dummy icache_dummy(
 
   );
   regfile regfile (
-      .clock(~clk),
-      .reset(rst),
+      .clock(~aclk),
+      .reset(reset),
       .rd1(rf_waddr1),
       .rs1(read_addr0),
       .rs2(read_addr1),
@@ -285,7 +286,7 @@ icache_dummy icache_dummy(
       .rs4data(read_data3)
   );
   ID_stage ID_stage (
-      .clk             (clk),
+      .clk             (aclk),
       .rst             (reset),
       // for IF
       .IF_instr0       (IF_instr0),
@@ -474,7 +475,9 @@ icache_dummy icache_dummy(
     .data_wr_wstrb   ( data_wr_wstrb  ),
     .data_wr_data    ( data_wr_data   ),
     .data_wr_rdy     ( data_wr_rdy    ),
+    /* verilator lint_off PINCONNECTEMPTY */
     .write_buffer_empty () // ?
+    /* verilator lint_off PINCONNECTEMPTY */
   );
 
 
