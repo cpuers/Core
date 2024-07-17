@@ -1,3 +1,4 @@
+`include "define.v"
 module Alu(
   input  wire [11:0] alu_op,
   input  wire [31:0] alu_src1,
@@ -105,15 +106,15 @@ endmodule
 module Agu(
     input clk,
     input reset,
+    input [11:0] alu_op,
     input is_unsigned,
-    input size,
     input mem_we,
     input [3:0] mem_ewe,
     input mem_rd,
     input [31:0] src1,
     input [31:0] src2,
     input [31:0] wdata,
-    output [`EXM_DCACHE_WD] dcache_wdata_bus
+    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
 );
 
 wire        dcache_valid = mem_we | mem_rd;
@@ -130,6 +131,10 @@ wire [31:0] adder_a;
 wire [31:0] adder_b;
 wire        adder_cin;
 wire        adder_cout;
+wire op_add  = alu_op[ 0];
+wire op_sub  = alu_op[ 1];
+wire op_slt  = alu_op[ 2];
+wire op_sltu = alu_op[ 3];
 
 assign adder_a   = src1;
 assign adder_b   = (op_sub | op_slt | op_sltu) ? ~src2 : src2;  //src1 - src2 rj-rk
@@ -158,10 +163,9 @@ module Mul(
   input use_high,
   input [31:0] multiplicand,
   input [31:0] multiplier,
-  output [31:0] result,
-
+  output [31:0] result
 );
-  signed [63:0] product;
+  wire [63:0] product;
   wire [63:0] uproduct;
   assign product = valid ? multiplicand * multiplier : 64'b0;
   assign uproduct = valid ? multiplicand * multiplier : 64'b0;
@@ -174,12 +178,12 @@ module Div(
   input use_mod,
   input [31:0] dividend,
   input [31:0] divisor,
-  output [31:0] result,
+  output [31:0] result
 );
-  signed [31:0] quotient,
-  signed [31:0] remainder,
-  wire [31:0] uquotient,
-  wire [31:0] uremainder,
+  wire [31:0] quotient;
+  wire [31:0] remainder;
+  wire [31:0] uquotient;
+  wire [31:0] uremainder;
   assign quotient  = dividend / divisor;
   assign remainder = dividend % divisor;
 
@@ -187,7 +191,7 @@ module Div(
   assign uremainder = dividend % divisor;
   assign result = use_mod?
                    is_unsigned? uremainder : remainder:
-                   is_unsigned? iquotient : quotient;
+                   is_unsigned? uquotient : quotient;
 
 endmodule
 
@@ -208,7 +212,7 @@ module BranchCond (
     output wire [31:0] jump_target,
     output wire        pre_fail,
     output wire        flush_IF,
-    output wire        flush_ID,
+    output wire        flush_ID
 );
   assign need_jump = may_jump & 
                    ~(use_less & ~(need_less & less| ~need_less & ~ less)) &
