@@ -17,6 +17,7 @@ markdown_extensions:
 nav:
   - Home: 'index.md'
   - Design:
+    - CPU: 'cpu.md'
     - TLB: 'tlb.md'
     - Cache: 'cache.md'
   - Framework: 'framework.md'
