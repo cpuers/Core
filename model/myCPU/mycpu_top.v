@@ -194,8 +194,8 @@ icache_dummy icache_dummy(
     .clock(clk),
     .reset(reset),
 
-    .arvalid(if0_valid),      // in cpu, valid no dep on ok;
-    .arready(icache_addr_ok),    // in cache, addr_ok can dep on valid
+    .valid(if0_valid),      // in cpu, valid no dep on ok;
+    .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
     .araddr(iaddr),
     .uncached(iuncached),
 

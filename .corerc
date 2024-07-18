@@ -3,7 +3,7 @@ export CORE_HOME=$(pwd)
 
 # Bear autoinstall
 if [ -z "$(bear --version)" ]; then
-    sudo apt install bear
+    sudo apt install -y bear
 fi
 
 alias make="bear --append --output ${CORE_HOME}/compile_commands.json -- make"

@@ -5,7 +5,7 @@
 ### 构建文档
 
 ```sh
-$ pip install mkdocs-material
+$ pip install mkdocs-material pygments
 $ cd docs && mkdocs serve
 ```
 
