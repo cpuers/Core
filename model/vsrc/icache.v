@@ -1,5 +1,6 @@
 /* verilator lint_off DECLFILENAME */
 
+/* verilator lint_off UNUSED */
 module icache_dummy(
     input           clock,
     input           reset,
@@ -94,7 +95,7 @@ module icache_dummy(
         endcase
     end
 endmodule
-
+/* verilator lint_on UNUSED */
 
 module icache_v1 (
     input           clock,
@@ -303,7 +304,9 @@ module icache_v2(
     output          ready,      // in cache, ready can dep on valid
     /// cpu ifetch
     //// read address (ar) channel
+    /* verilator lint_off UNUSED */
     input   [31:0]  araddr,
+    /* verilator lint_on UNUSED */
     input           uncached,
     //// read data (r) channel
     output          rvalid,
@@ -311,7 +314,9 @@ module icache_v2(
     /// cpu cacop
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]
+    /* verilator lint_off UNUSED */
     input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
     
     // axi bridge
     output          rd_req,
@@ -518,7 +523,9 @@ module icache_v3(
     output          ready,      // in cache, ready can dep on valid
     /// cpu ifetch
     //// read address (ar) channel
+    /* verilator lint_off UNUSED */
     input   [31:0]  araddr,
+    /* verilator lint_on UNUSED */
     input           uncached,
     //// read data (r) channel
     output          rvalid,
@@ -526,7 +533,9 @@ module icache_v3(
     /// cpu cacop
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]
+    /* verilator lint_off UNUSED */
     input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
     
     // axi bridge
     output          rd_req,
@@ -582,7 +591,6 @@ module icache_v3(
     wire    [ICACHE_WAY-1:0]    lookup_way_v;
     wire    [19:0]              lookup_way_tag  [0:ICACHE_WAY-1];
     wire    [ICACHE_WAY-1:0]    lookup_way_hit;
-    reg     [ICACHE_WAY-1:0]    lookup_way_hit_result;
     reg     [ICACHE_WAY-1:0]    lookup_way_v_result;
     wire                        lookup_hit;
     reg    [127:0]              lookup_hit_data;    // combinational logic
@@ -620,7 +628,6 @@ module icache_v3(
             request_buffer_idx <= 0;
             request_buffer_uncached <= 0;
             request_buffer_cacop_way <= 0;
-            lookup_way_hit_result <= 0;
         end else case (state)
             state_idle: begin
                 if (cacop_en) begin
@@ -649,7 +656,6 @@ module icache_v3(
                     state <= state_idle;
                 end else begin
                     state <= state_request;
-                    lookup_way_hit_result <= lookup_way_hit;
                     lookup_way_v_result <= lookup_way_v;
                 end
             end
@@ -660,11 +666,13 @@ module icache_v3(
                 end
             end
             state_receive: begin
-                if (receive_finish) begin
-                    state <= state_idle;
-                end else begin
-                    receive_buffer[receive_buffer_cnt] <= ret_data;
-                    receive_buffer_cnt <= receive_buffer_cnt + 1;
+                if (ret_valid) begin
+                    if (receive_finish) begin
+                        state <= state_idle;
+                    end else begin
+                        receive_buffer[receive_buffer_cnt] <= ret_data;
+                        receive_buffer_cnt <= receive_buffer_cnt + 1;
+                    end
                 end
             end
             state_cacop: begin
@@ -682,9 +690,11 @@ module icache_v3(
     wire   receive_ret = state_is_receive && receive_finish;
     assign rvalid = lookup_ret || receive_ret;
     assign rdata = 
-        ({128{lookup_ret}} & data_douta) |
+        ({128{lookup_ret}} & lookup_hit_data) |
         ({128{receive_ret}} & receive_result);
     assign rd_req = (state_is_lookup && !lookup_hit) || state_is_request;
+    assign rd_type = 3'b100;
+    assign rd_addr = {request_buffer_tag, 12'd0};
 
     // cache sram
 
@@ -692,9 +702,9 @@ module icache_v3(
     generate
         for (i = 0; i < ICACHE_WAY; i = i + 1) begin
             sram_sim #(
-                .ADDR_WIDTH = 8,
+                .ADDR_WIDTH     ( 8             ),
                 // [20:1] tag   [0:0] v
-                .DATA_WIDTH = 21
+                .DATA_WIDTH     ( 21            )
             ) u_tagv_sram(
                 .clka           (clock          ),
                 .ena            (tagv_ena   [i] ),
@@ -705,8 +715,8 @@ module icache_v3(
             );
 
             sram_sim #(
-                .ADDR_WIDTH = 8,
-                .DATA_WIDTH = 128
+                .ADDR_WIDTH     ( 8             ),
+                .DATA_WIDTH     ( 128           )
             ) u_data_sram(
                 .clka           (clock          ),
                 .ena            (data_ena   [i] ),
@@ -786,7 +796,9 @@ module icache_v4(
     output          ready,      // in cache, ready can dep on valid
     /// cpu ifetch
     //// read address (ar) channel
+    /* verilator lint_off UNUSED */
     input   [31:0]  araddr,
+    /* verilator lint_on UNUSED */
     input           uncached,
     //// read data (r) channel
     output          rvalid,
@@ -794,7 +806,9 @@ module icache_v4(
     /// cpu cacop
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]
+    /* verilator lint_off UNUSED */
     input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
     
     // axi bridge
     output          rd_req,
@@ -852,7 +866,6 @@ module icache_v4(
     wire    [ICACHE_WAY-1:0]    lookup_way_v;
     wire    [19:0]              lookup_way_tag  [0:ICACHE_WAY-1];
     wire    [ICACHE_WAY-1:0]    lookup_way_hit;
-    reg     [ICACHE_WAY-1:0]    lookup_way_hit_result;
     reg     [ICACHE_WAY-1:0]    lookup_way_v_result;
     wire                        lookup_hit;
     reg    [127:0]              lookup_hit_data;    // combinational logic
@@ -890,7 +903,6 @@ module icache_v4(
             request_buffer_idx <= 0;
             request_buffer_uncached <= 0;
             request_buffer_cacop_way <= 0;
-            lookup_way_hit_result <= 0;
         end else case (state)
             state_idle: begin
                 if (cacop_en) begin
@@ -920,7 +932,6 @@ module icache_v4(
                     lru[request_buffer_idx] <= (lookup_way_hit == 2'b01) ? 0 : 1;
                 end else begin
                     state <= state_request;
-                    lookup_way_hit_result <= lookup_way_hit;
                     lookup_way_v_result <= lookup_way_v;
                 end
             end
@@ -931,12 +942,14 @@ module icache_v4(
                 end
             end
             state_receive: begin
-                if (receive_finish) begin
-                    state <= state_idle;
-                end else begin
-                    receive_buffer[receive_buffer_cnt] <= ret_data;
-                    receive_buffer_cnt <= receive_buffer_cnt + 1;
-                    lru[request_buffer_idx] <= (replace_way_en == 2'b01) ? 0 : 1;
+                if (ret_valid) begin
+                    if (receive_finish) begin
+                        state <= state_idle;
+                    end else begin
+                        receive_buffer[receive_buffer_cnt] <= ret_data;
+                        receive_buffer_cnt <= receive_buffer_cnt + 1;
+                        lru[request_buffer_idx] <= (replace_way_en == 2'b01) ? 0 : 1;
+                    end
                 end
             end
             state_cacop: begin
@@ -954,9 +967,11 @@ module icache_v4(
     wire   receive_ret = state_is_receive && receive_finish;
     assign rvalid = lookup_ret || receive_ret;
     assign rdata = 
-        ({128{lookup_ret}} & data_douta) |
+        ({128{lookup_ret}} & lookup_hit_data) |
         ({128{receive_ret}} & receive_result);
     assign rd_req = (state_is_lookup && !lookup_hit) || state_is_request;
+    assign rd_type = 3'b100;
+    assign rd_addr = {request_buffer_tag, 12'd0};
 
     // cache sram
 
@@ -964,9 +979,9 @@ module icache_v4(
     generate
         for (i = 0; i < ICACHE_WAY; i = i + 1) begin
             sram_sim #(
-                .ADDR_WIDTH = 8,
+                .ADDR_WIDTH     ( 8             ),
                 // [20:1] tag   [0:0] v
-                .DATA_WIDTH = 21
+                .DATA_WIDTH     ( 21            )
             ) u_tagv_sram(
                 .clka           (clock          ),
                 .ena            (tagv_ena   [i] ),
@@ -977,8 +992,8 @@ module icache_v4(
             );
 
             sram_sim #(
-                .ADDR_WIDTH = 8,
-                .DATA_WIDTH = 128
+                .ADDR_WIDTH     ( 8             ),
+                .DATA_WIDTH     ( 128           )
             ) u_data_sram(
                 .clka           (clock          ),
                 .ena            (data_ena   [i] ),

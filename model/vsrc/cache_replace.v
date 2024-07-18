@@ -37,12 +37,14 @@ module replace_rand_2 (
 endmodule
 
 module replace_lru_2 (
+    /* verilator lint_off UNUSED */
     input               clock,
     input               reset,
     input               en,
+    /* verilator lint_on UNUSED */
     input       [ 1:0]  valid_way,
     input       [ 0:0]  lru_in,
-    output  reg [ 1:0]  replace_en,
+    output  reg [ 1:0]  replace_en
 );
     always @(*) begin
         case (valid_way)
