@@ -96,6 +96,7 @@
     | O            | read_addr0~3       | 读取寄存器的地址                                |
     | I            | readdata0~3        | 从寄存器读出的数据                              |
 
+
 ### exm阶段
 - 此阶段整合了EXE阶段和MEM阶段，通过对指令的判断选择相应的执行部件fu结果:
     - alu:进行一般算术和逻辑运算
@@ -116,8 +117,8 @@
     | O            | es_allowin         | EXM阶段握手信号, 表示EXE阶段是否空闲,高电平有效     |
     | I            | ds_to_es_valid     | ID向EXM阶段传递的数据是否有效,高电平有效            |
     | I            | ds_to_es_bus       | ID向EXM阶段传递的指令数据                         |
-    | I            | forward_data1      | 第一条EXM段流水线的旁路信息                       |
-    | I            | forward_data2      | 第二条EXM段流水线的旁路信息                       |
+    | I            | forward_data1      | 第一条EXM段流水线的旁路信息,解决RAW问题            |
+    | I            | forward_data2      | 第二条EXM段流水线的旁路信息,解决RAW问题            |
     | O            | exm_forward_bus    | 该流水线的给下一周期指令的旁路信息                 |
     | O            | br_bus             | 分支预测失败的前转的正确跳转信息                   |
     | O            | flush_IF           | 冲刷IF流水线段，高电平有效                        |
@@ -126,6 +127,7 @@
     | O            | es_to_ws_bus       | EXM向WB阶段传递的指令数据                        |
     | I            | dcache_rdata_bus   | dcache中读取的信息                               |
     | O            | dcache_wdata_bus   | 写入dcache的信息                                 |
+
 
 ### wb阶段
 - 此阶段进行计算结果到寄存器的写入
