@@ -17,7 +17,6 @@ module InstrBuffer (
   reg [`IB_WIDTH_LOG2-1:0] head_ptr;
   reg [`IB_WIDTH_LOG2-1:0] tail_ptr;
   reg [`IB_WIDTH_LOG2:0] buffer_size;
-  wire [`IB_WIDTH_LOG2-1:0] pop_num;
   always @(posedge clk) begin
     if (rst | flush) begin
       buffer_size <= {1'b0,`IB_WIDTH_LOG2'h0};

@@ -27,25 +27,24 @@ module IF_stage0 (
 
 
 );
-
+    assign uncached = 1'b0;
   reg  [31:0] pc_r;
   wire [31:0] fs_pc;
   assign fs_pc = pc_r;
   assign iaddr = fs_pc;
-  wire [31:0] next_pc;
   assign pc_to_PBU = fs_pc;
   wire [`IF0_TO_IF1_BUS_WD-1:0] if0_to_if1_w;
 
 
 
   assign if0_to_if1_w = {pc_valid, pc_is_jump, fs_pc};
-  assign valid = !IF1_ready || !addr_ok;
+  assign valid = IF1_ready ;
   always @(posedge clk) begin
     if (rst) begin
       pc_r <= 32'h1bfffffc;
     end else if (need_jump) begin
       pc_r <= jump_pc;
-    end else if (!valid) begin
+    end else if (!valid||!addr_ok) begin
       pc_r <= pc_r;
     end else begin
       pc_r <= pre_nextpc;

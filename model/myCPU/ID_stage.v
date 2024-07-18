@@ -4,6 +4,7 @@ module ID_stage (
     input clk,
     input rst,
     // for IF
+    //FIX ME
     input [`IB_DATA_BUS_WD-1:0] IF_instr0,
     input [`IB_DATA_BUS_WD-1:0] IF_instr1,
     input IB_empty,
@@ -55,6 +56,7 @@ module ID_stage (
   assign EXE_instr0_valid = EXE_instr0_r[`DS_TO_ES_BUS_WD];
   assign EXE_instr1_valid = EXE_instr1_r[`DS_TO_ES_BUS_WD];
 
+/* verilator lint_off UNUSED */
 
   wire [4:0] instr0_dest;
   wire instr0_gr_we;
@@ -101,8 +103,8 @@ module ID_stage (
   wire need_single;
   wire IF_instr0_valid;
   wire IF_instr1_valid;
-  assign IF_instr0_valid = IF_instr0[`DS_TO_ES_BUS_WD-1];
-  assign IF_instr1_valid = IF_instr1[`DS_TO_ES_BUS_WD-1];
+  assign IF_instr0_valid = IF_instr0[`IB_DATA_BUS_WD-1];
+  assign IF_instr1_valid = IF_instr1[`IB_DATA_BUS_WD-1];
   assign need_single =  instr0_may_jump|
                         ((|instr0_dest) & 
                           instr0_gr_we 
@@ -133,7 +135,6 @@ module ID_decoder (
     output [4:0] rf_raddr2,
     input [31:0] rf_rdata2
 );
-  wire        use_src1;
 
   wire        use_rj_value;
   wire        use_less;
@@ -142,15 +143,11 @@ module ID_decoder (
   wire        use_zero;
   wire        need_zero;
 
-  wire        br_taken;
-  wire [31:0] br_target;
 
-  wire [31:0] ds_pc;
   wire        pc_is_jump;
   wire [31:0] ds_inst;
 
 
-  wire        ds_ready_go;
 
   wire [11:0] alu_op;
 
@@ -165,8 +162,6 @@ module ID_decoder (
   wire [31:0] rj_value;
   wire [31:0] rkd_value;
   wire [31:0] imm;
-  wire [31:0] br_offs;
-  wire [31:0] jirl_offs;
 
   wire [ 5:0] op_31_26;
   wire [ 3:0] op_25_22;
@@ -260,18 +255,7 @@ module ID_decoder (
   wire        need_si26;
   wire        src2_is_4;
 
-
-
-  wire        rf_we;
-  wire [ 4:0] rf_waddr;
-  wire [31:0] rf_wdata;
-
-  wire [31:0] alu_src1;
-  wire [31:0] alu_src2;
-  wire [31:0] alu_result;
-
-  wire [31:0] mem_result;
-  wire [31:0] final_result;
+  wire [31:0] ds_pc;
 
 
   assign op_31_26 = ds_inst[31:26];
@@ -387,11 +371,8 @@ module ID_decoder (
              need_ui5  ? rkd_value                     :
              need_si26 ? {{6{i26[25]}},i26[25:0]}   :
              need_si16 ? {{16{i16[15]}},i16[15:0]}  :
+             need_si12_u ? {{20{1'b0}}, i12[11:0]}:
              need_si12 ? {{20{i12[11]}}, i12[11:0]} : {{{20{1'b0}}, i12[11:0]}};
-
-  assign br_offs = need_si26 ? {{4{i26[25]}}, i26[25:0], 2'b0} : {{14{i16[15]}}, i16[15:0], 2'b0};
-
-  assign jirl_offs = {{14{i16[15]}}, i16[15:0], 2'b0};
 
   assign src_reg_is_rd = inst_beq | inst_bne|inst_blt|inst_bltu|inst_bge|inst_bgeu | inst_st_w | inst_st_b |inst_st_h;
 

@@ -1,11 +1,11 @@
 `include "define.vh"
 
-module core_top #(
-    parameter TLBNUM = 32
-) (
+module core_top (
     input         aclk,
     input         aresetn,
+    /* verilator lint_off UNDRIVEN */
     input  [ 7:0] intrpt,
+    /* verilator lint_on UNDRIVEN */
     //AXI interface 
     //read reqest
     output [ 3:0] arid,
@@ -50,17 +50,19 @@ module core_top #(
     output        bready,
 
     //debug
+    /* verilator lint_off UNDRIVEN */
     input         break_point,
     input         infor_flag,
     input  [ 4:0] reg_num,
     output        ws_valid,
     output [31:0] rf_rdata,
-
+    
     output [31:0] debug0_wb_pc,
     output [ 3:0] debug0_wb_rf_wen,
     output [ 4:0] debug0_wb_rf_wnum,
     output [31:0] debug0_wb_rf_wdata,
     output [31:0] debug0_wb_inst
+    /* verilator lint_on UNDRIVEN */
 );
   reg reset;
   always @(posedge aclk) reset <= ~aresetn;
@@ -78,8 +80,8 @@ module core_top #(
   wire flush_ID1;
   wire flush_ID2;
 
-  wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr0;
-  wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr1;
+  //wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr0;
+  //wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr1;
 
   wire [  `DS_TO_ES_BUS_WD -1:0] ds_to_es_bus1;
   wire [  `DS_TO_ES_BUS_WD -1:0] ds_to_es_bus2;
@@ -161,7 +163,7 @@ module core_top #(
   wire [       `IB_WIDTH_LOG2:0] can_push_size;
   wire [                    2:0] push_num;
   wire [                   31:0] if0_pc;
-  wire                           pbu_next_pc;
+  wire [                   31:0]                        pbu_next_pc;
   wire [                    3:0] pbu_pc_is_jump;
   wire [                    3:0] pbu_pc_valid;
   wire [    `IB_DATA_BUS_WD-1:0] IF_instr0;
@@ -182,6 +184,7 @@ module core_top #(
   wire                           rf_we2;
   wire [                    4:0] rf_waddr2;  //36:32
   wire [                   31:0] rf_wdata2;
+  wire iuncached;
   assign {rf_we1, rf_waddr1, rf_wdata1, rf_we2, rf_waddr2, rf_wdata2} = ws_to_rf_bus;
   wire [1:0] IB_pop_op;
   BPU BPU (
@@ -191,7 +194,7 @@ module core_top #(
       .pc_valid(pbu_pc_valid)
   );
 icache_dummy icache_dummy(
-    .clock(clk),
+    .clock(aclk),
     .reset(reset),
 
     .valid(if0_valid),      // in cpu, valid no dep on ok;
@@ -218,7 +221,7 @@ icache_dummy icache_dummy(
     .ret_data(inst_ret_data)
 );
   IF_stage0 IF_stage0 (
-      .clk      (clk),
+      .clk      (aclk),
       .flush_IF (flush_IF1 | flush_IF2),
       .rst      (reset),
       // jump_signal
@@ -240,7 +243,7 @@ icache_dummy icache_dummy(
       .pre_nextpc (pbu_next_pc)
   );
   IF_stage1 IF_stage1 (
-      .clk(clk),
+      .clk(aclk),
       .rst(reset),
       .flush_IF(flush_IF1 | flush_IF2),
       .if0_if1_bus(if0_if1_bus),
@@ -254,8 +257,8 @@ icache_dummy icache_dummy(
       .if1_ready(if1_ready)
   );
   InstrBuffer InstrBuffer (
-      .clk(clk),
-      .rst(rst),
+      .clk(aclk),
+      .rst(reset),
       .flush(flush_IF1 | flush_IF2),
       .if1_to_ib(if1_to_ib),
       .push_num(push_num),
@@ -267,8 +270,8 @@ icache_dummy icache_dummy(
 
   );
   regfile regfile (
-      .clock(~clk),
-      .reset(rst),
+      .clock(~aclk),
+      .reset(reset),
       .rd1(rf_waddr1),
       .rs1(read_addr0),
       .rs2(read_addr1),
@@ -285,7 +288,7 @@ icache_dummy icache_dummy(
       .rs4data(read_data3)
   );
   ID_stage ID_stage (
-      .clk             (clk),
+      .clk             (aclk),
       .rst             (reset),
       // for IF
       .IF_instr0       (IF_instr0),
@@ -329,7 +332,7 @@ icache_dummy icache_dummy(
       .es_to_ws_valid(es_to_ws_valid1),
       .es_to_ws_bus  (es_to_ws_bus1),
       .flush_IF      (flush_IF1),
-      .flush_ID      (flush_ID2),
+      .flush_ID      (flush_ID1),
       .dcache_rdata_bus  (dcache_rdata_bus),
       .dcache_wdata_bus  (dcache_wdata1_bus)
   );
@@ -350,14 +353,14 @@ icache_dummy icache_dummy(
       .br_bus        (br_bus2),
       .es_to_ws_valid(es_to_ws_valid2),
       .es_to_ws_bus  (es_to_ws_bus2),
-      .flush_IF      (flush_IF1),
+      .flush_IF      (flush_IF2),
       .flush_ID      (flush_ID2),
       .dcache_rdata_bus  (dcache_rdata_bus),
-      .dcache_wdata_bus  (dcache_wdata1_bus)
+      .dcache_wdata_bus  (dcache_wdata2_bus)
   );
 
   WB_stage wb_stage (
-      .clk            (clk),
+      .clk            (~aclk),
       .reset          (reset),
       .ws_allowin     (ws_allowin),
       .es_to_ws_valid1(es_to_ws_valid1),
@@ -368,7 +371,7 @@ icache_dummy icache_dummy(
   );
 
   dcache_dummy dcache(
-      .clock(clk),
+      .clock(aclk),
       .reset(reset),
   
       // cpu load / store
@@ -377,7 +380,7 @@ icache_dummy icache_dummy(
       .ready(dcache_ready),
       .op(dcache_op),         // 0: read, 1: write
       .addr(dcache_addr),
-      .uncached(dcache_uncache),
+      .uncached(dcache_uncached),
       /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
@@ -474,7 +477,9 @@ icache_dummy icache_dummy(
     .data_wr_wstrb   ( data_wr_wstrb  ),
     .data_wr_data    ( data_wr_data   ),
     .data_wr_rdy     ( data_wr_rdy    ),
+    /* verilator lint_off PINCONNECTEMPTY */
     .write_buffer_empty () // ?
+    /* verilator lint_off PINCONNECTEMPTY */
   );
 
 
