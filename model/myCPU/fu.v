@@ -44,20 +44,22 @@ wire [31:0] or_result;
 wire [31:0] xor_result;
 wire [31:0] lui_result;
 wire [31:0] sll_result;
+/* verilator lint_off UNUSED */
 wire [63:0] sr64_result;
+/* verilator lint_on UNUSED */
 wire [31:0] sr_result;
 
 
 // 32-bit adder
 wire [31:0] adder_a;
 wire [31:0] adder_b;
-wire        adder_cin;
+wire [31:0] adder_cin;
 wire [31:0] adder_result;
 wire        adder_cout;
 
 assign adder_a   = alu_src1;
 assign adder_b   = (op_sub | op_slt | op_sltu) ? ~alu_src2 : alu_src2;  //src1 - src2 rj-rk
-assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
+assign adder_cin = (op_sub | op_slt | op_sltu) ? 32'b0001      : 32'b0;
 assign {adder_cout, adder_result} = adder_a + adder_b + adder_cin;
 
 // ADD, SUB result
@@ -104,10 +106,7 @@ endmodule
 
 
 module Agu(
-    input clk,
-    input reset,
-    input [11:0] alu_op,
-    input is_unsigned,
+    input [2:0] alu_op,
     input mem_we,
     input [3:0] mem_ewe,
     input mem_rd,
@@ -129,16 +128,17 @@ wire [31:0] dcache_cacop_addr = 32'b0;
 
 wire [31:0] adder_a;
 wire [31:0] adder_b;
-wire        adder_cin;
+wire [31:0] adder_cin;
+/* verilator lint_off UNUSED */
 wire        adder_cout;
-wire op_add  = alu_op[ 0];
-wire op_sub  = alu_op[ 1];
-wire op_slt  = alu_op[ 2];
-wire op_sltu = alu_op[ 3];
+/* verilator lint_on UNUSED */
+wire op_sub  = alu_op[0];
+wire op_slt  = alu_op[1];
+wire op_sltu = alu_op[2];
 
 assign adder_a   = src1;
 assign adder_b   = (op_sub | op_slt | op_sltu) ? ~src2 : src2;  //src1 - src2 rj-rk
-assign adder_cin = (op_sub | op_slt | op_sltu) ? 1'b1      : 1'b0;
+assign adder_cin = (op_sub | op_slt | op_sltu) ? 32'b0001      : 32'b0;
 assign {adder_cout, dcache_addr} = adder_a + adder_b + adder_cin;
 
 assign dcache_wdata_bus = {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
@@ -166,7 +166,9 @@ module Mul(
   output [31:0] result
 );
   wire [63:0] product;
+  /* verilator lint_off UNUSED */
   wire [63:0] uproduct;
+  /* verilator lint_on UNUSED */
   assign product = valid ? multiplicand * multiplier : 64'b0;
   assign uproduct = valid ? multiplicand * multiplier : 64'b0;
   assign result = use_high ? is_unsigned ? uproduct[63:32] : product[63:32] : product[31:0];
@@ -184,11 +186,11 @@ module Div(
   wire [31:0] remainder;
   wire [31:0] uquotient;
   wire [31:0] uremainder;
-  assign quotient  = dividend / divisor;
-  assign remainder = dividend % divisor;
+  assign quotient  = valid ? dividend / divisor : 32'b0;
+  assign remainder = valid ? dividend % divisor : 32'b0;
 
-  assign uquotient  = dividend / divisor;
-  assign uremainder = dividend % divisor;
+  assign uquotient  = valid ? dividend / divisor :32'b0;
+  assign uremainder = valid ? dividend % divisor :32'b0;
   assign result = use_mod?
                    is_unsigned? uremainder : remainder:
                    is_unsigned? uquotient : quotient;
@@ -207,13 +209,14 @@ module BranchCond (
     input  wire        zero,
     input  wire [31:0] pc,
     input  wire [31:0] rj_value,
+    /* verilator lint_off UNUSED */
     input  wire [31:0] imm,
-    output wire        need_jump,
     output wire [31:0] jump_target,
     output wire        pre_fail,
     output wire        flush_IF,
     output wire        flush_ID
 );
+  wire need_jump;
   assign need_jump = may_jump & 
                    ~(use_less & ~(need_less & less| ~need_less & ~ less)) &
                    ~(use_zero & ~(need_zero & zero| ~need_zero & ~ zero ));

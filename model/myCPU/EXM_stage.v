@@ -27,7 +27,10 @@ module EXM_stage(
 reg                          es_valid;
 wire                         es_ready_go;
 
-reg  [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus_r;
+wire es_to_ws_valid_w;
+reg  [  `ES_TO_WS_BUS_WD:0]  es_to_ws_bus_r;
+reg  [`FORWAED_BUS_WD -1:0]  exm_forward_bus_r;
+wire [`FORWAED_BUS_WD -1:0]  exm_forward_bus_w;
 
 wire [                 11:0] alu_op;
 wire [                  3:0] bit_width;
@@ -73,10 +76,9 @@ wire                          dcache_ready;
 wire                          dcache_rvalid;
 wire [                 31:0]  dcache_rdata;
 
-wire                          need_jump;
-wire [31:0] jump_target;
-wire zero;
-wire less;
+wire                   [31:0] jump_target;
+wire                          zero;
+wire                          less;
 
 assign {
     alu_op,  // 12  操作类型
@@ -106,11 +108,13 @@ assign {
     is_unsigned,
     use_div,
     use_mod
-} = ds_to_es_bus_r;
+} = ds_to_es_bus;
 
 assign es_ready_go = 1'b1;
 assign es_allowin = !es_valid || es_ready_go && ws_allowin;
-assign es_to_ws_valid = es_valid && es_ready_go;
+assign es_to_ws_valid_w = es_valid && es_ready_go;
+assign es_to_ws_valid = es_to_ws_bus_r[`ES_TO_WS_BUS_WD];
+
 always @(posedge clk) begin
     if (reset) begin
         es_valid <= 1'b0;
@@ -120,13 +124,19 @@ always @(posedge clk) begin
     end 
 
     if (reset) begin
-      ds_to_es_bus_r <= `DS_TO_ES_BUS_WD'b0;
-    end else if (ds_to_es_valid && es_allowin) begin
-      ds_to_es_bus_r <= ds_to_es_bus;
+      es_to_ws_bus_r <= 0;
+      exm_forward_bus_r <= 0;
+    end else if (!ws_allowin) begin
+      es_to_ws_bus_r <= es_to_ws_bus_r;
+      exm_forward_bus_r <= exm_forward_bus_r;
     end else begin
-      ds_to_es_bus_r <= ds_to_es_bus_r;
+      es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus;
+      es_to_ws_bus_r[`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
+      exm_forward_bus_r <= exm_forward_bus_w;
     end
 end
+
+
 
 assign rj_value = (forward_data1[4:0]==rf_raddr1) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr1) ? forward_data2[36:5] :rj_value_t;
 assign rkd_value = (forward_data1[4:0]==rf_raddr2) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr2) ? forward_data2[36:5] :rkd_value_t;
@@ -160,15 +170,10 @@ Div u_div(
     .result       (div_result)
 );
 
-wire [31:0] rdata;
-
 assign {dcache_ready, dcache_rvalid, dcache_rdata} = dcache_rdata_bus;
 assign mem_result = (dcache_ready & dcache_rvalid) ? dcache_rdata : 32'b0;
 Agu u_agu(
-    .clk        (clk),
-    .reset      (reset),
-    .alu_op     (alu_op),
-    .is_unsigned(is_unsigned),
+    .alu_op     (alu_op[3:1]),
     .mem_we     (mem_we && es_valid),
     .mem_ewe    (mem_we && es_valid ? bit_width : 4'h0),
     .mem_rd     (res_from_mem),
@@ -190,7 +195,6 @@ BranchCond u_branch (
     .zero(zero),
     .pc(es_pc),
     .rj_value(rj_value),
-    .need_jump(need_jump),
     .jump_target(jump_target),
     .imm(imm),
     .pre_fail(pre_fail),
@@ -206,7 +210,8 @@ assign es_to_ws_bus = {
     es_pc  //31:0  32
   };
 
-assign EXM_forward_bus = gr_we ? {final_result, dest} : `FORWAED_BUS_WD'b0;
+assign exm_forward_bus_w = gr_we ? {final_result, dest} : `FORWAED_BUS_WD'b0;
+assign exm_forward_bus = exm_forward_bus_r;
 
 assign br_bus = reset ? 0 : {pre_fail, jump_target};
 endmodule

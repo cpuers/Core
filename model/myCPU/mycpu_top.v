@@ -1,11 +1,11 @@
 `include "define.vh"
 
-module core_top #(
-    parameter TLBNUM = 32
-) (
+module core_top (
     input         aclk,
     input         aresetn,
+    /* verilator lint_off UNDRIVEN */
     input  [ 7:0] intrpt,
+    /* verilator lint_on UNDRIVEN */
     //AXI interface 
     //read reqest
     output [ 3:0] arid,
@@ -50,17 +50,19 @@ module core_top #(
     output        bready,
 
     //debug
+    /* verilator lint_off UNDRIVEN */
     input         break_point,
     input         infor_flag,
     input  [ 4:0] reg_num,
     output        ws_valid,
     output [31:0] rf_rdata,
-
+    
     output [31:0] debug0_wb_pc,
     output [ 3:0] debug0_wb_rf_wen,
     output [ 4:0] debug0_wb_rf_wnum,
     output [31:0] debug0_wb_rf_wdata,
     output [31:0] debug0_wb_inst
+    /* verilator lint_on UNDRIVEN */
 );
   reg reset;
   always @(posedge aclk) reset <= ~aresetn;
@@ -78,8 +80,8 @@ module core_top #(
   wire flush_ID1;
   wire flush_ID2;
 
-  wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr0;
-  wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr1;
+  //wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr0;
+  //wire [   `DS_TO_ES_BUS_WD-1:0] EXE_instr1;
 
   wire [  `DS_TO_ES_BUS_WD -1:0] ds_to_es_bus1;
   wire [  `DS_TO_ES_BUS_WD -1:0] ds_to_es_bus2;
@@ -330,7 +332,7 @@ icache_dummy icache_dummy(
       .es_to_ws_valid(es_to_ws_valid1),
       .es_to_ws_bus  (es_to_ws_bus1),
       .flush_IF      (flush_IF1),
-      .flush_ID      (flush_ID2),
+      .flush_ID      (flush_ID1),
       .dcache_rdata_bus  (dcache_rdata_bus),
       .dcache_wdata_bus  (dcache_wdata1_bus)
   );
@@ -351,14 +353,14 @@ icache_dummy icache_dummy(
       .br_bus        (br_bus2),
       .es_to_ws_valid(es_to_ws_valid2),
       .es_to_ws_bus  (es_to_ws_bus2),
-      .flush_IF      (flush_IF1),
+      .flush_IF      (flush_IF2),
       .flush_ID      (flush_ID2),
       .dcache_rdata_bus  (dcache_rdata_bus),
-      .dcache_wdata_bus  (dcache_wdata1_bus)
+      .dcache_wdata_bus  (dcache_wdata2_bus)
   );
 
   WB_stage wb_stage (
-      .clk            (clk),
+      .clk            (~aclk),
       .reset          (reset),
       .ws_allowin     (ws_allowin),
       .es_to_ws_valid1(es_to_ws_valid1),
@@ -369,7 +371,7 @@ icache_dummy icache_dummy(
   );
 
   dcache_dummy dcache(
-      .clock(clk),
+      .clock(aclk),
       .reset(reset),
   
       // cpu load / store
@@ -378,7 +380,7 @@ icache_dummy icache_dummy(
       .ready(dcache_ready),
       .op(dcache_op),         // 0: read, 1: write
       .addr(dcache_addr),
-      .uncached(dcache_uncache),
+      .uncached(dcache_uncached),
       /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
