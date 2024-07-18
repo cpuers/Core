@@ -5,6 +5,15 @@ theme:
 plugins:
   - search
 
+markdown_extensions: 
+  - extra
+  - codehilite
+  - toc:
+      permalink: true
+      separator: '_'
+  - sane_lists
+  - smarty
+
 nav:
   - Home: 'index.md'
   - Design:
