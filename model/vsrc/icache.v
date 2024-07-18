@@ -603,9 +603,10 @@ module icache_v3(
         end
     endgenerate
     assign lookup_hit = |lookup_way_hit;
+    integer j;
     always @(*) begin
         lookup_hit_data = 128'b0;        
-        for (integer j = 0; j < ICACHE_WAY; j ++) begin
+        for (j = 0; j < ICACHE_WAY; j = j + 1) begin
             lookup_hit_data = lookup_hit_data | 
                 ({128{lookup_way_hit[j]}} & data_douta[j]);
         end
@@ -880,7 +881,7 @@ module icache_v4(
     assign lookup_hit = |lookup_way_hit;
     always @(*) begin
         lookup_hit_data = 128'b0;        
-        for (integer j = 0; j < ICACHE_WAY; j ++) begin
+        for (integer j = 0; j < ICACHE_WAY; j = j + 1) begin
             lookup_hit_data = lookup_hit_data | 
                 ({128{lookup_way_hit[j]}} & data_douta[j]);
         end

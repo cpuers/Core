@@ -2,54 +2,54 @@
 /* verilator lint_off DECLFILENAME */
 
 module tlb_async (
-    input           clock,
-    input           reset,
+    input  wire         clock,
+    input  wire         reset,
 
     // translation: ifetch (current tick)
-    input   [19:0]                  if_vpn,
-    input   [ 9:0]                  if_asid,
-    input   [ 1:0]                  if_priv,
-    output  [$clog2(`TLBENTRY)-1:0] if_idx,
-    output                          if_valid,
+    input  wire [19:0]                  if_vpn,
+    input  wire [ 9:0]                  if_asid,
+    input  wire [ 1:0]                  if_priv,
+    output wire [$clog2(`TLBENTRY)-1:0] if_idx,
+    output wire                         if_valid,
     // high on unprivileged access
-    output                          if_unpriv,
-    output  [19:0]                  if_ppn,
-    output                          if_uncached,
+    output wire                         if_unpriv,
+    output wire [19:0]                  if_ppn,
+    output wire                         if_uncached,
 
     // translation: load / store (current tick)
-    input   [19:0]                  ls_vpn,
-    input   [ 9:0]                  ls_asid,
-    input   [ 1:0]                  ls_priv,
-    output  [$clog2(`TLBENTRY)-1:0] ls_idx,
-    output                          ls_valid,
-    output                          ls_unpriv,
-    output  [19:0]                  ls_ppn,
-    output                          ls_uncached,
+    input  wire [19:0]                  ls_vpn,
+    input  wire [ 9:0]                  ls_asid,
+    input  wire [ 1:0]                  ls_priv,
+    output wire [$clog2(`TLBENTRY)-1:0] ls_idx,
+    output wire                         ls_valid,
+    output wire                         ls_unpriv,
+    output wire [19:0]                  ls_ppn,
+    output wire                         ls_uncached,
 
     // write (one tick)
-    input                           w_en,
-    input   [$clog2(`TLBENTRY)-1:0] w_idx,
-    input   [18:0]                  w_vppn,
-    input   [ 5:0]                  w_ps,
-    input   [ 9:0]                  w_asid,
-    input                           w_e,
-    input   [27:0]                  w_tlbelo0,
-    input   [27:0]                  w_tlbelo1,
+    input  wire                         w_en,
+    input  wire [$clog2(`TLBENTRY)-1:0] w_idx,
+    input  wire [18:0]                  w_vppn,
+    input  wire [ 5:0]                  w_ps,
+    input  wire [ 9:0]                  w_asid,
+    input  wire                         w_e,
+    input  wire [27:0]                  w_tlbelo0,
+    input  wire [27:0]                  w_tlbelo1,
 
     // read (current tick)
-    input   [$clog2(`TLBENTRY)-1:0] r_idx,
-    output  [18:0]                  r_vppn,
-    output  [ 9:0]                  r_asid,
-    output  [ 5:0]                  r_ps,
-    output                          r_e,
-    output  [27:0]                  r_tlbelo0,
-    output  [27:0]                  r_tlbelo1,
+    input  wire [$clog2(`TLBENTRY)-1:0] r_idx,
+    output wire [18:0]                  r_vppn,
+    output wire [ 9:0]                  r_asid,
+    output wire [ 5:0]                  r_ps,
+    output wire                         r_e,
+    output wire [27:0]                  r_tlbelo0,
+    output wire [27:0]                  r_tlbelo1,
 
     // invtlb (one tick)
-    input           inv_en,
-    input   [ 4:0]  inv_op,
-    input   [ 9:0]  inv_asid,
-    input   [18:0]  inv_vppn
+    input  wire         inv_en,
+    input  wire [ 4:0]  inv_op,
+    input  wire [ 9:0]  inv_asid,
+    input  wire [18:0]  inv_vppn
 );
     genvar i;
     integer j;
@@ -91,7 +91,7 @@ module tlb_async (
     endgenerate
     always @(*) begin
         if_entry = 0;        
-        for (j = 0; j < `TLBENTRY; j ++) begin
+        for (j = 0; j < `TLBENTRY; j = j + 1) begin
             if_entry = if_entry | (if_sel_pg[j] & {28{if_hit[j]}});
         end
     end
@@ -116,7 +116,7 @@ module tlb_async (
     endgenerate
     always @(*) begin
         ls_entry = 0;        
-        for (j = 0; j < `TLBENTRY; j ++) begin
+        for (j = 0; j < `TLBENTRY; j = j + 1) begin
             ls_entry = ls_entry | (ls_sel_pg[j] & {28{ls_hit[j]}});
         end
     end
@@ -131,7 +131,7 @@ module tlb_async (
     wire    w_g;
     assign w_g = w_tlbelo0[6] & w_tlbelo1[6];
     generate
-        for (i = 0; i < `TLBENTRY; i ++) begin
+        for (i = 0; i < `TLBENTRY; i = i + 1) begin
             assign sel[i] =
                 (w_en && w_idx == i) |
                 (inv_en && (
@@ -167,54 +167,54 @@ endmodule
 
 /* verilator lint_off UNUSED */
 module tlb_sync(
-    input           clock,
-    input           reset,
+    input  wire         clock,
+    input  wire         reset,
 
-    // translation: ifetch (one tick)
-    input   [19:0]                  if_vpn,
-    input   [ 9:0]                  if_asid,
-    input   [ 1:0]                  if_priv,
-    output  [$clog2(`TLBENTRY)-1:0] if_idx,
-    output                          if_valid,
+    // translation: ifetch (current tick)
+    input  wire [19:0]                  if_vpn,
+    input  wire [ 9:0]                  if_asid,
+    input  wire [ 1:0]                  if_priv,
+    output wire [$clog2(`TLBENTRY)-1:0] if_idx,
+    output wire                         if_valid,
     // high on unprivileged access
-    output                          if_unpriv,
-    output  [19:0]                  if_ppn,
-    output                          if_uncached,
+    output wire                         if_unpriv,
+    output wire [19:0]                  if_ppn,
+    output wire                         if_uncached,
 
-    // translation: load / store (one tick)
-    input   [19:0]                  ls_vpn,
-    input   [ 9:0]                  ls_asid,
-    input   [ 1:0]                  ls_priv,
-    output  [$clog2(`TLBENTRY)-1:0] ls_idx,
-    output                          ls_valid,
-    output                          ls_unpriv,
-    output  [19:0]                  ls_ppn,
-    output                          ls_uncached,
+    // translation: load / store (current tick)
+    input  wire [19:0]                  ls_vpn,
+    input  wire [ 9:0]                  ls_asid,
+    input  wire [ 1:0]                  ls_priv,
+    output wire [$clog2(`TLBENTRY)-1:0] ls_idx,
+    output wire                         ls_valid,
+    output wire                         ls_unpriv,
+    output wire [19:0]                  ls_ppn,
+    output wire                         ls_uncached,
 
     // write (one tick)
-    input                           w_en,
-    input   [$clog2(`TLBENTRY)-1:0] w_idx,
-    input   [18:0]                  w_vppn,
-    input   [ 5:0]                  w_ps,
-    input   [ 9:0]                  w_asid,
-    input                           w_e,
-    input   [27:0]                  w_tlbelo0,
-    input   [27:0]                  w_tlbelo1,
+    input  wire                         w_en,
+    input  wire [$clog2(`TLBENTRY)-1:0] w_idx,
+    input  wire [18:0]                  w_vppn,
+    input  wire [ 5:0]                  w_ps,
+    input  wire [ 9:0]                  w_asid,
+    input  wire                         w_e,
+    input  wire [27:0]                  w_tlbelo0,
+    input  wire [27:0]                  w_tlbelo1,
 
     // read (current tick)
-    input   [$clog2(`TLBENTRY)-1:0] r_idx,
-    output  [18:0]                  r_vppn,
-    output  [ 9:0]                  r_asid,
-    output  [ 5:0]                  r_ps,
-    output                          r_e,
-    output  [27:0]                  r_tlbelo0,
-    output  [27:0]                  r_tlbelo1,
+    input  wire [$clog2(`TLBENTRY)-1:0] r_idx,
+    output wire [18:0]                  r_vppn,
+    output wire [ 9:0]                  r_asid,
+    output wire [ 5:0]                  r_ps,
+    output wire                         r_e,
+    output wire [27:0]                  r_tlbelo0,
+    output wire [27:0]                  r_tlbelo1,
 
     // invtlb (one tick)
-    input           inv_en,
-    input   [ 4:0]  inv_op,
-    input   [ 9:0]  inv_asid,
-    input   [18:0]  inv_vppn
+    input  wire         inv_en,
+    input  wire [ 4:0]  inv_op,
+    input  wire [ 9:0]  inv_asid,
+    input  wire [18:0]  inv_vppn
 );
     genvar i;
 
@@ -306,7 +306,7 @@ module tlb_sync(
     wire    w_g;
     assign w_g = w_tlbelo0[6] & w_tlbelo1[6];
     generate
-        for (i = 0; i < `TLBENTRY; i ++) begin
+        for (i = 0; i < `TLBENTRY; i = i + 1) begin
             assign sel[i] =
                 (w_en && w_idx == i) |
                 (inv_en && (
