@@ -3,9 +3,9 @@
 module core_top (
     input         aclk,
     input         aresetn,
-    /* verilator lint_off UNDRIVEN */
+    /* verilator lint_off UNUSED */
     input  [ 7:0] intrpt,
-    /* verilator lint_on UNDRIVEN */
+    /* verilator lint_on UNUSED */
     //AXI interface 
     //read reqest
     output [ 3:0] arid,
@@ -50,6 +50,7 @@ module core_top (
     output        bready,
 
     //debug
+    /* verilator lint_off UNUSED */
     /* verilator lint_off UNDRIVEN */
     input         break_point,
     input         infor_flag,
@@ -63,6 +64,7 @@ module core_top (
     output [31:0] debug0_wb_rf_wdata,
     output [31:0] debug0_wb_inst
     /* verilator lint_on UNDRIVEN */
+    /* verilator lint_on UNUSED */
 );
   reg reset;
   always @(posedge aclk) reset <= ~aresetn;
@@ -136,7 +138,12 @@ module core_top (
   wire [31:0]    inst_wr_addr    ;
   wire [ 3:0]    inst_wr_wstrb   ;
   wire [127:0]   inst_wr_data    ;
+  /* verilator lint_off UNUSED */
   wire           inst_wr_rdy     ;
+  /* verilator lint_on UNUSED */
+
+  assign {inst_wr_req, inst_wr_type, inst_wr_addr, 
+    inst_wr_wstrb, inst_wr_data} = 0;
 
   wire           data_rd_req     ;
   wire [ 2:0]    data_rd_type    ;

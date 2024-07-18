@@ -1,3 +1,4 @@
+/* verilator lint_off UNUSED */
 module axi_bridge(
     input   clk,
     input   reset,
@@ -314,3 +315,5 @@ end
 assign write_wait_enable = ~(write_requst_state == write_request_empty);
 
 endmodule
+
+/* verilator lint_on UNUSED */
