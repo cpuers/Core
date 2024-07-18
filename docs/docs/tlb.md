@@ -46,7 +46,7 @@ TLB 的主体是一个多端口 CAM，支持两种寻址方式
 
 ### read / write
 
-和 TLB 相关的 CSR 主要有 TLBEHI, TLBLO0/1, ASID。输入和输出信号中 TLBLO0/1 是直接连的，但是 TLB 中应该存储的信息，与 TLBEHI 的布局相比有较大变化，因此是拆开来连接的。
+和 TLB 相关的 CSR 主要有 TLBEHI, TLBLO0/1, ASID。输入和输出信号中 TLBLO0/1 与其直接相连即可（如果 CSR 位域是按照手册的布局），但是 TLB 中应该存储的信息，与 TLBEHI 的布局相比有较大变化，因此是拆开来连接的。
 
 请注意 `r/w_e` 和 `r/w_en` 的区别。
 - `r/w_e` 是 CSR TLBEHI 中的字段，或者手册上 TLB 内部布局的 `e` 字段，表示 TLB 表项是否有效；
