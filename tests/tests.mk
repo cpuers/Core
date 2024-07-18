@@ -77,9 +77,9 @@ binary: $(BINARY)
 
 run: $(BINARY)
 	@if $(BINARY) ; then \
-        printf '\x1b[0m[%20s] \x1b[32;1mPASSED\033[0m\n' '$(NAME)' ; \
+        echo '\033[0m[\033[1;32mPASSED\033[0m] $(NAME)'; \
     else \
-        printf '\x1b[0m[%20s] \x1b[31;1mFAILED\033[0m\n' '$(NAME)' ; \
+        echo '\033[0m[\033[1;31mFAILED\033[0m] $(NAME)'; \
     fi
 
 wave: $(WAVE)

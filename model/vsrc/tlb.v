@@ -6,18 +6,18 @@ module tlb_async (
     input           reset,
 
     // translation: ifetch (current tick)
-    input   [19:0]                  if_vpn,
-    input   [ 9:0]                  if_asid,
-    input   [ 1:0]                  if_priv,
-    output  [$clog2(`TLBENTRY)-1:0] if_idx,
-    output                          if_valid,
+    input   [19:0]                  if_vpn,      // 虚拟页号
+    input   [ 9:0]                  if_asid,     // 地址空间标识
+    input   [ 1:0]                  if_priv,     // 访问权限
+    output  [$clog2(`TLBENTRY)-1:0] if_idx,      // TLB索引
+    output                          if_valid,    // 地址转换是否有效
     // high on unprivileged access
-    output                          if_unpriv,
-    output  [19:0]                  if_ppn,
-    output                          if_uncached,
+    output                          if_unpriv,   // 非特权访问标志(1->用户)
+    output  [19:0]                  if_ppn,      // 物理页号
+    output                          if_uncached, // 非缓存标志(1->直接访问内存)
 
     // translation: load / store (current tick)
-    input   [19:0]                  ls_vpn,
+    input   [19:0]                  ls_vpn,       
     input   [ 9:0]                  ls_asid,
     input   [ 1:0]                  ls_priv,
     output  [$clog2(`TLBENTRY)-1:0] ls_idx,
@@ -30,8 +30,8 @@ module tlb_async (
     input                           w_en,
     input   [$clog2(`TLBENTRY)-1:0] w_idx,
     input   [18:0]                  w_vppn,
-    input   [ 5:0]                  w_ps,
-    input   [ 9:0]                  w_asid,
+    input   [ 5:0]                  w_ps,       // 页大小
+    input   [ 9:0]                  w_asid,     // 地址空间标识符
     input                           w_e,
     input   [27:0]                  w_tlbelo0,
     input   [27:0]                  w_tlbelo1,
