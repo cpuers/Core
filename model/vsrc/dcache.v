@@ -40,46 +40,63 @@ module dcache_dummy (
 );
     localparam  state_idle = 0;
     localparam  state_request = 1;  // wait axi rd_rdy | wr_rdy
+    localparam  state_receive = 2;
+    localparam  state_reset = 3;
     reg         state;
     wire state_is_idle = state == state_idle;
     wire state_is_request = state == state_request;
+    wire state_is_receive = state == state_receive;
 
+    reg             req_op;
     reg     [31:0]  req_addr;
     reg     [ 3:0]  req_awstrb;
     reg     [31:0]  req_wdata;
-
-    assign ready = state_is_idle && (
-        (!op & rd_rdy) |
-        ( op)    
-    );
-    assign rvalid = ret_valid && ret_last;
-    assign rdata = ret_data;
     
-    assign rd_req = valid && !op;
+    assign ready = state_is_idle;
+    assign rvalid = ret_last;
+    assign rdata = ret_data;
+    wire request_is_read = (state_is_request && !op);
+    wire request_is_write = (state_is_request && op);
+    assign rd_req = request_is_read;
     assign rd_type = 3'b010;
-    assign rd_addr = {addr[31:2], 2'b0};
-    assign wr_req = (state_is_idle && op) | state_is_request;
+    assign rd_addr = {{30{request_is_read}}, 2'b0} && req_addr;
+    assign wr_req = request_is_write;
     assign wr_type = 3'b010;
-    assign wr_addr = 
-        ({32{state_is_idle}} & {addr[31:2], 2'b0}) |
-        ({32{state_is_request}} & {req_addr[31:2], 2'b0});
-    assign wr_wstrb = (state_is_idle) ? awstrb : req_awstrb;
-    assign wr_data = {96'b0, (state_is_idle) ? wdata : req_wdata};
+    assign wr_addr = {{30{request_is_write}}, 2'b0} && req_addr;
+    assign wr_wstrb = req_awstrb;
+    assign wr_data = {96'b0, req_wdata};
 
     always @(posedge clock) begin
         if (reset) begin
-            state <= state_idle;
+            state <= state_reset;
+            req_op <= 0;
+            req_addr <= 0;
+            req_awstrb <= 0;
+            req_wdata <= 0;
         end else case (state)
             state_idle: begin
-                if (op) begin
-                    state <= state_request;
+                if (valid) begin
+                    req_op <= op;
                     req_addr <= addr;
-                    req_awstrb <= awstrb;
-                    req_wdata <= wdata;
+                    if (op) begin
+                        req_awstrb <= awstrb;
+                        req_wdata <= wdata;
+                    end
                 end
             end
             state_request: begin
-                if (wr_rdy) begin
+                if (op) begin
+                    if (wr_rdy) begin
+                        state <= state_idle;
+                    end
+                end else begin
+                    if (rd_rdy) begin
+                        state <= state_receive;
+                    end
+                end
+            end
+            state_receive: begin
+                if (ret_last) begin
                     state <= state_idle;
                 end
             end
