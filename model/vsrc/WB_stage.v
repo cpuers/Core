@@ -1,17 +1,17 @@
 `include "define.vh"
 
 module WB_stage(
-    input clk,
-    input reset,
+    input  wire clk,
+    input  wire reset,
      
-    output ws_allowin,
+    output wire ws_allowin,
 
-    input es_to_ws_valid1,
-    input es_to_ws_valid2,
-    input [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus1,
-    input [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus2,
+    input  wire es_to_ws_valid1,
+    input  wire es_to_ws_valid2,
+    input  wire [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus1,
+    input  wire [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus2,
 
-    output [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus
+    output wire [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus
 );
 
 reg         ws_valid;

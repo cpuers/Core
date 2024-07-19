@@ -1,70 +1,66 @@
 `include "define.vh"
 
 module core_top (
-    input         aclk,
-    input         aresetn,
+    input  wire        aclk,
+    input  wire        aresetn,
     /* verilator lint_off UNUSED */
-    input  [ 7:0] intrpt,
+    input  wire [ 7:0] intrpt,
     /* verilator lint_on UNUSED */
     //AXI interface 
     //read reqest
-    output [ 3:0] arid,
-    output [31:0] araddr,
-    output [ 7:0] arlen,
-    output [ 2:0] arsize,
-    output [ 1:0] arburst,
-    output [ 1:0] arlock,
-    output [ 3:0] arcache,
-    output [ 2:0] arprot,
-    output        arvalid,
-    input         arready,
+    output wire [ 3:0] arid,
+    output wire [31:0] araddr,
+    output wire [ 7:0] arlen,
+    output wire [ 2:0] arsize,
+    output wire [ 1:0] arburst,
+    output wire [ 1:0] arlock,
+    output wire [ 3:0] arcache,
+    output wire [ 2:0] arprot,
+    output wire        arvalid,
+    input  wire        arready,
     //read back
-    input  [ 3:0] rid,
-    input  [31:0] rdata,
-    input  [ 1:0] rresp,
-    input         rlast,
-    input         rvalid,
-    output        rready,
+    input  wire [ 3:0] rid,
+    input  wire [31:0] rdata,
+    input  wire [ 1:0] rresp,
+    input  wire        rlast,
+    input  wire        rvalid,
+    output wire        rready,
     //write request
-    output [ 3:0] awid,
-    output [31:0] awaddr,
-    output [ 7:0] awlen,
-    output [ 2:0] awsize,
-    output [ 1:0] awburst,
-    output [ 1:0] awlock,
-    output [ 3:0] awcache,
-    output [ 2:0] awprot,
-    output        awvalid,
-    input         awready,
+    output wire [ 3:0] awid,
+    output wire [31:0] awaddr,
+    output wire [ 7:0] awlen,
+    output wire [ 2:0] awsize,
+    output wire [ 1:0] awburst,
+    output wire [ 1:0] awlock,
+    output wire [ 3:0] awcache,
+    output wire [ 2:0] awprot,
+    output wire        awvalid,
+    input  wire        awready,
     //write data
-    output [ 3:0] wid,
-    output [31:0] wdata,
-    output [ 3:0] wstrb,
-    output        wlast,
-    output        wvalid,
-    input         wready,
+    output wire [ 3:0] wid,
+    output wire [31:0] wdata,
+    output wire [ 3:0] wstrb,
+    output wire        wlast,
+    output wire        wvalid,
+    input  wire        wready,
     //write back
-    input  [ 3:0] bid,
-    input  [ 1:0] bresp,
-    input         bvalid,
-    output        bready,
+    input  wire [ 3:0] bid,
+    input  wire [ 1:0] bresp,
+    input  wire        bvalid,
+    output wire        bready
 
     //debug
-    /* verilator lint_off UNUSED */
-    /* verilator lint_off UNDRIVEN */
-    input         break_point,
-    input         infor_flag,
-    input  [ 4:0] reg_num,
-    output        ws_valid,
-    output [31:0] rf_rdata,
-    
-    output [31:0] debug0_wb_pc,
-    output [ 3:0] debug0_wb_rf_wen,
-    output [ 4:0] debug0_wb_rf_wnum,
-    output [31:0] debug0_wb_rf_wdata,
-    output [31:0] debug0_wb_inst
-    /* verilator lint_on UNDRIVEN */
-    /* verilator lint_on UNUSED */
+    `ifdef TEAMPACKAGE_EN
+    ,
+    output wire [31:0] debug0_wb_pc,
+    output wire [ 3:0] debug0_wb_rf_wen,
+    output wire [ 4:0] debug0_wb_rf_wnum,
+    output wire [31:0] debug0_wb_rf_wdata,
+    output wire [31:0] debug1_wb_pc,
+    output wire [ 3:0] debug1_wb_rf_wen,
+    output wire [ 4:0] debug1_wb_rf_wnum,
+    output wire [31:0] debug1_wb_rf_wdata
+    `endif
 );
   reg reset;
   always @(posedge aclk) reset <= ~aresetn;
@@ -380,6 +376,17 @@ icache_dummy icache_dummy(
       .es_to_ws_bus2  (es_to_ws_bus2),
       .ws_to_rf_bus   (ws_to_rf_bus)
   );
+  
+  `ifdef TEAMPACKAGE_EN
+  assign debug0_wb_pc            = wb_stage.ws_pc1;
+  assign debug0_wb_rf_wen        = wb_stage.rf_we1;
+  assign debug0_wb_rf_wnum       = wb_stage.rf_waddr1;
+  assign debug0_wb_rf_wdata      = wb_stage.rf_wdata1;
+  assign debug1_wb_pc            = wb_stage.ws_pc2;
+  assign debug1_wb_rf_wen        = wb_stage.rf_we2;
+  assign debug1_wb_rf_wnum       = wb_stage.rf_waddr2;
+  assign debug1_wb_rf_wdata      = wb_stage.rf_wdata2;
+  `endif
 
   dcache_dummy dcache(
       .clock(aclk),
