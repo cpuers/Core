@@ -21,10 +21,8 @@ wire        ws_gr_we1;
 wire [ 4:0] ws_dest1;
 wire [31:0] ws_final_result1;
 
-/* verilator lint_off UNUSED */
 wire [31:0] ws_pc1;
 wire [31:0] ws_pc2;
-/* verilator lint_on UNUSED */
 
 wire        ws_gr_we2;
 wire [ 4:0] ws_dest2;
@@ -70,9 +68,11 @@ assign rf_we2    = ws_gr_we2 && ws_valid;
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
 
-assign ws_to_rf_bus = {rf_we1   ,  //37:37
+assign ws_to_rf_bus = {ws_pc1,
+                       rf_we1   ,  //37:37
                        rf_waddr1,  //36:32
                        rf_wdata1,   //31:0
+                       ws_pc2,
                        rf_we2   ,  //37:37
                        rf_waddr2,  //36:32
                        rf_wdata2

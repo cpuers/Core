@@ -185,6 +185,10 @@ module core_top (
   wire [                   31:0] read_data1;
   wire [                   31:0] read_data2;
   wire [                   31:0] read_data3;
+  /* verilator lint_off UNUSED */
+  wire [                   31:0] ws_pc1;
+  wire [                   31:0] ws_pc2;
+  /* verilator lint_on UNUSED */
   wire                           rf_we1;
   wire [                    4:0] rf_waddr1;  //36:32
   wire [                   31:0] rf_wdata1;  //31:0
@@ -192,7 +196,7 @@ module core_top (
   wire [                    4:0] rf_waddr2;  //36:32
   wire [                   31:0] rf_wdata2;
   wire iuncached;
-  assign {rf_we1, rf_waddr1, rf_wdata1, rf_we2, rf_waddr2, rf_wdata2} = ws_to_rf_bus;
+  assign {ws_pc1, rf_we1, rf_waddr1, rf_wdata1, ws_pc2, rf_we2, rf_waddr2, rf_wdata2} = ws_to_rf_bus;
   wire [1:0] IB_pop_op;
   BPU BPU (
       .pc(if0_pc),

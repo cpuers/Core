@@ -14,7 +14,7 @@
 //执行阶段旁路信息
 `define FORWAED_BUS_WD 37
 //写回寄存器信息
-`define WS_TO_RF_BUS_WD 76
+`define WS_TO_RF_BUS_WD 140
 `define BR_BUS_WD 33
 `define ES_TO_WS_BUS_WD 70
 
