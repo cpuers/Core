@@ -81,3 +81,13 @@ ICache 只支持读取和 CACOP 操作。读取时，一次性返回给定地址
     > 直到 `icache_v4` 都有一个问题，即不能连续处理请求，如果在 `state_lookup` 命中情况下应该可以继续留在 `state_lookup`，而不需要回到 `state_idle`；
 
 - 添加性能计数器接口；
+
+## DCache
+
+### 接口
+
+### 版本
+
+#### `dcache_dummy`
+
+#### `dcache_dummy_v2`
