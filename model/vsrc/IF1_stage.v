@@ -27,11 +27,12 @@ module IF_stage1 (
   reg [2:0] buf_num;
   reg buf_empty;
   wire can_push;
-  /* verilator lint_off PINCONNECTEMPTY */
+  /* verilator lint_off UNUSED */
   wire  [`IB_WIDTH_LOG2:0]total_size;
-  /* verilator lint_on PINCONNECTEMPTY */
+  
   assign total_size = {can_push_size + (buf_empty ? {2'b0, instr_num} : {2'b0, buf_num})};
   assign can_push   = ~total_size[`IB_WIDTH_LOG2];
+  /* verilator lint_on  UNUSED */
 
   always @(*) begin
     case (instr_num)
