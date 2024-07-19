@@ -93,6 +93,107 @@ module icache_dummy(
         endcase
     end
 endmodule
+
+module icache_dummy_v2 (
+    input  wire          clock,
+    input  wire          reset,
+
+    // common control (c) channel
+    input  wire          valid,      // in cpu, valid no dep on ready;
+    output wire          ready,      // in cache, ready can dep on valid
+    /// cpu ifetch
+    //// read address (ar) channel
+    input  wire  [31:0]  araddr,
+    input  wire          uncached,
+    //// read data (r) channel
+    output wire          rvalid,
+    output wire [127:0]  rdata,
+    /// cpu cacop
+    input  wire          cacop_en,
+    input  wire  [ 1:0]  cacop_code, // code[4:3]
+    input  wire  [31:0]  cacop_addr,
+    
+    // axi bridge
+    output wire          rd_req,
+    output wire  [ 2:0]  rd_type,
+    output wire  [31:0]  rd_addr,
+    input  wire          rd_rdy,
+    input  wire          ret_valid,
+    input  wire          ret_last,
+    input  wire  [31:0]  ret_data
+);
+    localparam  state_idle = 0;
+    localparam  state_receive = 1;
+    localparam  state_reset = 2;
+    reg     [ 2:0]  state;
+    wire state_is_idle = (state == state_idle);
+    wire state_is_receive = (state == state_receive);
+
+    reg     [31:0]  receive_buffer  [ 0:2];
+    reg     [ 1:0]  receive_buffer_cnt;
+
+    wire            receive_finish;
+    assign receive_finish = 
+        state_is_receive && (ret_last || receive_buffer_cnt == 2'd3);
+
+    //  (state_is_idle && (
+    //      (!cacop_en && rd_rdy) ||
+    //      ( cacop_en)
+    //   )
+    //  ) ||
+    //  (state_is_receive && receive_finish && (
+    //      (!cacop_en && rd_rdy) ||
+    //      ( cacop_en)
+    //   )
+    //  );
+    assign ready = (state_is_idle || receive_finish) && (cacop_en || rd_rdy);
+    assign rvalid = receive_finish;
+    assign rdata = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
+    //  (state_is_idle && valid && !cacop_en) ||
+    //  (state_is_receive && receive_finish && valid && !cacop_en);
+    assign rd_req = (valid && !cacop_en) && (state_is_idle || state_is_receive);
+    assign rd_type = 3'b100;
+    assign rd_addr = {28'b1, 4'b0} & araddr;
+
+    always @(posedge clock) begin
+        if (reset) begin
+            state <= state_reset;
+        end else case (state)
+            state_idle: begin
+                if (valid) begin
+                    if (cacop_en) begin
+                        state <= state_idle;
+                    end else if (rd_rdy) begin
+                        state <= state_receive;
+                        receive_buffer_cnt <= 0;
+                    end
+                end
+            end 
+            state_receive: begin
+                if (ret_valid) begin
+                    if (receive_finish) begin
+                        if (valid) begin
+                            if (cacop_en) begin
+                                state <= state_idle;
+                            end else if (rd_rdy) begin
+                                state <= state_receive;
+                                receive_buffer_cnt <= 0;
+                            end else begin
+                                state <= state_idle;
+                            end
+                        end                                            
+                    end else begin
+                        receive_buffer[receive_buffer_cnt] <= ret_data;
+                        receive_buffer_cnt <= receive_buffer_cnt + 1;
+                    end
+                end
+            end
+            default: begin
+                state <= state_idle;
+            end
+        endcase
+    end
+endmodule
 /* verilator lint_on UNUSED */
 
 
