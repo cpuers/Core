@@ -5,9 +5,12 @@ module ID_stage (
     input rst,
     // for IF
     //FIX ME
+    /* verilator lint_off UNUSED */
     input [`IB_DATA_BUS_WD-1:0] IF_instr0,
     input [`IB_DATA_BUS_WD-1:0] IF_instr1,
-    input IB_empty,
+    /* verilator lint_on UNUSED */
+    input IF_instr0_valid,
+    input IF_instr1_valid,
 
     output [1:0] IF_pop_op,
 
@@ -31,28 +34,34 @@ module ID_stage (
 
 );
   wire EXE_instr0_valid_w;
+  wire [`DS_TO_ES_BUS_WD-1:0] EXE_instr0_w;
+  wire [`DS_TO_ES_BUS_WD-1:0] EXE_instr1_w;
   wire EXE_instr1_valid_w;
 
   reg [`DS_TO_ES_BUS_WD:0] EXE_instr0_r;
   reg [`DS_TO_ES_BUS_WD:0] EXE_instr1_r;
-  always @(posedge clk) begin
-    if (rst | flush_ID) begin
-      EXE_instr0_r <= 0;
-      EXE_instr1_r <= 0;
+  always @(posedge clk) 
+  begin
+    if (rst | flush_ID) 
+    begin
+      EXE_instr0_r <= {1'b0,`DS_TO_ES_BUS_WD'h0};
+      EXE_instr1_r <= {1'b0,`DS_TO_ES_BUS_WD'h0};
     end 
     else if (!EXE_ready) 
     begin
       EXE_instr0_r <= EXE_instr0_r;
       EXE_instr1_r <= EXE_instr1_r;  
     end
-    else begin
-      EXE_instr0_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr0;
-      EXE_instr1_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr1;
+    else 
+    begin
+      EXE_instr0_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr0_w;
+      EXE_instr1_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr1_w;
       EXE_instr0_r[`DS_TO_ES_BUS_WD] <= EXE_instr0_valid_w;
       EXE_instr1_r[`DS_TO_ES_BUS_WD] <= EXE_instr1_valid_w;
     end
   end
-
+  assign EXE_instr0 = EXE_instr0_r[`DS_TO_ES_BUS_WD-1:0];
+  assign EXE_instr1 = EXE_instr1_r[`DS_TO_ES_BUS_WD-1:0];
   assign EXE_instr0_valid = EXE_instr0_r[`DS_TO_ES_BUS_WD];
   assign EXE_instr1_valid = EXE_instr1_r[`DS_TO_ES_BUS_WD];
 
@@ -72,7 +81,7 @@ module ID_stage (
   wire instr1_is_ls;
   ID_decoder ID_decoder0 (
       .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-2:0]),
-      .ds_to_es_bus(EXE_instr0),
+      .ds_to_es_bus(EXE_instr0_w),
       .rf_raddr1(read_addr0),
       .rf_raddr2(read_addr1),
       .rf_rdata1(read_data0),
@@ -86,7 +95,7 @@ module ID_stage (
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
-      .ds_to_es_bus(EXE_instr1),
+      .ds_to_es_bus(EXE_instr1_w),
       .rf_raddr1(read_addr2),
       .rf_raddr2(read_addr3),
       .rf_rdata1(read_data2),
@@ -101,10 +110,6 @@ module ID_stage (
 
   // 判断发射逻辑
   wire need_single;
-  wire IF_instr0_valid;
-  wire IF_instr1_valid;
-  assign IF_instr0_valid = IF_instr0[`IB_DATA_BUS_WD-1];
-  assign IF_instr1_valid = IF_instr1[`IB_DATA_BUS_WD-1];
   assign need_single =  instr0_may_jump|
                         ((|instr0_dest) & 
                           instr0_gr_we 
@@ -112,10 +117,10 @@ module ID_stage (
                          (instr1_dest==read_addr3 & instr1_use_rkd))) |
                          instr0_is_ls |instr1_is_ls
                          ;
-  assign IF_pop_op[0] = IF_instr0_valid & EXE_ready;
-  assign IF_pop_op[1] = IF_instr1_valid & EXE_ready;
-  assign EXE_instr0_valid_w = IB_empty & IF_instr0_valid;
-  assign EXE_instr1_valid_w = IB_empty & IF_instr1_valid & ~need_single;
+  assign IF_pop_op[0] = EXE_instr0_valid_w & EXE_ready;
+  assign IF_pop_op[1] = EXE_instr1_valid_w & EXE_ready;
+  assign EXE_instr0_valid_w = IF_instr0_valid;
+  assign EXE_instr1_valid_w = IF_instr1_valid & ~need_single;
 endmodule
 
 module ID_decoder (
@@ -426,7 +431,7 @@ module ID_decoder (
   assign need_zero = inst_beq;
 
 
-  assign {pc_is_jump, ds_inst, ds_pc} = fs_to_ds_bus;
+  assign {pc_is_jump, ds_pc, ds_inst} = fs_to_ds_bus;
 
 
 

@@ -36,7 +36,10 @@ wire [31:0] rf_wdata1;
 wire        rf_we2;
 wire [4 :0] rf_waddr2;
 wire [31:0] rf_wdata2;
-
+/* verilator lint_off UNUSED */
+wire debug1_gr_we;
+wire debug2_gr_we;
+/* verilator lint_on UNUSED */
 assign {ws_gr_we1       ,  //69:69
         ws_dest1       ,  //68:64
         ws_final_result1,  //63:32
@@ -59,12 +62,13 @@ always @(posedge clk) begin
         ws_valid <= es_to_ws_valid1 & es_to_ws_valid2;
     end
 end
-
-assign rf_we1    = ws_gr_we1 && ws_valid && (ws_dest1 != ws_dest2);
+assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1;
+assign rf_we1    = ws_gr_we1 && es_to_ws_valid1 && (ws_dest1 != ws_dest2);
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
-assign rf_we2    = ws_gr_we2 && ws_valid;
+assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid2;
+assign rf_we2    = ws_gr_we2 && es_to_ws_valid2;
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
 

@@ -212,9 +212,7 @@ module BranchCond (
     /* verilator lint_off UNUSED */
     input  wire [31:0] imm,
     output wire [31:0] jump_target,
-    output wire        pre_fail,
-    output wire        flush_IF,
-    output wire        flush_ID
+    output wire        pre_fail
 );
   wire need_jump;
   assign need_jump = may_jump & 
@@ -223,8 +221,6 @@ module BranchCond (
   wire [31:0] src1 = use_rj_value ? rj_value : pc;
   wire [31:0] src2 = {imm[29:0], 2'b00};
   assign jump_target = src1 + src2;
-  assign pre_fail = ~(need_jump & pre_jump);
-  assign flush_ID = need_jump;
-  assign flush_IF = need_jump;
+  assign pre_fail = (need_jump ^ pre_jump);
 
 endmodule

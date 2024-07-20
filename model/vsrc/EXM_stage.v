@@ -32,6 +32,7 @@ reg  [  `ES_TO_WS_BUS_WD:0]  es_to_ws_bus_r;
 reg  [`FORWAED_BUS_WD -1:0]  exm_forward_bus_r;
 wire [`FORWAED_BUS_WD -1:0]  exm_forward_bus_w;
 
+wire [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus_w;
 wire [                 11:0] alu_op;
 wire [                  3:0] bit_width;
 wire                         may_jump;  // 1 
@@ -112,7 +113,7 @@ assign {
 
 assign es_ready_go = 1'b1;
 assign es_allowin = !es_valid || es_ready_go && ws_allowin;
-assign es_to_ws_valid_w = es_valid && es_ready_go;
+assign es_to_ws_valid_w = ds_to_es_valid && es_ready_go;
 assign es_to_ws_valid = es_to_ws_bus_r[`ES_TO_WS_BUS_WD];
 
 always @(posedge clk) begin
@@ -130,13 +131,13 @@ always @(posedge clk) begin
       es_to_ws_bus_r <= es_to_ws_bus_r;
       exm_forward_bus_r <= exm_forward_bus_r;
     end else begin
-      es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus;
+      es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus_w;
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
       exm_forward_bus_r <= exm_forward_bus_w;
     end
 end
 
-
+assign es_to_ws_bus = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
 
 assign rj_value = (forward_data1[4:0]==rf_raddr1) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr1) ? forward_data2[36:5] :rj_value_t;
 assign rkd_value = (forward_data1[4:0]==rf_raddr2) ? forward_data1[36:5] : (forward_data2[4:0]==rf_raddr2) ? forward_data2[36:5] :rkd_value_t;
@@ -197,13 +198,11 @@ BranchCond u_branch (
     .rj_value(rj_value),
     .jump_target(jump_target),
     .imm(imm),
-    .pre_fail(pre_fail),
-    .flush_IF(flush_IF),
-    .flush_ID(flush_ID)
+    .pre_fail(pre_fail)
 );
 
 assign final_result = res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
-assign es_to_ws_bus = {  
+assign es_to_ws_bus_w = {  
     gr_we,
     dest,  //68:64 5   ?
     final_result,
@@ -213,5 +212,7 @@ assign es_to_ws_bus = {
 assign exm_forward_bus_w = gr_we ? {final_result, dest} : `FORWAED_BUS_WD'b0;
 assign exm_forward_bus = exm_forward_bus_r;
 
-assign br_bus = reset ? 0 : {pre_fail, jump_target};
+assign br_bus = reset ? 0 : {pre_fail&&ds_to_es_valid, jump_target};
+assign flush_IF = pre_fail&&ds_to_es_valid;
+assign flush_ID = pre_fail&&ds_to_es_valid;
 endmodule
