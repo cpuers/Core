@@ -199,20 +199,28 @@ module dcache_dummy_v2 (
         if (reset) begin
             state <= state_reset;
         end else case (state)
-            state_idle: begin
+            state_idle: 
+            // begin
+            //     if (valid) begin
+            //         if (cacop_en) begin
+            //             state <= state_idle;                        
+            //         end else begin
+            //             if (op) begin
+            //                 if (wr_rdy) begin
+            //                     state <= state_idle;
+            //                 end                            
+            //             end else begin
+            //                 if (rd_rdy) begin
+            //                     state <= state_receive;
+            //                 end
+            //             end                       
+            //         end
+            //     end
+            // end
+            begin
                 if (valid) begin
-                    if (cacop_en) begin
-                        state <= state_idle;                        
-                    end else begin
-                        if (op) begin
-                            if (wr_rdy) begin
-                                state <= state_idle;
-                            end                            
-                        end else begin
-                            if (rd_rdy) begin
-                                state <= state_receive;
-                            end
-                        end                       
+                    if (!op && !cacop_en && rd_rdy) begin
+                        state <= state_receive;
                     end
                 end
             end
@@ -222,10 +230,11 @@ module dcache_dummy_v2 (
                         if (cacop_en) begin
                             state <= state_idle;                        
                         end else begin
+                            state <= state_idle;                        
                             if (op) begin
                                 if (wr_rdy) begin
                                     state <= state_idle;
-                                end                            
+                                end
                             end else begin
                                 if (rd_rdy) begin
                                     state <= state_receive;
