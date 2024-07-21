@@ -8,7 +8,8 @@ module InstrBuffer (
     input  [                  2:0] push_num,
     input  [                  1:0] pop_op,
     output [     `IB_WIDTH_LOG2:0] if_bf_sz,
-    output                         empty,
+    output  reg                    instr0_valid,
+    output  reg                    instr1_valid,
     output [  `IB_DATA_BUS_WD-1:0] pop_instr0,
     output [  `IB_DATA_BUS_WD-1:0] pop_instr1
 
@@ -17,6 +18,15 @@ module InstrBuffer (
   reg [`IB_WIDTH_LOG2-1:0] head_ptr;
   reg [`IB_WIDTH_LOG2-1:0] tail_ptr;
   reg [`IB_WIDTH_LOG2:0] buffer_size;
+
+
+  integer i;
+  initial begin
+    for (i = 0; i < `IB_WIDTH; i = i + 1) begin
+      buffer[i] = `IB_DATA_BUS_WD'h0; // 初始化为0
+    end
+  end
+
   always @(posedge clk) begin
     if (rst | flush) begin
       buffer_size <= {1'b0,`IB_WIDTH_LOG2'h0};
@@ -70,12 +80,9 @@ module InstrBuffer (
         end
         2'b01: begin
           head_ptr <= head_ptr + 1;
-          buffer[head_ptr][`IB_DATA_BUS_WD-1] <= 1'b0;
         end
         2'b11: begin
           head_ptr <= head_ptr + 2;
-           buffer[head_ptr][`IB_DATA_BUS_WD-1] <= 1'b0;
-           buffer[head_ptr+1][`IB_DATA_BUS_WD-1] <= 1'b0;
         end
         default: begin
           head_ptr <= head_ptr;
@@ -84,10 +91,29 @@ module InstrBuffer (
     end
   end
 
+  always @(*) 
+  begin
+    case (buffer_size)
+      {1'b0,`IB_WIDTH_LOG2'h0}: 
+        begin
+          instr0_valid = 1'b0;
+          instr1_valid = 1'b0;
+        end 
+      {1'b0,`IB_WIDTH_LOG2'h1}:
+      begin
+          instr0_valid = buffer[head_ptr][`IB_DATA_BUS_WD-1];
+          instr1_valid = 1'b0;
+      end
+      default: 
+      begin
+          instr0_valid = buffer[head_ptr][`IB_DATA_BUS_WD-1];
+          instr1_valid = buffer[head_ptr+1][`IB_DATA_BUS_WD-1];
+      end
+    endcase  
+  end
 
   assign pop_instr0 = buffer[head_ptr];
   assign pop_instr1 = buffer[head_ptr+1];
-  assign empty = |buffer_size;
 
 
 endmodule

@@ -93,17 +93,19 @@ module core_top (
   wire [  `WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
 
   wire                           if0_valid;
+  wire                           if0_valid_to_if1;
   wire                           if1_ready;
   wire [`IF0_TO_IF1_BUS_WD -1:0] if0_if1_bus;
   wire                           need_jump;
   wire [                   31:0] jump_pc;
 
 
-  //FIX ME
+ 
   wire [                   31:0] iaddr;
   wire                           icache_addr_ok;
   wire                           icache_data_ok;
   wire [      `FS_ICACHE_WD-1:0] icache_rdata;
+  
 
   wire [`EXM_DCACHE_RD -1:0] dcache_rdata_bus;
   wire [`EXM_DCACHE_WD -1:0] dcache_wdata1_bus;
@@ -171,7 +173,8 @@ module core_top (
   wire [                    3:0] pbu_pc_valid;
   wire [    `IB_DATA_BUS_WD-1:0] IF_instr0;
   wire [    `IB_DATA_BUS_WD-1:0] IF_instr1;
-  wire                           IB_empty;
+  wire                           IF_instr0_valid;
+  wire                           IF_instr1_valid;
 
   wire [                    4:0] read_addr0;
   wire [                    4:0] read_addr1;
@@ -243,6 +246,7 @@ icache_dummy icache_dummy(
       //for IF1
       .if0_if1_bus(if0_if1_bus),
       .IF1_ready  (if1_ready),
+      .IF0_valid (if0_valid_to_if1),
       //for BPU
       .pc_to_PBU  (if0_pc),
       .pc_is_jump (pbu_pc_is_jump),
@@ -260,7 +264,7 @@ icache_dummy icache_dummy(
       .push_num(push_num),
       .data_ok(icache_data_ok),
       .rdata(icache_rdata),
-      .if0_valid(if0_valid),
+      .if0_valid(if0_valid_to_if1),
       .if1_ready(if1_ready)
   );
   InstrBuffer InstrBuffer (
@@ -271,9 +275,10 @@ icache_dummy icache_dummy(
       .push_num(push_num),
       .pop_op(IB_pop_op),
       .if_bf_sz(can_push_size),
-      .empty(IB_empty),
       .pop_instr0(IF_instr0),
-      .pop_instr1(IF_instr1)
+      .instr0_valid(IF_instr0_valid),
+      .pop_instr1(IF_instr1),
+      .instr1_valid(IF_instr1_valid)
 
   );
   regfile regfile (
@@ -299,8 +304,9 @@ icache_dummy icache_dummy(
       .rst             (reset),
       // for IF
       .IF_instr0       (IF_instr0),
+      .IF_instr0_valid (IF_instr0_valid),
       .IF_instr1       (IF_instr1),
-      .IB_empty        (IB_empty),
+      .IF_instr1_valid (IF_instr1_valid),
       .IF_pop_op       (IB_pop_op),
       //for EXE
       .EXE_instr0      (ds_to_es_bus1),
@@ -379,11 +385,11 @@ icache_dummy icache_dummy(
   
   `ifdef TEAMPACKAGE_EN
   assign debug0_wb_pc            = wb_stage.ws_pc1;
-  assign debug0_wb_rf_wen        = wb_stage.rf_we1;
+  assign debug0_wb_rf_wen        = wb_stage.debug1_gr_we;
   assign debug0_wb_rf_wnum       = wb_stage.rf_waddr1;
   assign debug0_wb_rf_wdata      = wb_stage.rf_wdata1;
   assign debug1_wb_pc            = wb_stage.ws_pc2;
-  assign debug1_wb_rf_wen        = wb_stage.rf_we2;
+  assign debug1_wb_rf_wen        = wb_stage.debug2_gr_we;
   assign debug1_wb_rf_wnum       = wb_stage.rf_waddr2;
   assign debug1_wb_rf_wdata      = wb_stage.rf_wdata2;
   `endif
