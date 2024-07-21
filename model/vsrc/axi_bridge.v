@@ -190,6 +190,7 @@ always @(posedge clk) begin
                     if (bvalid && bready) begin
                         read_requst_state <= read_requst_ready;
                         arid <= 4'b0;
+                        araddr <= inst_rd_addr;
                         arsize <= inst_real_rd_size;
                         arlen  <= inst_real_rd_len;
                         arvalid <= 1'b1;

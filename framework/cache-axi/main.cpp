@@ -1,5 +1,6 @@
 #include <common.hpp>
 
+#include <cstdio>
 #include <verilated.h>
 #include <verilated_fst_c.h>
 #include <VTOP.h>
@@ -88,23 +89,17 @@ public:
         for (u64 i = 0; i < ticks; i ++) {
             dut->eval();
             fstp->dump(ctxp->time());
-
-            // if (dut->axi_ram_wen) {
-            //     pmem_write(dut->axi_ram_waddr, dut->axi_ram_wdata, dut->axi_ram_wstrb);
-            // }
-
             ctxp->timeInc(1);
 
             dut->clock = 1;
             dut->eval();
             fstp->dump(ctxp->time());
-
-            // pmem_read(dut->axi_ram_raddr, &dut->axi_ram_rdata);
-
             ctxp->timeInc(1);
 
             dut->clock = 0;
         }
+
+        dut->eval();
 
         if (stall()) {
             fprintf(stderr, "Stall at %lu\n", ctxp->time());
@@ -180,13 +175,15 @@ public:
             dut->d_op         = dtx->op;
             dut->d_addr       = dtx->addr    ;
             dut->d_uncached   = dtx->uncached  ;
+            dut->d_wdata      = dtx->wdata     ;
+            dut->d_awstrb     = dtx->awstrb    ;
             dut->d_cacop_en   = dtx->cacop_en  ;
             dut->d_cacop_code = dtx->cacop_code;
             dut->d_cacop_addr = dtx->cacop_addr;
         } else {
             dut->d_valid = false;
         }
-        dut->eval();
+        delay(0);
     }
 
     void send(Tx *tx) {
@@ -231,7 +228,14 @@ int main(int argc, char **argv, char **envp) {
                 auto e2 = ram.iread(i->araddr, true);
 
                 auto r = i->rdata;
-                if (i->rdata != e1 && i->rdata != e2) {
+
+                bool flag = true;
+                for (auto i = 0; i < 4; i ++) {
+                    if (r[i] != e1[i] && r[i] != e2[i]) {
+                        flag = false; break;
+                    }
+                }
+                if (!flag) {
                     printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st, i->ed);
                     printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n", 
                         e1[3], e1[2], e1[1], e1[0],
@@ -250,6 +254,7 @@ int main(int argc, char **argv, char **envp) {
                         return 1;
                     }
                 } else if (auto dw = dynamic_cast<DCacheTxW *>(d)) {
+                    // fprintf(stderr, "Write: %08x: %08x\n", dw->addr, dw->wdata);
                     ram.dwrite(dw->addr, dw->wdata, dw->awstrb);
                 }
                 delete d;

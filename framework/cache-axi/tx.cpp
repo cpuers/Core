@@ -28,6 +28,7 @@ DCacheTxR::DCacheTxR(u32 addr) {
     this->addr = addr; 
 }
 DCacheTxW::DCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
+    this->op = true;
     this->addr = addr;
     this->awstrb = awstrb;
     this->wdata = wdata;
