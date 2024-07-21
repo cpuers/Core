@@ -55,8 +55,8 @@ module dcache_dummy (
     assign ready = state_is_idle;
     assign rvalid = state_is_receive && ret_valid && ret_last;
     assign rdata = ret_data;
-    wire request_is_read = (state_is_request && !op);
-    wire request_is_write = (state_is_request && op);
+    wire request_is_read = (state_is_request && !req_op);
+    wire request_is_write = (state_is_request && req_op);
     assign rd_req = request_is_read;
     assign rd_type = 3'b010;
     assign rd_addr = {{30{request_is_read}}, 2'b0} & req_addr;
@@ -86,7 +86,7 @@ module dcache_dummy (
                 end
             end
             state_request: begin
-                if (op) begin
+                if (req_op) begin
                     if (wr_rdy) begin
                         state <= state_idle;
                     end

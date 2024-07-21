@@ -22,9 +22,16 @@ private:
 
     // tx_* -> p_* -> rx_*
 
-    u64 timestamp;
+    u64 timestamp_i, timestamp_d;
+    void update_timestamp_i() {
+        timestamp_i = ctxp->time();
+    }
+    void update_timestamp_d() {
+        timestamp_d = ctxp->time();
+    }
     void update_timestamp() {
-        timestamp = ctxp->time();
+        update_timestamp_i();
+        update_timestamp_d();
     }
 
 public:
@@ -55,15 +62,23 @@ public:
         delete ctxp;
     }
 
+    bool empty_i() {
+        return tx_i.empty() && rx_i.empty() && p_i.empty();
+    }
+
+    bool empty_d() {
+        return tx_d.empty() && rx_d.empty() && p_d.empty();
+    }
+
     bool stall() {
-        return ctxp->time() - timestamp > 100;
+        return 
+            (!empty_i() && (ctxp->time() - timestamp_i > 100)) || 
+            (!empty_d() && (ctxp->time() - timestamp_d > 100));
     }
 
     bool finish() {
         return stall() || (
-            tx_i.empty() && rx_i.empty() && 
-            tx_d.empty() && rx_d.empty() &&
-            p_i.empty() && p_d.empty()
+            empty_i() && empty_d()
         );
     }
 
@@ -106,6 +121,7 @@ public:
             fprintf(stderr, "queues: i: %d %d %d, d: %d %d %d\n", 
                     tx_i.empty(), p_i.empty(), rx_i.empty(),
                     tx_d.empty(), p_d.empty(), rx_d.empty());
+            fprintf(stderr, "ICache update time: %lu, DCache update time: %lu\n", timestamp_i, timestamp_d);
         }
     }
 
@@ -120,7 +136,7 @@ public:
                 }
                 rx_i.push(irx);
                 p_i.pop();
-                update_timestamp();
+                update_timestamp_i();
             }
         }
         if (!tx_i.empty() && dut->i_valid) {
@@ -129,7 +145,7 @@ public:
                 p_i.push(itx);
                 tx_i.pop();
                 itx->st = ctxp->time();
-                update_timestamp();
+                update_timestamp_i();
             }
         }
         if (!p_d.empty()) {
@@ -139,7 +155,7 @@ public:
                 drx->rdata = dut->d_rdata;
                 rx_d.push(drx);
                 p_d.pop();
-                update_timestamp();
+                update_timestamp_d();
             }
         }
         if (!tx_d.empty() && dut->d_valid) {
@@ -147,7 +163,7 @@ public:
             if (dut->d_ready) {
                 tx_d.pop();
                 dtx->st = ctxp->time();
-                update_timestamp();
+                update_timestamp_d();
                 if (auto rdtx = dynamic_cast<DCacheTxR *>(dtx)) {
                     p_d.push(rdtx);
                 } else if (auto wdtx = dynamic_cast<DCacheTxW *>(dtx)) {

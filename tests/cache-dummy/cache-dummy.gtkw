@@ -1,22 +1,22 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Sun Jul 21 11:43:35 2024
+[*] Sun Jul 21 16:17:32 2024
 [*]
 [dumpfile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-dummy/build/cache-dummy.fst"
-[dumpfile_mtime] "Sun Jul 21 11:40:47 2024"
-[dumpfile_size] 4436
+[dumpfile_mtime] "Sun Jul 21 16:16:34 2024"
+[dumpfile_size] 9516
 [savefile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-dummy/cache-dummy.gtkw"
-[timestart] 59
+[timestart] 0
 [size] 1920 1016
 [pos] -1 -1
-*-0.572539 62 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-7.572539 62 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.cache_test_top.
 [sst_width] 378
 [signals_width] 240
 [sst_expanded] 1
 [sst_vpaned_height] 291
-@800200
+@c00200
 -icache
 @28
 TOP.cache_test_top.u_icache.clock
@@ -34,7 +34,7 @@ TOP.cache_test_top.u_icache.uncached
 @22
 [color] 4
 TOP.cache_test_top.u_icache.araddr[31:0]
-@29
+@28
 [color] 4
 TOP.cache_test_top.u_icache.rvalid
 @22
@@ -85,92 +85,92 @@ TOP.cache_test_top.u_icache.buffer_cnt[1:0]
 TOP.cache_test_top.u_icache.buffer_receive_end
 @1000200
 -buffer
+@1401200
 -icache
-@c00200
+@800201
 -dcache
-@28
+@29
 TOP.cache_test_top.u_dcache.clock
 TOP.cache_test_top.u_dcache.reset
-@22
+@23
 TOP.cache_test_top.u_dcache.state[3:0]
-@800200
+@800201
 -cpu
-@28
+@29
 TOP.cache_test_top.u_dcache.valid
 TOP.cache_test_top.u_dcache.ready
 TOP.cache_test_top.u_dcache.op
 TOP.cache_test_top.u_dcache.uncached
-@22
+@23
 TOP.cache_test_top.u_dcache.addr[31:0]
-@28
+@29
 TOP.cache_test_top.u_dcache.rvalid
-@22
+@23
 TOP.cache_test_top.u_dcache.rdata[31:0]
 TOP.cache_test_top.u_dcache.awstrb[3:0]
 TOP.cache_test_top.u_dcache.wdata[31:0]
-@1000200
+@1000201
 -cpu
-@800200
+@800201
 -request_buffer
-@28
+@29
 [color] 5
 TOP.cache_test_top.u_dcache.req_op
-@22
+@23
 [color] 5
 TOP.cache_test_top.u_dcache.req_addr[31:0]
 [color] 5
 TOP.cache_test_top.u_dcache.req_awstrb[3:0]
 [color] 5
 TOP.cache_test_top.u_dcache.req_wdata[31:0]
-@1000200
+@1000201
 -request_buffer
-@800200
+@800201
 -axi_rd
-@28
+@29
 [color] 3
 TOP.cache_test_top.u_dcache.rd_req
 [color] 3
 TOP.cache_test_top.u_dcache.rd_rdy
-@22
+@23
 [color] 3
 TOP.cache_test_top.u_dcache.rd_addr[31:0]
-@28
+@29
 [color] 3
 TOP.cache_test_top.u_dcache.rd_type[2:0]
-@1000200
+@1000201
 -axi_rd
-@800200
+@800201
 -axi_ret
-@22
+@23
 [color] 1
 TOP.cache_test_top.u_dcache.ret_data[31:0]
-@28
+@29
 [color] 1
 TOP.cache_test_top.u_dcache.ret_last
 [color] 1
 TOP.cache_test_top.u_dcache.ret_valid
-@1000200
+@1000201
 -axi_ret
-@800200
+@800201
 -axi_wr
-@28
+@29
 [color] 2
 TOP.cache_test_top.u_dcache.wr_req
 [color] 2
 TOP.cache_test_top.u_dcache.wr_rdy
-@22
+@23
 [color] 2
 TOP.cache_test_top.u_dcache.wr_addr[31:0]
 [color] 2
 TOP.cache_test_top.u_dcache.wr_data[127:0]
 [color] 2
 TOP.cache_test_top.u_dcache.wr_wstrb[3:0]
-@28
+@29
 [color] 2
 TOP.cache_test_top.u_dcache.wr_type[2:0]
-@1000200
+@1000201
 -axi_wr
-@1401200
 -dcache
 @28
 TOP.cache_test_top.u_axi_ram.mem_rd_en
