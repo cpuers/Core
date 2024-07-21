@@ -1,7 +1,7 @@
 #include <common.hpp>
 #include <iostream>
 #include <testbench.hpp>
-#include <Vregfile.h>
+#include <Vtlb_sync.h>
 
 #include <map>
 
@@ -22,7 +22,7 @@ u64 Testbench::reset(Vregfile *dut) {
 
     for (u8 i = 1; i < 32; i ++) {
         dut->rd1 = i;
-        dut->eval();        
+        dut->eval();
     }
 
     dut->wen1 = 0;
