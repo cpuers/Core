@@ -14,6 +14,8 @@
 #define TLBENTRY    16
 #define TESTLOOP  10000
 
+Vtlb_async *dut;
+
 struct tlb_ctx{
     // 比较部分
     u8 e;
@@ -125,7 +127,9 @@ u16 ref_write(tlb_ctx *ctx) {
     dut->plv1 = ctx->plv1;
 }
 
-void tlb_read() { // TODO
+
+/*
+void read_tlb_read() { // TODO
 
     tlb_found = 0
     for(int i=0; i<TLBENTRY; i++) {
@@ -183,8 +187,9 @@ void tlb_read() { // TODO
         mat = found_mat;
     }
 }
+*/
 
-bool dut_read(int idx) {
+bool dut_read(int idx, tlb_ctx *ctx) {
 
     int idx       = rand() % TLBENTRY;
     if(TLB[idx].vppn != ctx->vppn) { 
@@ -270,6 +275,8 @@ void step() {
 
 int main() {
 
+    dut = new Vtlb_async;
+
     for(int i=0; i<TESTLOOP; i++) {
         tlb_ctx *cur = gen_context();
         ref_write(cur);
@@ -277,7 +284,7 @@ int main() {
         do {
             read_idx = rand() % TLBENTRY;
         } while(read_idx == cur_write);
-        bool chk = dut_read(read_idx);
+        bool chk = dut_read(read_idx, cur);
         if(chk == false) {
             std::cout << "FAULT!" << std::endl;
             break;
