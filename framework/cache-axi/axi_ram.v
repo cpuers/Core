@@ -143,6 +143,8 @@ reg s_axi_bvalid_reg = 1'b0, s_axi_bvalid_next;
 reg s_axi_arready_reg = 1'b0, s_axi_arready_next;
 reg [ID_WIDTH-1:0] s_axi_rid_reg = {ID_WIDTH{1'b0}}, s_axi_rid_next;
 reg [DATA_WIDTH-1:0] s_axi_rdata_reg = {DATA_WIDTH{1'b0}}, s_axi_rdata_next;
+// reg [DATA_WIDTH-1:0] s_axi_rdata_next;
+// wire [DATA_WIDTH-1:0] s_axi_rdata_reg;
 reg s_axi_rlast_reg = 1'b0, s_axi_rlast_next;
 reg s_axi_rvalid_reg = 1'b0, s_axi_rvalid_next;
 reg [ID_WIDTH-1:0] s_axi_rid_pipe_reg = {ID_WIDTH{1'b0}};
@@ -347,6 +349,17 @@ always @* begin
     endcase
 end
 
+logic [DATA_WIDTH-1:0] mem_rd_result;
+
+always_comb begin
+    pmem_read(read_addr_valid, mem_rd_result);
+end
+
+always @(posedge clk) begin
+    s_axi_rdata_reg <= mem_rd_result;
+end
+// assign s_axi_rdata_reg = mem_rd_result;
+
 always @(posedge clk) begin
     read_state_reg <= read_state_next;
 
@@ -365,9 +378,9 @@ always @(posedge clk) begin
     //     s_axi_rdata_reg <= mem[read_addr_valid];
     // end
 
-    if (mem_rd_en) begin
-        pmem_read(read_addr_valid, s_axi_rdata_reg);
-    end
+    // if (mem_rd_en) begin
+    //     s_axi_rdata_reg <= mem_rd_result;
+    // end
 
     if (!s_axi_rvalid_pipe_reg || s_axi_rready) begin
         s_axi_rid_pipe_reg <= s_axi_rid_reg;

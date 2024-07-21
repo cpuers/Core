@@ -1,19 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Sun Jul 21 08:16:15 2024
+[*] Sun Jul 21 11:43:35 2024
 [*]
 [dumpfile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-dummy/build/cache-dummy.fst"
-[dumpfile_mtime] "Sun Jul 21 08:15:47 2024"
-[dumpfile_size] 12212
+[dumpfile_mtime] "Sun Jul 21 11:40:47 2024"
+[dumpfile_size] 4436
 [savefile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-dummy/cache-dummy.gtkw"
-[timestart] 809
+[timestart] 59
 [size] 1920 1016
 [pos] -1 -1
-*-2.572539 53 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-0.572539 62 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.cache_test_top.
-[sst_width] 260
-[signals_width] 230
+[sst_width] 378
+[signals_width] 240
 [sst_expanded] 1
 [sst_vpaned_height] 291
 @800200
@@ -34,7 +34,7 @@ TOP.cache_test_top.u_icache.uncached
 @22
 [color] 4
 TOP.cache_test_top.u_icache.araddr[31:0]
-@28
+@29
 [color] 4
 TOP.cache_test_top.u_icache.rvalid
 @22
@@ -69,7 +69,7 @@ TOP.cache_test_top.u_icache.ret_last
 TOP.cache_test_top.u_icache.ret_data[31:0]
 @1000200
 -axi_ret
-@c00200
+@800200
 -buffer
 @22
 [color] 5
@@ -83,11 +83,10 @@ TOP.cache_test_top.u_icache.buffer[2][31:0]
 TOP.cache_test_top.u_icache.buffer_cnt[1:0]
 [color] 5
 TOP.cache_test_top.u_icache.buffer_receive_end
-@1401200
--buffer
 @1000200
+-buffer
 -icache
-@800200
+@c00200
 -dcache
 @28
 TOP.cache_test_top.u_dcache.clock
@@ -164,7 +163,6 @@ TOP.cache_test_top.u_dcache.wr_rdy
 TOP.cache_test_top.u_dcache.wr_addr[31:0]
 [color] 2
 TOP.cache_test_top.u_dcache.wr_data[127:0]
-@23
 [color] 2
 TOP.cache_test_top.u_dcache.wr_wstrb[3:0]
 @28
@@ -172,6 +170,21 @@ TOP.cache_test_top.u_dcache.wr_wstrb[3:0]
 TOP.cache_test_top.u_dcache.wr_type[2:0]
 @1000200
 -axi_wr
+@1401200
 -dcache
+@28
+TOP.cache_test_top.u_axi_ram.mem_rd_en
+@22
+TOP.cache_test_top.u_axi_ram.read_addr_valid[13:0]
+TOP.cache_test_top.u_axi_ram.mem_rd_result[31:0]
+@28
+TOP.cache_test_top.u_axi_ram.mem_wr_en
+@22
+TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
+TOP.cache_test_top.u_axi_ram.s_axi_rdata_reg[31:0]
+@28
+TOP.cache_test_top.u_axi_ram.s_axi_rvalid
+@22
+TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
 [pattern_trace] 1
 [pattern_trace] 0

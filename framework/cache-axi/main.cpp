@@ -45,7 +45,7 @@ public:
     ~Dut() {
         dut->i_valid = dut->d_valid = false;
 
-        delay(3);
+        delay(10);
         dut->final();
         fstp->close();
 
@@ -80,15 +80,27 @@ public:
     }
 
     void delay(u64 ticks) {
+        if (ticks == 0) {
+            dut->eval();
+            return;
+        }
         dut->clock = 0;
         for (u64 i = 0; i < ticks; i ++) {
             dut->eval();
             fstp->dump(ctxp->time());
+
+            // if (dut->axi_ram_wen) {
+            //     pmem_write(dut->axi_ram_waddr, dut->axi_ram_wdata, dut->axi_ram_wstrb);
+            // }
+
             ctxp->timeInc(1);
 
             dut->clock = 1;
             dut->eval();
             fstp->dump(ctxp->time());
+
+            // pmem_read(dut->axi_ram_raddr, &dut->axi_ram_rdata);
+
             ctxp->timeInc(1);
 
             dut->clock = 0;
@@ -116,7 +128,7 @@ public:
                 update_timestamp();
             }
         }
-        if (!tx_i.empty()) {
+        if (!tx_i.empty() && dut->i_valid) {
             auto itx = tx_i.front();
             if (dut->i_ready) {
                 p_i.push(itx);
@@ -135,13 +147,17 @@ public:
                 update_timestamp();
             }
         }
-        if (!tx_d.empty()) {
+        if (!tx_d.empty() && dut->d_valid) {
             auto dtx = tx_d.front();
             if (dut->d_ready) {
-                p_d.push(dtx);
                 tx_d.pop();
                 dtx->st = ctxp->time();
                 update_timestamp();
+                if (auto rdtx = dynamic_cast<DCacheTxR *>(dtx)) {
+                    p_d.push(rdtx);
+                } else if (auto wdtx = dynamic_cast<DCacheTxW *>(dtx)) {
+                    rx_d.push(wdtx);
+                }
             }
         }
         // Then, update the model in the middle
@@ -170,6 +186,7 @@ public:
         } else {
             dut->d_valid = false;
         }
+        dut->eval();
     }
 
     void send(Tx *tx) {
@@ -210,22 +227,30 @@ int main(int argc, char **argv, char **envp) {
         dut.step();
         while (auto t = dut.receive()) {
             if (auto i = dynamic_cast<ICacheTx *>(t)) {
-                std::array<u32, 4> e = ram.iread(i->araddr);
+                auto e1 = ram.iread(i->araddr, false);
+                auto e2 = ram.iread(i->araddr, true);
+
                 auto r = i->rdata;
-                if (i->rdata != r) {
+                if (i->rdata != e1 && i->rdata != e2) {
                     printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st, i->ed);
-                    printf("Expected: [%08x %08x %08x %08x]\n", e[0], e[1], e[2], e[3]);
-                    printf("Result  : [%08x %08x %08x %08x]\n", r[0], r[1], r[2], r[3]);
+                    printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n", 
+                        e1[3], e1[2], e1[1], e1[0],
+                        e2[3], e2[2], e2[1], e2[0]);
+                    printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
                     return 1;
                 }
                 delete i;
             } else if (auto d = dynamic_cast<DCacheTx *>(t)) {
-                u32 e = ram.dread(d->addr);
-                u32 r = d->rdata;
-                if (e != r) {
-                    printf("DCache Read: %08x, [%lu -- %lu]\n", d->addr, d->st, d->ed);
-                    printf("Expected: %08x\nResult  : %08x\n", e, r);
-                    return 1;
+                if (auto dr = dynamic_cast<DCacheTxR *>(d)) {
+                    u32 e = ram.dread(d->addr);
+                    u32 r = dr->rdata;
+                    if (e != r) {
+                        printf("DCache Read: %08x, [%lu -- %lu]\n", dr->addr, dr->st, dr->ed);
+                        printf("Expected: %08x\nResult  : %08x\n", e, r);
+                        return 1;
+                    }
+                } else if (auto dw = dynamic_cast<DCacheTxW *>(d)) {
+                    ram.dwrite(dw->addr, dw->wdata, dw->awstrb);
                 }
                 delete d;
             }

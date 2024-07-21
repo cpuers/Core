@@ -45,7 +45,7 @@ module icache_dummy(
 
     wire            buffer_receive_end;
     assign buffer_receive_end = 
-        (state == state_receive) && (ret_last | (buffer_cnt == 2'd3));
+        (state == state_receive) && (ret_valid && ret_last | (buffer_cnt == 2'd3));
 
     assign ready = state_is_idle;
     assign rvalid = buffer_receive_end;
@@ -134,7 +134,7 @@ module icache_dummy_v2 (
 
     wire            receive_finish;
     assign receive_finish = 
-        state_is_receive && (ret_last || receive_buffer_cnt == 2'd3);
+        state_is_receive && ret_valid && (ret_last || receive_buffer_cnt == 2'd3);
 
     //  (state_is_idle && (
     //      (!cacop_en && rd_rdy) ||
@@ -151,9 +151,9 @@ module icache_dummy_v2 (
     assign rdata = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
     //  (state_is_idle && valid && !cacop_en) ||
     //  (state_is_receive && receive_finish && valid && !cacop_en);
-    assign rd_req = (valid && !cacop_en) && (state_is_idle || state_is_receive);
+    assign rd_req = (valid && !cacop_en) && (state_is_idle || (state_is_receive && receive_finish));
     assign rd_type = 3'b100;
-    assign rd_addr = {28'b1, 4'b0} & araddr;
+    assign rd_addr = {{28{1'b1}}, 4'b0} & araddr;
 
     always @(posedge clock) begin
         if (reset) begin

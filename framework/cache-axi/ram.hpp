@@ -14,7 +14,7 @@ public:
     Ram();
     ~Ram();
     void init();
-    std::array<u32, 4> iread(u32 addr);
+    std::array<u32, 4> iread(u32 addr, bool uncached);
     u32 dread(u32 addr);
     void dwrite(u32 addr, u32 data, u8 wstrb);
 };

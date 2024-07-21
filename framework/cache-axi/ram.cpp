@@ -2,6 +2,7 @@
 #include <common.hpp>
 #include <cstdlib>
 #include <ram.hpp>
+#include <cassert>
 
 static u32 mem[MEM_SIZE / 4];
 
@@ -28,13 +29,17 @@ Ram::Ram() {}
 Ram::~Ram() {}
 void Ram::init() {
     for (u32 i = 0; i < MEM_SIZE / 4; i ++) {
-        mem[i] = rand();
+        mem[i] = i;
         imem[i] = dmem[i] = mem[i];
     }
 }
-std::array<u32, 4> Ram::iread(u32 addr) {
-    u32 a = (addr / 4) % (MEM_SIZE / 4);
-    return {imem[a], imem[a + 1], imem[a + 2], imem[a + 3]};
+std::array<u32, 4> Ram::iread(u32 addr, bool uncached) {
+    u32 a = (addr / 16) * 4 % (MEM_SIZE / 4);
+    if (uncached) {
+        return {mem[a], mem[a+1], mem[a+2], mem[a+3]};
+    } else {
+        return {imem[a], imem[a+1], imem[a+2], imem[a+3]};
+    }
 }
 u32 Ram::dread(u32 addr) {
     u32 valid_addr = (addr / 4) % (MEM_SIZE / 4);
