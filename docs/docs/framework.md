@@ -80,6 +80,12 @@ include ../tests.mk # common rules for unit tests
 
 用户只需提供 `Testbench` 类的实现。`Testbench` 只能根据框架给出的时间设置输入和检查输出；
 
+### cache-axi
+
+用于测试 ICache，DCache + AXI Bridge + AXI RAM 访存部分的测试框架，提供了构造 CPU Transaction 的 C++ 类和 CPU 流水线的简单模拟；
+
+目前仅支持 Read-only 的随机访存测试；
+
 ### nvboard (WIP)
 
 接入 NVBoard，可以以图形化方式，手动测试一些简单电路；
