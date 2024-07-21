@@ -53,7 +53,7 @@ module dcache_dummy (
     reg     [31:0]  req_wdata;
     
     assign ready = state_is_idle;
-    assign rvalid = ret_last && state_is_receive;
+    assign rvalid = state_is_receive && ret_valid && ret_last;
     assign rdata = ret_data;
     wire request_is_read = (state_is_request && !op);
     wire request_is_write = (state_is_request && op);
@@ -97,7 +97,7 @@ module dcache_dummy (
                 end
             end
             state_receive: begin
-                if (ret_last) begin
+                if (ret_valid && ret_last) begin
                     state <= state_idle;
                 end
             end
@@ -159,7 +159,7 @@ module dcache_dummy_v2 (
     wire state_can_accept_request;
 
     wire receive_finish;
-    assign receive_finish = state_is_receive && ret_last;
+    assign receive_finish = state_is_receive && ret_valid && ret_last;
     assign state_can_accept_request = (state_is_idle || receive_finish);
 
     //  (state_is_idle && (
@@ -186,13 +186,13 @@ module dcache_dummy_v2 (
     assign rd_req = 
         state_can_accept_request && valid && !cacop_en && !op;
     assign rd_type = 3'b010;
-    assign rd_addr = {30'b1, 2'b0} & addr;
+    assign rd_addr = {{30{1'b1}}, 2'b0} & addr;
     //  (state_is_idle && valid && !cacop_en && op) ||
     //  (state_is_receive && receive_finish && valid && op);
     assign wr_req = 
         state_can_accept_request && valid && !cacop_en && op;
     assign wr_type = 3'b010;
-    assign wr_addr = {30'b1, 2'b0} & addr;
+    assign wr_addr = {{30{1'b1}}, 2'b0} & addr;
     assign wr_wstrb = awstrb;
     assign wr_data = {96'b0, wdata};
 

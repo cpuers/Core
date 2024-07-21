@@ -1,5 +1,15 @@
-`define ICACHE_MODULE icache_dummy
-`define DCACHE_MODULE dcache_dummy
+// ┌────────┐   ┌────────┐
+// | icache |   | dcache |
+// └────┬───┘   └───┬────┘
+//      │           │
+//     ┌────────────┐
+//     | axi_bridge | (Master)
+//     └─────┬──────┘
+//           │
+//     ┌─────┴──────┐     
+//     |  axi_ram   | (Slave)
+//     └────────────┘
+
 
 module cache_test_top (
     input  wire          clock,

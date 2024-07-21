@@ -109,7 +109,8 @@ $(DST_DIR)/%.o: %.S
 
 $(LIBS): %:
 	@$(MAKE) -s -C $(CORE_HOME)/$* \
-	    TOP=$(TOP) VSRCS_TEST="$(VSRCS)" archive
+        TOP=$(TOP) VSRCS_TEST="$(VSRCS)" VERILATOR_FLAGS_TEST="$(VERILATOR_FLAGS)" \
+        archive
 
 $(ARCHIVE): $(OBJS)
 	@echo + AR "->" $(shell realpath $@ --relative-to .)
@@ -132,10 +133,13 @@ archive: $(ARCHIVE)
 clean:
 	rm -rf $(WORK_DIR)/build/
 	rm -f $(WORK_DIR)/framework
+
+clean-model:
+	-@$(MAKE) -s -C $(CORE_HOME)/model/ clean
 .PHONY: clean
 
 CLEAN_ALL = $(dir $(shell find . -mindepth 2 -name Makefile))
-clean-all: $(CLEAN_ALL) clean
+clean-all: $(CLEAN_ALL) clean clean-model
 $(CLEAN_ALL):
 	-@$(MAKE) -s -C $@ clean
 .PHONY: clean-all $(CLEAN_ALL)

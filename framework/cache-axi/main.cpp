@@ -5,87 +5,9 @@
 #include <VTOP.h>
 
 #include <ram.hpp>
-
-#include <bits/stdc++.h>
-
-using namespace std;
-
-class CpuTx {
-public:
-    u64     st;
-    u64     ed;
-
-    bool    done;
-
-    CpuTx() : st(0), ed(0), done(false) {}
-};
-
-class CpuICacheTx : public CpuTx {
-public:
-    u32     araddr;
-    bool    uncached;
-    std::array<u32, 4> rdata;
-    bool    cacop_en;
-    u8      cacop_code;
-    u32     cacop_addr;
-
-    CpuICacheTx() {
-        araddr = 0;
-        uncached = false;
-        rdata = {0, 0, 0, 0};
-        cacop_en = false;
-        cacop_code = 0;
-        cacop_addr = 0;
-    }
-};
-
-class CpuICacheTxR: public CpuICacheTx {
-public:
-    CpuICacheTxR(u32 araddr) {
-        this->araddr = araddr;
-    }
-};
-
-class CpuDCacheTx : public CpuTx {
-public:
-    bool    op;
-    u32     addr;
-    bool    uncached;
-    u32     rdata;
-    u8      awstrb;
-    u32     wdata;
-    bool    cacop_en;
-    u8      cacop_code;
-    u32     cacop_addr;
-
-    CpuDCacheTx() {
-        op = false;
-        addr = 0;
-        uncached = false;
-        rdata = 0;
-        awstrb = 0;
-        wdata = 0;
-        cacop_en = false;
-        cacop_code = 0;
-        cacop_addr = 0;
-    }
-};
-
-class CpuDCacheTxR : public CpuDCacheTx {
-public:
-    CpuDCacheTxR(u32 addr) {
-        this->addr = addr;
-    }
-};
-
-class CpuDCacheTxW: public CpuDCacheTx {
-public:
-    CpuDCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
-        this->addr = addr;
-        this->awstrb = awstrb;
-        this->wdata = wdata;
-    }
-};
+#include <tx.hpp>
+#include <testbench.hpp>
+#include <queue>
 
 class Dut {
 private:
@@ -94,8 +16,8 @@ private:
     VTOP* const dut;
 
     // request waiting, pipeline passing, data waiting
-    std::queue<CpuICacheTx *> tx_i, p_i, rx_i;
-    std::queue<CpuDCacheTx *> tx_d, p_d, rx_d;
+    std::queue<ICacheTx *> tx_i, p_i, rx_i;
+    std::queue<DCacheTx *> tx_d, p_d, rx_d;
 
     // tx_* -> p_* -> rx_*
 
@@ -104,9 +26,6 @@ private:
         timestamp = ctxp->time();
     }
 
-    bool stall() {
-        return ctxp->time() - timestamp > 100;
-    }
 public:
     Dut(int argc, char **argv) : 
         ctxp(new VerilatedContext), 
@@ -124,6 +43,8 @@ public:
         reset(10);
     }
     ~Dut() {
+        dut->i_valid = dut->d_valid = false;
+
         delay(3);
         dut->final();
         fstp->close();
@@ -131,6 +52,10 @@ public:
         delete dut;
         delete fstp;
         delete ctxp;
+    }
+
+    bool stall() {
+        return ctxp->time() - timestamp > 100;
     }
 
     bool finish() {
@@ -170,7 +95,10 @@ public:
         }
 
         if (stall()) {
-            fprintf(stderr, "Stall!\n");
+            fprintf(stderr, "Stall at %lu\n", ctxp->time());
+            fprintf(stderr, "queues: i: %d %d %d, d: %d %d %d\n", 
+                    tx_i.empty(), p_i.empty(), rx_i.empty(),
+                    tx_d.empty(), p_d.empty(), rx_d.empty());
         }
     }
 
@@ -244,24 +172,22 @@ public:
         }
     }
 
-    void send(CpuICacheTx *tx) {
-        tx_i.push(tx);
+    void send(Tx *tx) {
+        if (auto itx = dynamic_cast<ICacheTx *>(tx)) {
+            tx_i.push(itx);
+        } else if (auto dtx = dynamic_cast<DCacheTx *>(tx)) {
+            tx_d.push(dtx);
+        } else {
+            assert(false);
+        }
     }
 
-    void send(CpuDCacheTx *tx) {
-        tx_d.push(tx);
-    }
-
-    CpuICacheTx *receive_i() {
+    Tx *receive() {
         if (!rx_i.empty()) {
             auto r =  rx_i.front();
             rx_i.pop();
             return r;
         }
-        return nullptr;
-    }
-
-    CpuDCacheTx *receive_d() {
         if (!rx_d.empty()) {
             auto r =  rx_d.front();
             rx_d.pop();
@@ -276,37 +202,33 @@ int main(int argc, char **argv, char **envp) {
     Ram ram;
     ram.init();
     dut.reset(10);
-    for (int i = 0; i < 100; i ++) {
-        if (rand() & 1) {
-            auto t = new CpuICacheTxR(rand());
-            dut.send(t);
-        } else {
-            auto t = new CpuDCacheTxR(rand());
-            dut.send(t);
-        }
+    Testbench tb(argc, argv);
+    for (auto t : tb.tests()) {
+        dut.send(t);
     }
     while (!dut.finish()) {
         dut.step();
-        auto i = dut.receive_i();
-        if (i) {
-            std::array<u32, 4> e = ram.iread(i->araddr);
-            auto r = i->rdata;
-            if (i->rdata != r) {
-                printf("Expected: [%08x %08x %08x %08x]\n", e[0], e[1], e[2], e[3]);
-                printf("Result  : [%08x %08x %08x %08x]\n", r[0], r[1], r[2], r[3]);
-                return 1;
+        while (auto t = dut.receive()) {
+            if (auto i = dynamic_cast<ICacheTx *>(t)) {
+                std::array<u32, 4> e = ram.iread(i->araddr);
+                auto r = i->rdata;
+                if (i->rdata != r) {
+                    printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st, i->ed);
+                    printf("Expected: [%08x %08x %08x %08x]\n", e[0], e[1], e[2], e[3]);
+                    printf("Result  : [%08x %08x %08x %08x]\n", r[0], r[1], r[2], r[3]);
+                    return 1;
+                }
+                delete i;
+            } else if (auto d = dynamic_cast<DCacheTx *>(t)) {
+                u32 e = ram.dread(d->addr);
+                u32 r = d->rdata;
+                if (e != r) {
+                    printf("DCache Read: %08x, [%lu -- %lu]\n", d->addr, d->st, d->ed);
+                    printf("Expected: %08x\nResult  : %08x\n", e, r);
+                    return 1;
+                }
+                delete d;
             }
-            delete i;
-        }
-        auto d = dut.receive_d();
-        if (d) {
-            u32 e = ram.dread(d->addr);
-            u32 r = d->rdata;
-            if (e != r) {
-                printf("Expected: %08x\nResult  : %08x\n", e, r);
-                return 1;
-            }
-            delete d;
         }
     }
     return 0;

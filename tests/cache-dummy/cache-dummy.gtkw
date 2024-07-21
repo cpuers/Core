@@ -1,12 +1,12 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Sun Jul 21 04:25:14 2024
+[*] Sun Jul 21 08:16:15 2024
 [*]
 [dumpfile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-dummy/build/cache-dummy.fst"
-[dumpfile_mtime] "Sun Jul 21 04:18:27 2024"
-[dumpfile_size] 4713
+[dumpfile_mtime] "Sun Jul 21 08:15:47 2024"
+[dumpfile_size] 12212
 [savefile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-dummy/cache-dummy.gtkw"
-[timestart] 42
+[timestart] 809
 [size] 1920 1016
 [pos] -1 -1
 *-2.572539 53 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
