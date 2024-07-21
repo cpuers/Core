@@ -93,26 +93,33 @@ private:
     VerilatedFstC* fstp;
     VTOP* const dut;
 
-    std::queue<CpuICacheTx *> tx_i, rx_i;
-    std::queue<CpuDCacheTx *> tx_d, rx_d;
+    // request waiting, pipeline passing, data waiting
+    std::queue<CpuICacheTx *> tx_i, p_i, rx_i;
+    std::queue<CpuDCacheTx *> tx_d, p_d, rx_d;
 
-    CpuICacheTx *itx, *irx;
-    CpuDCacheTx *dtx, *drx;
+    // tx_* -> p_* -> rx_*
 
-    // tx_* -> *tx -> *rx -> rx_*
+    u64 timestamp;
+    void update_timestamp() {
+        timestamp = ctxp->time();
+    }
+
+    bool stall() {
+        return ctxp->time() - timestamp > 100;
+    }
 public:
     Dut(int argc, char **argv) : 
         ctxp(new VerilatedContext), 
         fstp(new VerilatedFstC), 
-        dut(new VTOP),
-        itx(nullptr), irx(nullptr),
-        dtx(nullptr), drx(nullptr)
+        dut(new VTOP)
     {
         ctxp->traceEverOn(true);
         ctxp->commandArgs(argc, argv);
 
         dut->trace(fstp, 0);
         fstp->open("build/" TEST ".fst");
+
+        update_timestamp();
 
         reset(10);
     }
@@ -127,11 +134,10 @@ public:
     }
 
     bool finish() {
-        return (
+        return stall() || (
             tx_i.empty() && rx_i.empty() && 
             tx_d.empty() && rx_d.empty() &&
-            !itx && !dtx &&
-            !irx && !drx
+            p_i.empty() && p_d.empty()
         );
     }
 
@@ -144,6 +150,8 @@ public:
         delay(ticks);
 
         dut->reset = 0;
+
+        update_timestamp();
     }
 
     void delay(u64 ticks) {
@@ -160,53 +168,59 @@ public:
 
             dut->clock = 0;
         }
+
+        if (stall()) {
+            fprintf(stderr, "Stall!\n");
+        }
     }
 
     void step() {
         // Firstly, receive data at output
-        if (irx) {
+        if (!p_i.empty()) {
+            auto irx = p_i.front();
             if (dut->i_rvalid) {
                 irx->ed = ctxp->time();
                 for (u32 i = 0; i < 4; i ++) {
                     irx->rdata[i] = dut->i_rdata.at(i);
                 }
                 rx_i.push(irx);
-                irx = nullptr;
+                p_i.pop();
+                update_timestamp();
             }
         }
-        if (itx) {
+        if (!tx_i.empty()) {
+            auto itx = tx_i.front();
             if (dut->i_ready) {
-                // assume blocking cache
-                assert(!irx);
-                irx = itx;
-                itx = nullptr;
-                irx->st = ctxp->time();
+                p_i.push(itx);
+                tx_i.pop();
+                itx->st = ctxp->time();
+                update_timestamp();
             }
         }
-        if (drx) {
+        if (!p_d.empty()) {
+            auto drx = p_d.front();
             if (dut->d_rvalid) {
                 drx->ed = ctxp->time();
                 drx->rdata = dut->d_rdata;
                 rx_d.push(drx);
-                drx = nullptr;
+                p_d.pop();
+                update_timestamp();
             }
         }
-        if (dtx) {
+        if (!tx_d.empty()) {
+            auto dtx = tx_d.front();
             if (dut->d_ready) {
-                // assume blocking cache
-                assert(!drx);
-                drx = dtx;
-                dtx = nullptr;
-                drx->st = ctxp->time();
+                p_d.push(dtx);
+                tx_d.pop();
+                dtx->st = ctxp->time();
+                update_timestamp();
             }
         }
         // Then, update the model in the middle
         delay(1);
         // Finally, put new data at input
-        if (itx) {
-        } else if (!tx_i.empty()) {
-            itx = tx_i.front();
-            tx_i.pop();
+        if (!tx_i.empty()) {
+            auto itx = tx_i.front();
             dut->i_valid = true;
             dut->i_araddr     = itx->araddr    ;
             dut->i_uncached   = itx->uncached  ;
@@ -216,10 +230,8 @@ public:
         } else {
             dut->i_valid = false;
         }
-        if (dtx) {
-        } else if (!tx_d.empty()) {
-            dtx = tx_d.front();
-            tx_d.pop();
+        if (!tx_d.empty()) {
+            auto dtx = tx_d.front();
             dut->d_valid = true;
             dut->d_op         = dtx->op;
             dut->d_addr       = dtx->addr    ;
@@ -284,6 +296,7 @@ int main(int argc, char **argv, char **envp) {
                 printf("Result  : [%08x %08x %08x %08x]\n", r[0], r[1], r[2], r[3]);
                 return 1;
             }
+            delete i;
         }
         auto d = dut.receive_d();
         if (d) {
@@ -293,7 +306,7 @@ int main(int argc, char **argv, char **envp) {
                 printf("Expected: %08x\nResult  : %08x\n", e, r);
                 return 1;
             }
-
+            delete d;
         }
     }
     return 0;

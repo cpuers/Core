@@ -53,7 +53,7 @@ module dcache_dummy (
     reg     [31:0]  req_wdata;
     
     assign ready = state_is_idle;
-    assign rvalid = ret_last;
+    assign rvalid = ret_last && state_is_receive;
     assign rdata = ret_data;
     wire request_is_read = (state_is_request && !op);
     wire request_is_write = (state_is_request && op);
@@ -82,6 +82,7 @@ module dcache_dummy (
                         req_awstrb <= awstrb;
                         req_wdata <= wdata;
                     end
+                    state <= state_request;
                 end
             end
             state_request: begin
