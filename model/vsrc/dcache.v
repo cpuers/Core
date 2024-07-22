@@ -15,10 +15,12 @@ module dcache_dummy (
     /// read data (r) channel
     output          rvalid,
     output  [31:0]  rdata,
+    output          rhit,
     /// write address (aw) channel
     input   [ 3:0]  awstrb,
     /// write data (w) channel
     input   [31:0]  wdata,
+    output          whit,
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]
     input   [31:0]  cacop_addr,
@@ -65,6 +67,9 @@ module dcache_dummy (
     assign wr_addr = {{30{request_is_write}}, 2'b0} & req_addr;
     assign wr_wstrb = req_awstrb;
     assign wr_data = {96'b0, req_wdata};
+
+    assign rhit = 1'b0;
+    assign whit = 1'b0;
 
     always @(posedge clock) begin
         if (reset) begin
@@ -125,10 +130,12 @@ module dcache_dummy_v2 (
     /// read data (r) channel
     output          rvalid,
     output  [31:0]  rdata,
+    output          rhit,
     /// write address (aw) channel
     input   [ 3:0]  awstrb,
     /// write data (w) channel
     input   [31:0]  wdata,
+    output          whit,
     input           cacop_en,
     /* verilator lint_off UNUSED */
     input   [ 1:0]  cacop_code, // code[4:3]
@@ -195,6 +202,9 @@ module dcache_dummy_v2 (
     assign wr_addr = {{30{1'b1}}, 2'b0} & addr;
     assign wr_wstrb = awstrb;
     assign wr_data = {96'b0, wdata};
+
+    assign rhit = 1'b0;
+    assign whit = 1'b0;
 
     always @(posedge clock) begin
         if (reset) begin

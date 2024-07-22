@@ -118,8 +118,10 @@ module core_top (
   wire        dcache_uncached;
   wire        dcache_rvalid;
   wire [31:0] dcache_rdata;
+  wire        dcache_rhit;
   wire [ 3:0] dcache_awstrb;
   wire [31:0] dcache_wdata;
+  wire        dcache_whit;
   wire        dcache_cacop_en;
   wire [ 1:0] dcache_cacop_code; 
   wire [31:0] dcache_cacop_addr;
@@ -214,6 +216,9 @@ icache_dummy icache_dummy(
 
     .rvalid(icache_data_ok),
     .rdata(icache_rdata),
+    /* verilator lint_off PINCONNECTEMPTY */
+    .rhit(          ),
+    /* verilator lint_on PINCONNECTEMPTY */
 
     //TODO
     .cacop_en(dcache_cacop_en),
@@ -408,10 +413,12 @@ icache_dummy icache_dummy(
       /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
+      .rhit(dcache_rhit),
       /// write address (aw) channel
       .awstrb(dcache_awstrb),
       /// write data (w) channel
       .wdata(dcache_wdata),
+      .whit(dcache_whit),
       .cacop_en(dcache_cacop_en),
       .cacop_code(dcache_cacop_code), // code[4:3]
       .cacop_addr(dcache_cacop_addr),

@@ -15,6 +15,7 @@ module icache_dummy(
     //// read data (r) channel
     output wire          rvalid,
     output wire [127:0]  rdata,
+    output wire          rhit,
     /// cpu cacop
     input  wire          cacop_en,
     input  wire  [ 1:0]  cacop_code, // code[4:3]
@@ -51,6 +52,7 @@ module icache_dummy(
     assign rvalid = buffer_receive_end;
     assign rdata = 
         {128{rvalid}} & {ret_data, buffer[2], buffer[1], buffer[0]};
+    assign rhit = 1'b0;
 
     assign rd_req = state_is_request;
     assign rd_type = 3'b100;
@@ -108,6 +110,7 @@ module icache_dummy_v2 (
     //// read data (r) channel
     output wire          rvalid,
     output wire [127:0]  rdata,
+    output wire          rhit,
     /// cpu cacop
     input  wire          cacop_en,
     input  wire  [ 1:0]  cacop_code, // code[4:3]
@@ -149,6 +152,7 @@ module icache_dummy_v2 (
     assign ready = (state_is_idle || receive_finish) && (cacop_en || rd_rdy);
     assign rvalid = receive_finish;
     assign rdata = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
+    assign rhit = 1'b0;
     //  (state_is_idle && valid && !cacop_en) ||
     //  (state_is_receive && receive_finish && valid && !cacop_en);
     assign rd_req = (valid && !cacop_en) && (state_is_idle || (state_is_receive && receive_finish));
@@ -411,6 +415,7 @@ module icache_v2(
     //// read data (r) channel
     output          rvalid,
     output [127:0]  rdata,
+    output          rhit,
     /// cpu cacop
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]
@@ -472,6 +477,7 @@ module icache_v2(
     assign lookup_v = tagv_douta[20];
     assign lookup_tag = tagv_douta[19:0];
     assign lookup_hit = lookup_v && (lookup_tag == request_buffer_tag);
+    assign rhit = state_is_lookup && lookup_hit;
     /// receive
     reg     [31:0]  receive_buffer      [ 0:2];
     reg     [ 1:0]  receive_buffer_cnt;
@@ -630,6 +636,7 @@ module icache_v3(
     //// read data (r) channel
     output          rvalid,
     output [127:0]  rdata,
+    output          rhit,
     /// cpu cacop
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]
@@ -904,6 +911,7 @@ module icache_v4(
     //// read data (r) channel
     output          rvalid,
     output [127:0]  rdata,
+    output          rhit,
     /// cpu cacop
     input           cacop_en,
     input   [ 1:0]  cacop_code, // code[4:3]

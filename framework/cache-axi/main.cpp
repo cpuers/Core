@@ -131,10 +131,8 @@ public:
         if (!p_i.empty()) {
             auto irx = p_i.front();
             if (dut->i_rvalid) {
-                irx->ed = ctxp->time();
-                for (u32 i = 0; i < 4; i ++) {
-                    irx->rdata[i] = dut->i_rdata.at(i);
-                }
+                irx->ed(ctxp->time());
+                irx->pull(dut);
                 rx_i.push(irx);
                 p_i.pop();
                 update_timestamp_i();
@@ -145,15 +143,15 @@ public:
             if (dut->i_ready) {
                 p_i.push(itx);
                 tx_i.pop();
-                itx->st = ctxp->time();
+                itx->st(ctxp->time());
                 update_timestamp_i();
             }
         }
         if (!p_d.empty()) {
             auto drx = p_d.front();
             if (dut->d_rvalid) {
-                drx->ed = ctxp->time();
-                drx->rdata = dut->d_rdata;
+                drx->ed(ctxp->time());
+                drx->pull(dut);
                 rx_d.push(drx);
                 p_d.pop();
                 update_timestamp_d();
@@ -163,7 +161,7 @@ public:
             auto dtx = tx_d.front();
             if (dut->d_ready) {
                 tx_d.pop();
-                dtx->st = ctxp->time();
+                dtx->st(ctxp->time());
                 update_timestamp_d();
                 if (auto rdtx = dynamic_cast<DCacheTxR *>(dtx)) {
                     p_d.push(rdtx);
@@ -178,25 +176,14 @@ public:
         if (!tx_i.empty()) {
             auto itx = tx_i.front();
             dut->i_valid = true;
-            dut->i_araddr     = itx->araddr    ;
-            dut->i_uncached   = itx->uncached  ;
-            dut->i_cacop_en   = itx->cacop_en  ;
-            dut->i_cacop_code = itx->cacop_code;
-            dut->i_cacop_addr = itx->cacop_addr;
+            itx->push(dut);
         } else {
             dut->i_valid = false;
         }
         if (!tx_d.empty()) {
             auto dtx = tx_d.front();
             dut->d_valid = true;
-            dut->d_op         = dtx->op;
-            dut->d_addr       = dtx->addr    ;
-            dut->d_uncached   = dtx->uncached  ;
-            dut->d_wdata      = dtx->wdata     ;
-            dut->d_awstrb     = dtx->awstrb    ;
-            dut->d_cacop_en   = dtx->cacop_en  ;
-            dut->d_cacop_code = dtx->cacop_code;
-            dut->d_cacop_addr = dtx->cacop_addr;
+            dtx->push(dut);
         } else {
             dut->d_valid = false;
         }
@@ -244,7 +231,7 @@ bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
                 }
             }
             if (!flag) {
-                printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st, i->ed);
+                printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st(), i->ed());
                 printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n", 
                     e1[3], e1[2], e1[1], e1[0],
                     e2[3], e2[2], e2[1], e2[0]);
@@ -256,7 +243,7 @@ bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
                 u32 e = ram.dread(d->addr, false);
                 u32 r = dr->rdata;
                 if (e != r) {
-                    printf("DCache Read: %08x, [%lu -- %lu]\n", dr->addr, dr->st, dr->ed);
+                    printf("DCache Read: %08x, [%lu -- %lu]\n", dr->addr, dr->st(), dr->ed());
                     printf("Expected: %08x\nResult  : %08x\n", e, r);
                     return false;
                 }
