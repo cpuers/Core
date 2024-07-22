@@ -4,4 +4,4 @@ FW   = cache-axi
 ICACHE_MODULE=icache_dummy_v2
 DCACHE_MODULE=dcache_dummy_v2
 
-include ../tests.mk
+include ../../tests.mk
