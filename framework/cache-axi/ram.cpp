@@ -34,7 +34,7 @@ Ram::Ram() {
 }
 Ram::~Ram() {}
 std::array<u32, 4> Ram::iread(u32 addr, bool uncached) {
-    u32 *m = uncached ? mem : imem;
+    u32 *m = uncached ? dmem : imem;
     u32 a = (addr / 16) * 4 % (MEM_SIZE / 4);
     return {m[a], m[a+1], m[a+2], m[a+3]};
 }
@@ -43,8 +43,8 @@ u32 Ram::dread(u32 addr, bool uncached) {
     u32 valid_addr = (addr / 4) % (MEM_SIZE / 4);
     return m[valid_addr];
 }
-void Ram::dwrite(u32 addr, u32 data, u8 wstrb, bool uncached) {
-    u32 *m = uncached ? mem : dmem;
+void Ram::dwrite(u32 addr, u32 data, u8 wstrb) {
+    u32 *m = dmem;
     u32 valid_addr = (addr / 4) % (MEM_SIZE / 4);
 
     u32 o = m[valid_addr];
@@ -57,4 +57,10 @@ void Ram::dwrite(u32 addr, u32 data, u8 wstrb, bool uncached) {
         }
     }
     m[valid_addr] = t;
+}
+void Ram::iflush(u32 addr) {
+  u32 a = (addr / 16) * 4 % (MEM_SIZE / 4);
+  for (int i = 0; i < 4; i++) {
+    imem[a + i] = mem[a + i];
+  }
 }

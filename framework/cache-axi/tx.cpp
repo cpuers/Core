@@ -84,23 +84,20 @@ bool CacheTx::hit() {
 }
 bool ICacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
-  auto e1 = ram->iread(araddr, false);
-  auto e2 = ram->iread(araddr, true);
-
-  auto r = rdata;
-
-  bool flag = true;
-  for (auto i = 0; i < 4; i++) {
-    if (r[i] != e1[i] && r[i] != e2[i]) {
-      flag = false;
-      break;
-    }
+  if (!hit()) {
+    ram->iflush(araddr);
   }
-  if (!flag) {
+  if (values.find(rdata) == values.end()) {
     printf("ICache Read: %08x, [%lu -- %lu]\n", araddr, st(), ed());
-    printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n",
-           e1[3], e1[2], e1[1], e1[0], e2[3], e2[2], e2[1], e2[0]);
+    r_t &r = rdata;
     printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
+    auto it = values.begin();
+    const r_t &e = *it;
+    printf("Expected: [%08x %08x %08x %08x]\n", e[3], e[2], e[1], e[0]);
+    for (it ++; it != values.end(); it ++) {
+      const r_t &e = *it;
+      printf("  or    : [%08x %08x %08x %08x]\n", e[3], e[2], e[1], e[0]);
+    }
     return false;
   }
   return true;
@@ -109,18 +106,24 @@ bool ICacheTxR::hit() {
   CacheTx::hit();
   return this->rhit;
 }
-ICacheTxUR::ICacheTxUR(u32 araddr) : ICacheTxR(araddr) { uncached = true; }
+ICacheTxUR::ICacheTxUR(u32 araddr) { 
+  this->araddr = araddr;
+  uncached = true; 
+}
 bool ICacheTxUR::hit() { return false; }
 bool DCacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
-  u32 e = ram->dread(addr, false);
-  u32 r = rdata;
-  if (e != r) {
+  if (values.find(rdata) == values.end()) {
     printf("DCache Read: %08x, [%lu -- %lu]\n", addr, st(), ed());
-    printf("Expected: %08x\nResult  : %08x\n", e, r);
+    printf("Result  : %08x\n", rdata);
+    auto it = values.begin();
+    printf("Expected: %08x\n", *it);
+    for (it ++; it != values.end(); it ++) {
+      printf("  or    : %08x\n", *it);
+    }
     return false;
   }
-  return ram->dread(addr, uncached) == rdata;
+  return true;
 }
 bool DCacheTxR::hit() {
   CacheTx::hit();
@@ -128,8 +131,25 @@ bool DCacheTxR::hit() {
 }
 bool DCacheTxW::check(Ram *ram) {
   CacheTx::check(ram);
-  ram->dwrite(addr, wdata, awstrb, false);
+  ram->dwrite(addr, wdata, awstrb);
   return true;
 }
 bool DCacheTxW::hit() { return this->whit; }
 Tx::State Tx::state() { return state_; };
+void CacheTx::watch(Ram *ram) {}
+void DCacheTxR::watch(Ram *ram) {
+  values.insert(ram->dread(addr, false));
+  values.insert(ram->dread(addr, true));
+}
+void ICacheTxR::watch(Ram *ram) {
+  auto a = ram->iread(araddr, false);
+  auto b = ram->iread(araddr, true);
+  u32 addr = araddr / 16 * 16;
+  r_t c = {};
+  for (auto i = 0; i < 4; i++) {
+    c[i] = ram->dread(addr + 4 * i, false);
+  }
+  values.insert(a);
+  values.insert(b);
+  values.insert(c);
+}

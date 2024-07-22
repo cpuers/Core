@@ -16,10 +16,13 @@ private:
     VerilatedContext* ctxp;
     VerilatedFstC* fstp;
     VTOP* const dut;
+    Ram* ram;
 
     // request waiting, pipeline passing, data waiting
-    std::queue<ICacheTx *> tx_i, p_i, rx_i;
-    std::queue<DCacheTx *> tx_d, p_d, rx_d;
+    std::queue<ICacheTx *> tx_i, rx_i;
+    std::queue<DCacheTx *> tx_d, rx_d;
+    std::deque<ICacheTx *> p_i;
+    std::deque<DCacheTx *> p_d;
 
     // tx_* -> p_* -> rx_*
 
@@ -36,10 +39,11 @@ private:
     }
 
 public:
-    Dut(int argc, char **argv) : 
+    Dut(int argc, char **argv, Ram *ram) : 
         ctxp(new VerilatedContext), 
         fstp(new VerilatedFstC), 
-        dut(new VTOP)
+        dut(new VTOP),
+        ram(ram)
     {
         ctxp->traceEverOn(true);
         ctxp->commandArgs(argc, argv);
@@ -136,14 +140,14 @@ public:
                 irx->ed(ctxp->time());
                 irx->pull(dut);
                 rx_i.push(irx);
-                p_i.pop();
+                p_i.pop_front();
                 update_timestamp_i();
             }
         }
         if (!tx_i.empty() && dut->i_valid) {
             auto itx = tx_i.front();
             if (dut->i_ready) {
-                p_i.push(itx);
+                p_i.push_back(itx);
                 tx_i.pop();
                 itx->st(ctxp->time());
                 update_timestamp_i();
@@ -155,7 +159,7 @@ public:
                 drx->ed(ctxp->time());
                 drx->pull(dut);
                 rx_d.push(drx);
-                p_d.pop();
+                p_d.pop_front();
                 update_timestamp_d();
             }
         }
@@ -166,11 +170,18 @@ public:
                 dtx->st(ctxp->time());
                 update_timestamp_d();
                 if (auto rdtx = dynamic_cast<DCacheTxR *>(dtx)) {
-                    p_d.push(rdtx);
+                    p_d.push_back(rdtx);
                 } else {
                     wdtx = dynamic_cast<DCacheTxW *>(dtx);
+                    ram->dwrite(wdtx->addr, wdtx->wdata, wdtx->awstrb);
                 }
             }
+        }
+        for (auto &t: p_i) {
+            t->watch(ram);
+        }
+        for (auto &t: p_d) {
+            t->watch(ram);
         }
         // Then, update the model in the middle
         delay(1);
@@ -197,6 +208,12 @@ public:
             dut->d_valid = false;
         }
         delay(0);
+        for (auto &t: p_i) {
+            t->watch(ram);
+        }
+        for (auto &t: p_d) {
+            t->watch(ram);
+        }
     }
 
     void send(CacheTx *tx) {
@@ -239,8 +256,8 @@ bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
 }
 
 int main(int argc, char **argv, char **envp) {
-    Dut dut(argc, argv);
     Ram ram;
+    Dut dut(argc, argv, &ram);
     dut.reset(10);
     Testbench tb(argc, argv);
     u32 tot = 0, hit = 0;

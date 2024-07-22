@@ -15,7 +15,8 @@ public:
     ~Ram();
     std::array<u32, 4> iread(u32 addr, bool uncached);
     u32 dread(u32 addr, bool uncached);
-    void dwrite(u32 addr, u32 data, u8 wstrb, bool uncached);
+    void dwrite(u32 addr, u32 data, u8 wstrb);
+    void iflush(u32 addr);
 };
 
 #endif

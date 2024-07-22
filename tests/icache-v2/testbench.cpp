@@ -16,7 +16,7 @@ std::vector<Tx *> Testbench::tests() {
         int c = rand() % 3;
         switch (c) {
         case 0: {
-            v.push_back(new ICacheTxR((i * 16) % 4096));
+            v.push_back(new ICacheTxR((i * 16) % 8192 + rand() % 128));
         } break;
         case 1: {
             v.push_back(new DCacheTxR(rand()));
