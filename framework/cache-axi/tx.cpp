@@ -57,8 +57,8 @@ void DCacheTx::push(VTOP *dut) {
   dut->d_cacop_code = this->cacop_code;
   dut->d_cacop_addr = this->cacop_addr;
 }
-void DCacheTx::pull(VTOP *dut) { 
-  this->rdata = dut->d_rdata; 
+void DCacheTx::pull(VTOP *dut) {
+  this->rdata = dut->d_rdata;
   this->rhit = dut->d_rhit;
   this->whit = dut->d_whit;
 }
@@ -84,7 +84,26 @@ bool CacheTx::hit() {
 }
 bool ICacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
-  return ram->iread(araddr, false) == rdata;
+  auto e1 = ram->iread(araddr, false);
+  auto e2 = ram->iread(araddr, true);
+
+  auto r = rdata;
+
+  bool flag = true;
+  for (auto i = 0; i < 4; i++) {
+    if (r[i] != e1[i] && r[i] != e2[i]) {
+      flag = false;
+      break;
+    }
+  }
+  if (!flag) {
+    printf("ICache Read: %08x, [%lu -- %lu]\n", araddr, st(), ed());
+    printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n",
+           e1[3], e1[2], e1[1], e1[0], e2[3], e2[2], e2[1], e2[0]);
+    printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
+    return false;
+  }
+  return true;
 }
 bool ICacheTxR::hit() {
   CacheTx::hit();
@@ -94,6 +113,13 @@ ICacheTxUR::ICacheTxUR(u32 araddr) : ICacheTxR(araddr) { uncached = true; }
 bool ICacheTxUR::hit() { return false; }
 bool DCacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
+  u32 e = ram->dread(addr, false);
+  u32 r = rdata;
+  if (e != r) {
+    printf("DCache Read: %08x, [%lu -- %lu]\n", addr, st(), ed());
+    printf("Expected: %08x\nResult  : %08x\n", e, r);
+    return false;
+  }
   return ram->dread(addr, uncached) == rdata;
 }
 bool DCacheTxR::hit() {

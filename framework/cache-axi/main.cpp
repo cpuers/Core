@@ -127,6 +127,8 @@ public:
     }
 
     void step() {
+        // Special Judge: DCacheTxW write pulls just after the tick
+        DCacheTxW *wdtx = nullptr;
         // Firstly, receive data at output
         if (!p_i.empty()) {
             auto irx = p_i.front();
@@ -165,13 +167,20 @@ public:
                 update_timestamp_d();
                 if (auto rdtx = dynamic_cast<DCacheTxR *>(dtx)) {
                     p_d.push(rdtx);
-                } else if (auto wdtx = dynamic_cast<DCacheTxW *>(dtx)) {
-                    rx_d.push(wdtx);
+                } else {
+                    wdtx = dynamic_cast<DCacheTxW *>(dtx);
                 }
             }
         }
         // Then, update the model in the middle
         delay(1);
+        // Special Judge: DCacheTxW
+        if (wdtx) {
+            wdtx->pull(dut);
+            wdtx->ed(ctxp->time());
+            rx_d.push(wdtx);
+            wdtx = nullptr;
+        }
         // Finally, put new data at input
         if (!tx_i.empty()) {
             auto itx = tx_i.front();
@@ -218,39 +227,9 @@ public:
 bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
     dut.step();
     while (auto t = dut.receive()) {
-        if (auto i = dynamic_cast<ICacheTx *>(t)) {
-            auto e1 = ram.iread(i->araddr, false);
-            auto e2 = ram.iread(i->araddr, true);
-
-            auto r = i->rdata;
-
-            bool flag = true;
-            for (auto i = 0; i < 4; i ++) {
-                if (r[i] != e1[i] && r[i] != e2[i]) {
-                    flag = false; break;
-                }
-            }
-            if (!flag) {
-                printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st(), i->ed());
-                printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n", 
-                    e1[3], e1[2], e1[1], e1[0],
-                    e2[3], e2[2], e2[1], e2[0]);
-                printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
-                return false;
-            }
-        } else if (auto d = dynamic_cast<DCacheTx *>(t)) {
-            if (auto dr = dynamic_cast<DCacheTxR *>(d)) {
-                u32 e = ram.dread(d->addr, false);
-                u32 r = dr->rdata;
-                if (e != r) {
-                    printf("DCache Read: %08x, [%lu -- %lu]\n", dr->addr, dr->st(), dr->ed());
-                    printf("Expected: %08x\nResult  : %08x\n", e, r);
-                    return false;
-                }
-            } else if (auto dw = dynamic_cast<DCacheTxW *>(d)) {
-                // fprintf(stderr, "Write: %08x: %08x\n", dw->addr, dw->wdata);
-                ram.dwrite(dw->addr, dw->wdata, dw->awstrb, false);
-            }
+        if (!t->check(&ram)) {
+            delete t;
+            return false;
         }
         tot ++;
         hit += t->hit();
@@ -262,7 +241,6 @@ bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
 int main(int argc, char **argv, char **envp) {
     Dut dut(argc, argv);
     Ram ram;
-    ram.init();
     dut.reset(10);
     Testbench tb(argc, argv);
     u32 tot = 0, hit = 0;

@@ -26,14 +26,13 @@ void pmem_write(const u32 addr, const u32 data, const u8 wstrb) {
     mem[addr % (MEM_SIZE / 4)] = t;
 }
 
-Ram::Ram() {}
-Ram::~Ram() {}
-void Ram::init() {
+Ram::Ram() {
     for (u32 i = 0; i < MEM_SIZE / 4; i ++) {
         mem[i] = i;
         imem[i] = dmem[i] = mem[i];
     }
 }
+Ram::~Ram() {}
 std::array<u32, 4> Ram::iread(u32 addr, bool uncached) {
     u32 *m = uncached ? mem : imem;
     u32 a = (addr / 16) * 4 % (MEM_SIZE / 4);
@@ -59,5 +58,3 @@ void Ram::dwrite(u32 addr, u32 data, u8 wstrb, bool uncached) {
     }
     m[valid_addr] = t;
 }
-void Ram::iflush() { memcpy(imem, mem, MEM_SIZE); }
-void Ram::dflush() { memcpy(mem, dmem, MEM_SIZE); }
