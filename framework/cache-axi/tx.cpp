@@ -35,8 +35,4 @@ DCacheTxW::DCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
 }
 bool Tx::done() { return true; }
 Tx::~Tx() {}
-ICacheTx::~ICacheTx() {}
-DCacheTx::~DCacheTx() {}
-ICacheTxR::~ICacheTxR() {}
-DCacheTxR::~DCacheTxR() {}
-DCacheTxW::~DCacheTxW() {}
+bool CacheTx::hit() { return ed - st <= 4; }

@@ -5,36 +5,47 @@
 #include <array>
 
 class Tx {
+protected:
+    Tx();
 public:
     u64     st;
     u64     ed;
 
-    Tx();
     virtual ~Tx();
-
     virtual bool done();
 };
 
-class ICacheTx : public Tx {
+class TxClear : public Tx {
+};
+
+class CacheTx : public Tx {
 public:
-    u32     araddr;
     bool    uncached;
-    std::array<u32, 4> rdata;
     bool    cacop_en;
     u8      cacop_code;
     u32     cacop_addr;
+    virtual bool hit();
+};
+
+class ICacheTx : public CacheTx {
+public:
+    u32     araddr;
+    std::array<u32, 4> rdata;
 
     ICacheTx();
-    virtual ~ICacheTx();
 };
 
 class ICacheTxR: public ICacheTx {
 public:
     ICacheTxR(u32 araddr);
-    virtual ~ICacheTxR();
 };
 
-class DCacheTx : public Tx {
+class ICacheTxUR: public ICacheTx {
+public:
+    ICacheTxUR(u32 araddr);
+};
+
+class DCacheTx : public CacheTx {
 public:
     bool    op;
     u32     addr;
@@ -42,24 +53,18 @@ public:
     u32     rdata;
     u8      awstrb;
     u32     wdata;
-    bool    cacop_en;
-    u8      cacop_code;
-    u32     cacop_addr;
 
     DCacheTx();
-    virtual ~DCacheTx();
 };
 
 class DCacheTxR : public DCacheTx {
 public:
     DCacheTxR(u32 addr);
-    virtual ~DCacheTxR();
 };
 
 class DCacheTxW: public DCacheTx {
 public:
     DCacheTxW(u32 addr, u8 awstrb, u32 wdata);
-    virtual ~DCacheTxW();
 };
 
 #endif

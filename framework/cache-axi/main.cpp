@@ -1,3 +1,4 @@
+#include <cassert>
 #include <common.hpp>
 
 #include <cstdio>
@@ -202,7 +203,7 @@ public:
         delay(0);
     }
 
-    void send(Tx *tx) {
+    void send(CacheTx *tx) {
         if (auto itx = dynamic_cast<ICacheTx *>(tx)) {
             tx_i.push(itx);
         } else if (auto dtx = dynamic_cast<DCacheTx *>(tx)) {
@@ -212,7 +213,7 @@ public:
         }
     }
 
-    Tx *receive() {
+    CacheTx *receive() {
         if (!rx_i.empty()) {
             auto r =  rx_i.front();
             rx_i.pop();
@@ -227,55 +228,85 @@ public:
     }
 };
 
+bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
+    dut.step();
+    while (auto t = dut.receive()) {
+        if (auto i = dynamic_cast<ICacheTx *>(t)) {
+            auto e1 = ram.iread(i->araddr, false);
+            auto e2 = ram.iread(i->araddr, true);
+
+            auto r = i->rdata;
+
+            bool flag = true;
+            for (auto i = 0; i < 4; i ++) {
+                if (r[i] != e1[i] && r[i] != e2[i]) {
+                    flag = false; break;
+                }
+            }
+            if (!flag) {
+                printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st, i->ed);
+                printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n", 
+                    e1[3], e1[2], e1[1], e1[0],
+                    e2[3], e2[2], e2[1], e2[0]);
+                printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
+                return false;
+            }
+        } else if (auto d = dynamic_cast<DCacheTx *>(t)) {
+            if (auto dr = dynamic_cast<DCacheTxR *>(d)) {
+                u32 e = ram.dread(d->addr, false);
+                u32 r = dr->rdata;
+                if (e != r) {
+                    printf("DCache Read: %08x, [%lu -- %lu]\n", dr->addr, dr->st, dr->ed);
+                    printf("Expected: %08x\nResult  : %08x\n", e, r);
+                    return false;
+                }
+            } else if (auto dw = dynamic_cast<DCacheTxW *>(d)) {
+                // fprintf(stderr, "Write: %08x: %08x\n", dw->addr, dw->wdata);
+                ram.dwrite(dw->addr, dw->wdata, dw->awstrb, false);
+            }
+        }
+        tot ++;
+        hit += t->hit();
+        delete t;
+    }
+    return true;
+}
+
 int main(int argc, char **argv, char **envp) {
     Dut dut(argc, argv);
     Ram ram;
     ram.init();
     dut.reset(10);
     Testbench tb(argc, argv);
+    u32 tot = 0, hit = 0;
     for (auto t : tb.tests()) {
-        dut.send(t);
-    }
-    while (!dut.finish()) {
-        dut.step();
-        while (auto t = dut.receive()) {
-            if (auto i = dynamic_cast<ICacheTx *>(t)) {
-                auto e1 = ram.iread(i->araddr, false);
-                auto e2 = ram.iread(i->araddr, true);
-
-                auto r = i->rdata;
-
-                bool flag = true;
-                for (auto i = 0; i < 4; i ++) {
-                    if (r[i] != e1[i] && r[i] != e2[i]) {
-                        flag = false; break;
-                    }
-                }
-                if (!flag) {
-                    printf("ICache Read: %08x, [%lu -- %lu]\n", i->araddr, i->st, i->ed);
-                    printf("Expected: [%08x %08x %08x %08x]\n  or    : [%08x %08x %08x %08x]\n", 
-                        e1[3], e1[2], e1[1], e1[0],
-                        e2[3], e2[2], e2[1], e2[0]);
-                    printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
+        if (auto ctx = dynamic_cast<CacheTx *>(t)) {
+            dut.send(ctx);
+            continue;
+        } else {
+            while (!dut.finish()) {
+                if (!step_and_check(dut, ram, tot, hit)) {
                     return 1;
                 }
-                delete i;
-            } else if (auto d = dynamic_cast<DCacheTx *>(t)) {
-                if (auto dr = dynamic_cast<DCacheTxR *>(d)) {
-                    u32 e = ram.dread(d->addr);
-                    u32 r = dr->rdata;
-                    if (e != r) {
-                        printf("DCache Read: %08x, [%lu -- %lu]\n", dr->addr, dr->st, dr->ed);
-                        printf("Expected: %08x\nResult  : %08x\n", e, r);
-                        return 1;
-                    }
-                } else if (auto dw = dynamic_cast<DCacheTxW *>(d)) {
-                    // fprintf(stderr, "Write: %08x: %08x\n", dw->addr, dw->wdata);
-                    ram.dwrite(dw->addr, dw->wdata, dw->awstrb);
-                }
-                delete d;
+            }
+            if (auto txc = dynamic_cast<TxClear *>(t)) {
+                (void) txc;
+                continue;
+            } else {
+                assert(false);
             }
         }
     }
+    while (!dut.finish()) {
+        if (!step_and_check(dut, ram, tot, hit)) {
+            return 1;
+        }
+    }
+    if (tot != 0) {
+        printf("=== Statistics ===\n");
+        printf("Hit / Tot: %u / %u (%.3lf%%)\n", hit, tot, (double)hit*100/tot);
+        printf("==================\n");
+    }
+
     return 0;
 }

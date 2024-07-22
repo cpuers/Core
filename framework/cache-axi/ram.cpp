@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <ram.hpp>
 #include <cassert>
+#include <cstring>
 
 static u32 mem[MEM_SIZE / 4];
 
@@ -34,21 +35,20 @@ void Ram::init() {
     }
 }
 std::array<u32, 4> Ram::iread(u32 addr, bool uncached) {
+    u32 *m = uncached ? mem : imem;
     u32 a = (addr / 16) * 4 % (MEM_SIZE / 4);
-    if (uncached) {
-        return {mem[a], mem[a+1], mem[a+2], mem[a+3]};
-    } else {
-        return {imem[a], imem[a+1], imem[a+2], imem[a+3]};
-    }
+    return {m[a], m[a+1], m[a+2], m[a+3]};
 }
-u32 Ram::dread(u32 addr) {
+u32 Ram::dread(u32 addr, bool uncached) {
+    u32 *m = uncached ? mem : dmem;
     u32 valid_addr = (addr / 4) % (MEM_SIZE / 4);
-    return dmem[valid_addr];
+    return m[valid_addr];
 }
-void Ram::dwrite(u32 addr, u32 data, u8 wstrb) {
+void Ram::dwrite(u32 addr, u32 data, u8 wstrb, bool uncached) {
+    u32 *m = uncached ? mem : dmem;
     u32 valid_addr = (addr / 4) % (MEM_SIZE / 4);
 
-    u32 o = dmem[valid_addr];
+    u32 o = m[valid_addr];
     u32 t = 0;
     for (int i = 0; i < 4; i ++) {
         if (wstrb & (1U << i)) {
@@ -57,5 +57,7 @@ void Ram::dwrite(u32 addr, u32 data, u8 wstrb) {
             t |= (o & (0xffUL << i));
         }
     }
-    dmem[valid_addr] = t;
+    m[valid_addr] = t;
 }
+void Ram::iflush() { memcpy(imem, mem, MEM_SIZE); }
+void Ram::dflush() { memcpy(mem, dmem, MEM_SIZE); }
