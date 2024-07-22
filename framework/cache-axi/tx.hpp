@@ -86,6 +86,12 @@ public:
     virtual bool hit() override;
 };
 
+class ICacheTxRH: public ICacheTxR {
+public:
+    ICacheTxRH(u32 addr);
+    virtual bool check(Ram *ram) override;
+};
+
 class ICacheTxUR: public ICacheTx {
 public:
     ICacheTxUR(u32 araddr);

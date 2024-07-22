@@ -29,7 +29,8 @@ module icache_dummy(
     input  wire          ret_valid,
     input  wire          ret_last,
     input  wire  [31:0]  ret_data
-);
+    );
+
     localparam      state_idle = 0;     
     localparam      state_request = 1;  // wait axi rd_ready
     localparam      state_receive = 2;  // wait axi ret_last
@@ -48,7 +49,7 @@ module icache_dummy(
     assign buffer_receive_end = 
         (state == state_receive) && (ret_valid && ret_last | (buffer_cnt == 2'd3));
 
-    assign ready = state_is_idle;
+    assign ready = state_is_idle && !cacop_en;
     assign rvalid = buffer_receive_end;
     assign rdata = 
         {128{rvalid}} & {ret_data, buffer[2], buffer[1], buffer[0]};
@@ -64,13 +65,11 @@ module icache_dummy(
             state <= state_reset;
         end else case (state)
             state_idle: begin
-                if (valid) begin
-                    if (cacop_en) begin
-                        state <= state_idle;        // simply ignore cacop
-                    end else begin
-                        state <= state_request;
-                        request_buffer <= araddr;
-                    end
+                if (cacop_en) begin
+                    state <= state_idle;
+                end else if (valid) begin
+                    state <= state_request;
+                    request_buffer <= araddr;
                 end
             end
             state_request: begin
@@ -124,7 +123,8 @@ module icache_dummy_v2 (
     input  wire          ret_valid,
     input  wire          ret_last,
     input  wire  [31:0]  ret_data
-);
+    );
+
     localparam  state_idle = 0;
     localparam  state_receive = 1;
     localparam  state_reset = 2;
@@ -139,23 +139,16 @@ module icache_dummy_v2 (
     assign receive_finish = 
         state_is_receive && ret_valid && (ret_last || receive_buffer_cnt == 2'd3);
 
-    //  (state_is_idle && (
-    //      (!cacop_en && rd_rdy) ||
-    //      ( cacop_en)
-    //   )
-    //  ) ||
-    //  (state_is_receive && receive_finish && (
-    //      (!cacop_en && rd_rdy) ||
-    //      ( cacop_en)
-    //   )
-    //  );
-    assign ready = (state_is_idle || receive_finish) && (cacop_en || rd_rdy);
+    //  (state_is_idle && !cacop_en && rd_rdy) ||
+    //  (state_is_receive && receive_finish && !cacop_en && rd_rdy);
+    assign ready = (state_is_idle || (state_is_receive && receive_finish)) && !cacop_en && rd_rdy;
+
     assign rvalid = receive_finish;
     assign rdata = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
     assign rhit = 1'b0;
-    //  (state_is_idle && valid && !cacop_en) ||
-    //  (state_is_receive && receive_finish && valid && !cacop_en);
-    assign rd_req = (valid && !cacop_en) && (state_is_idle || (state_is_receive && receive_finish));
+    //  (state_is_idle && !cacop_en && valid) ||
+    //  (state_is_receive && receive_finish && !cacop_en && valid);
+    assign rd_req = (state_is_idle || (state_is_receive && receive_finish)) && !cacop_en && valid;
     assign rd_type = 3'b100;
     assign rd_addr = {{28{1'b1}}, 4'b0} & araddr;
 
@@ -164,10 +157,11 @@ module icache_dummy_v2 (
             state <= state_reset;
         end else case (state)
             state_idle: begin
-                if (valid) begin
-                    if (cacop_en) begin
-                        state <= state_idle;
-                    end else if (rd_rdy) begin
+                if (cacop_en) begin
+                    state <= state_idle;
+                end 
+                else if (valid) begin
+                    if (rd_rdy) begin
                         state <= state_receive;
                         receive_buffer_cnt <= 0;
                     end
@@ -176,10 +170,11 @@ module icache_dummy_v2 (
             state_receive: begin
                 if (ret_valid) begin
                     if (receive_finish) begin
-                        if (valid) begin
-                            if (cacop_en) begin
-                                state <= state_idle;
-                            end else if (rd_rdy) begin
+                        if (cacop_en) begin
+                            state <= state_idle;
+                        end 
+                        else if (valid) begin
+                            if (rd_rdy) begin
                                 state <= state_receive;
                                 receive_buffer_cnt <= 0;
                             end else begin
@@ -431,7 +426,7 @@ module icache_v2(
     input           ret_valid,
     input           ret_last,
     input   [31:0]  ret_data
-);
+    );
 
     // cache ports
 
@@ -652,7 +647,8 @@ module icache_v3(
     input           ret_valid,
     input           ret_last,
     input   [31:0]  ret_data
-);
+    );
+
     localparam  ICACHE_WAY = 2;
     genvar i;   // way
 
@@ -725,7 +721,7 @@ module icache_v3(
     reg     [ 1:0]  receive_buffer_cnt;
     wire            receive_finish;
     wire   [127:0]  receive_result;
-    assign receive_finish = ret_last | (receive_buffer_cnt == 2'd3);
+    assign receive_finish = ret_valid && (ret_last | (receive_buffer_cnt == 2'd3));
     assign receive_result = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
     /// cacop
 
@@ -747,8 +743,7 @@ module icache_v3(
                     end else begin
                         state <= state_idle;
                     end
-                end
-                if (valid) begin
+                end else if (valid) begin
                     if (uncached) begin
                         state <= state_request;
                     end else begin
@@ -800,9 +795,10 @@ module icache_v3(
     assign rdata = 
         ({128{lookup_ret}} & lookup_hit_data) |
         ({128{receive_ret}} & receive_result);
-    assign rd_req = (state_is_lookup && !lookup_hit) || state_is_request;
+    assign rhit = state_is_lookup && lookup_hit;
+    assign rd_req = state_is_request;
     assign rd_type = 3'b100;
-    assign rd_addr = {request_buffer_tag, 12'd0};
+    assign rd_addr = {request_buffer_tag, request_buffer_idx, 4'd0};
 
     // cache sram
 
@@ -927,7 +923,8 @@ module icache_v4(
     input           ret_valid,
     input           ret_last,
     input   [31:0]  ret_data
-);
+    );
+
     localparam  ICACHE_WAY = 2;
     genvar i;   // way
 
@@ -1173,3 +1170,87 @@ module icache_v4(
         end
     endgenerate
 endmodule
+
+// module icache_v5(
+//     input           clock,
+//     input           reset,
+// 
+//     // common control (c) channel
+//     input           valid,      // in cpu, valid no dep on ready;
+//     output          ready,      // in cache, ready can dep on valid
+//     /// cpu ifetch
+//     //// read address (ar) channel
+//     /* verilator lint_off UNUSED */
+//     input   [31:0]  araddr,
+//     /* verilator lint_on UNUSED */
+//     input           uncached,
+//     //// read data (r) channel
+//     output          rvalid,
+//     output [127:0]  rdata,
+//     output          rhit,
+//     /// cpu cacop
+//     input           cacop_en,
+//     input   [ 1:0]  cacop_code, // code[4:3]
+//     /* verilator lint_off UNUSED */
+//     input   [31:0]  cacop_addr,
+//     /* verilator lint_on UNUSED */
+//     
+//     // axi bridge
+//     output          rd_req,
+//     output  [ 2:0]  rd_type,
+//     output  [31:0]  rd_addr,
+//     input           rd_rdy,
+//     input           ret_valid,
+//     input           ret_last,
+//     input   [31:0]  ret_data
+//     );
+// 
+//     localparam  ICACHE_WAY = 2;
+//     genvar i;   // way
+// 
+//     // cache ports
+// 
+//     wire            tagv_ena    [0:ICACHE_WAY-1];
+//     wire            tagv_wea    [0:ICACHE_WAY-1];
+//     wire    [ 7:0]  tagv_addra  [0:ICACHE_WAY-1];
+//     wire    [20:0]  tagv_dina   [0:ICACHE_WAY-1];
+//     wire    [20:0]  tagv_douta  [0:ICACHE_WAY-1];
+// 
+//     wire            data_ena    [0:ICACHE_WAY-1];
+//     wire            data_wea    [0:ICACHE_WAY-1];
+//     wire    [ 7:0]  data_addra  [0:ICACHE_WAY-1];
+//     wire   [127:0]  data_dina   [0:ICACHE_WAY-1];
+//     wire   [127:0]  data_douta  [0:ICACHE_WAY-1];
+// 
+//     // state machine
+// 
+//     localparam      state_idle = 0;
+//     localparam      state_lookup = 1;
+//     localparam      state_receive = 2;
+//     localparam      state_cacop = 3;
+//     localparam      state_reset = 4;
+//     reg     [ 3:0]  state;
+// 
+//     always @(posedge clock) begin
+//         if (reset) begin
+//             state <= state_reset;
+//         end else case (state)
+//             state_idle: begin
+//                                 
+//             end
+//             state_lookup: begin
+//                 
+//             end
+//             state_receive: begin
+//                 
+//             end
+//             state_cacop: begin
+//                 
+//             end
+//             default: begin
+//                 state <= state_idle;
+//             end
+//         endcase
+//     end
+// 
+// endmodule

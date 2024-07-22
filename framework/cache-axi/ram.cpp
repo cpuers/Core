@@ -18,9 +18,9 @@ void pmem_write(const u32 addr, const u32 data, const u8 wstrb) {
     u32 t = 0;
     for (int i = 0; i < 4; i ++) {
         if (wstrb & (1U << i)) {
-            t |= (data & (0xffUL << i));
+            t |= (data & (0xffUL << (i * 8)));
         } else {
-            t |= (o & (0xffUL << i));
+            t |= (o & (0xffUL << (i * 8)));
         }
     }
     mem[addr % (MEM_SIZE / 4)] = t;
@@ -51,9 +51,9 @@ void Ram::dwrite(u32 addr, u32 data, u8 wstrb) {
     u32 t = 0;
     for (int i = 0; i < 4; i ++) {
         if (wstrb & (1U << i)) {
-            t |= (data & (0xffUL << i));
+            t |= (data & (0xffUL << (i * 8)));
         } else {
-            t |= (o & (0xffUL << i));
+            t |= (o & (0xffUL << (i * 8)));
         }
     }
     m[valid_addr] = t;

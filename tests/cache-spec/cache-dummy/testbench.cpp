@@ -6,7 +6,7 @@ Testbench::~Testbench() {}
 
 std::vector<Tx *> Testbench::tests() {
     std::vector<Tx *> v;
-    for (int i = 0; i < 100; i ++) {
+    for (int i = 0; i < 65536; i ++) {
         int c = rand() % 3;
         switch (c) {
         case 0: {

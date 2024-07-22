@@ -38,12 +38,15 @@ private:
         update_timestamp_d();
     }
 
+    u32 hit_i, tot_i, hit_d, tot_d;
+
 public:
     Dut(int argc, char **argv, Ram *ram) : 
         ctxp(new VerilatedContext), 
         fstp(new VerilatedFstC), 
         dut(new VTOP),
-        ram(ram)
+        ram(ram),
+        hit_i(0), tot_i(0), hit_d(0), tot_d(0)
     {
         ctxp->traceEverOn(true);
         ctxp->commandArgs(argc, argv);
@@ -62,9 +65,23 @@ public:
         dut->final();
         fstp->close();
 
+        statistics();
+
         delete dut;
         delete fstp;
         delete ctxp;
+    }
+
+    void statistics() {
+        printf("=== Statistics ===\n");
+        if (tot_i) {
+            printf("ICache Hit / Tot: %u / %u (%.3lf%%)\n", hit_i, tot_i, (double)hit_i*100/tot_i);
+
+        }
+        if (tot_d) {
+            printf("DCache Hit / Tot: %u / %u (%.3lf%%)\n", hit_d, tot_d, (double)hit_d*100/tot_d);
+        }
+        printf("==================\n");
     }
 
     bool empty_i() {
@@ -139,6 +156,8 @@ public:
             if (dut->i_rvalid) {
                 irx->ed(ctxp->time());
                 irx->pull(dut);
+                tot_i ++;
+                hit_i += irx->hit();
                 rx_i.push(irx);
                 p_i.pop_front();
                 update_timestamp_i();
@@ -158,6 +177,8 @@ public:
             if (dut->d_rvalid) {
                 drx->ed(ctxp->time());
                 drx->pull(dut);
+                tot_d ++;
+                hit_d += drx->hit();
                 rx_d.push(drx);
                 p_d.pop_front();
                 update_timestamp_d();
@@ -189,6 +210,8 @@ public:
         if (wdtx) {
             wdtx->pull(dut);
             wdtx->ed(ctxp->time());
+            hit_d += wdtx->hit();
+            tot_d ++;
             rx_d.push(wdtx);
             wdtx = nullptr;
         }
@@ -241,15 +264,13 @@ public:
     }
 };
 
-bool step_and_check(Dut &dut, Ram &ram, u32 &tot, u32 &hit) {
+bool step_and_check(Dut &dut, Ram &ram) {
     dut.step();
     while (auto t = dut.receive()) {
         if (!t->check(&ram)) {
             delete t;
             return false;
         }
-        tot ++;
-        hit += t->hit();
         delete t;
     }
     return true;
@@ -260,19 +281,19 @@ int main(int argc, char **argv, char **envp) {
     Dut dut(argc, argv, &ram);
     dut.reset(10);
     Testbench tb(argc, argv);
-    u32 tot = 0, hit = 0;
     for (auto t : tb.tests()) {
         if (auto ctx = dynamic_cast<CacheTx *>(t)) {
             dut.send(ctx);
             continue;
         } else {
             while (!dut.finish()) {
-                if (!step_and_check(dut, ram, tot, hit)) {
+                if (!step_and_check(dut, ram)) {
                     return 1;
                 }
             }
             if (auto txc = dynamic_cast<TxClear *>(t)) {
                 (void) txc;
+                dut.statistics();
                 continue;
             } else {
                 assert(false);
@@ -280,15 +301,9 @@ int main(int argc, char **argv, char **envp) {
         }
     }
     while (!dut.finish()) {
-        if (!step_and_check(dut, ram, tot, hit)) {
+        if (!step_and_check(dut, ram)) {
             return 1;
         }
     }
-    if (tot != 0) {
-        printf("=== Statistics ===\n");
-        printf("Hit / Tot: %u / %u (%.3lf%%)\n", hit, tot, (double)hit*100/tot);
-        printf("==================\n");
-    }
-
     return 0;
 }

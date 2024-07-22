@@ -153,3 +153,12 @@ void ICacheTxR::watch(Ram *ram) {
   values.insert(b);
   values.insert(c);
 }
+ICacheTxRH::ICacheTxRH(u32 addr) : ICacheTxR(addr) {}
+bool ICacheTxRH::check(Ram *ram) {
+  ICacheTxR::check(ram);
+  if (!hit()) {
+    printf("ICache Read: %08x should hit but not.\n", araddr);
+    return false;
+  }
+  return true;
+}
