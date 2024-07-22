@@ -1,10 +1,12 @@
 `include "define.vh"
 
 module WB_stage(
+    /* verilator lint_off EOFNEWLINE */
     input  wire clk,
     input  wire reset,
+    /* verilator lint_on EOFNEWLINE */
      
-    output wire ws_allowin,
+    output wire ws_ready,
 
     input  wire es_to_ws_valid1,
     input  wire es_to_ws_valid2,
@@ -14,8 +16,8 @@ module WB_stage(
     output wire [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus
 );
 
-reg         ws_valid;
-wire        ws_ready_go;
+// reg         ws_valid;
+// wire        ws_ready_go;
 
 wire        ws_gr_we1;
 wire [ 4:0] ws_dest1;
@@ -52,23 +54,18 @@ assign {ws_gr_we2       ,  //69:69
        } = es_to_ws_bus2;
 
 
-assign ws_ready_go = 1'b1;
-assign ws_allowin  = !ws_valid || ws_ready_go;
-always @(posedge clk) begin
-    if (reset) begin
-        ws_valid <= 1'b0;
-    end
-    else if (ws_allowin) begin
-        ws_valid <= es_to_ws_valid1 & es_to_ws_valid2;
-    end
-end
+//assign ws_ready_go = 1'b1;
+//assign ws_ready  = !ws_valid || ws_ready_go;
+
+assign ws_ready = 1'b1;//(es_to_ws_valid1 && es_to_ws_valid2);
+
 assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1;
 assign rf_we1    = ws_gr_we1 && es_to_ws_valid1 && (ws_dest1 != ws_dest2);
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
-assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid2;
-assign rf_we2    = ws_gr_we2 && es_to_ws_valid2;
+assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid1 && es_to_ws_valid2;
+assign rf_we2    = ws_gr_we2 && es_to_ws_valid1 && es_to_ws_valid2;
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
 

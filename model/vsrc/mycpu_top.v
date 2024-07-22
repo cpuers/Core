@@ -65,9 +65,9 @@ module core_top (
   reg reset;
   always @(posedge aclk) reset <= ~aresetn;
 
-  wire                           es_allowin1;
-  wire                           es_allowin2;
-  wire                           ws_allowin;
+  wire                           es_ready1;
+  wire                           es_ready2;
+  wire                           ws_ready;
   wire                           ds_to_es_valid1;
   wire                           ds_to_es_valid2;
   wire                           es_to_ws_valid1;
@@ -118,10 +118,8 @@ module core_top (
   wire        dcache_uncached;
   wire        dcache_rvalid;
   wire [31:0] dcache_rdata;
-  wire        dcache_rhit;
   wire [ 3:0] dcache_awstrb;
   wire [31:0] dcache_wdata;
-  wire        dcache_whit;
   wire        dcache_cacop_en;
   wire [ 1:0] dcache_cacop_code; 
   wire [31:0] dcache_cacop_addr;
@@ -216,9 +214,6 @@ icache_dummy icache_dummy(
 
     .rvalid(icache_data_ok),
     .rdata(icache_rdata),
-    /* verilator lint_off PINCONNECTEMPTY */
-    .rhit(          ),
-    /* verilator lint_on PINCONNECTEMPTY */
 
     //TODO
     .cacop_en(dcache_cacop_en),
@@ -318,7 +313,7 @@ icache_dummy icache_dummy(
       .EXE_instr1      (ds_to_es_bus2),
       .EXE_instr0_valid(ds_to_es_valid1),
       .EXE_instr1_valid(ds_to_es_valid2),
-      .EXE_ready       (es_allowin1 & es_allowin2),
+      .EXE_ready       (es_ready1 & es_ready2),
       .flush_ID        (flush_ID1 | flush_ID2),
       //for regfile
       .read_addr0      (read_addr0),
@@ -336,19 +331,19 @@ icache_dummy icache_dummy(
       .clk  (aclk),
       .reset(reset),
 
-      .ws_allowin(ws_allowin),
-      .es_allowin(es_allowin1),
-
+      .es_ready(es_ready1),
       .ds_to_es_valid(ds_to_es_valid1),
       .ds_to_es_bus  (ds_to_es_bus1),
+
+      .ws_ready(ws_ready),
+      .es_to_ws_valid(es_to_ws_valid1),
+      .es_to_ws_bus  (es_to_ws_bus1),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
       .exm_forward_bus(exm_forward_data1),
 
       .br_bus        (br_bus1),
-      .es_to_ws_valid(es_to_ws_valid1),
-      .es_to_ws_bus  (es_to_ws_bus1),
       .flush_IF      (flush_IF1),
       .flush_ID      (flush_ID1),
       .dcache_rdata_bus  (dcache_rdata_bus),
@@ -358,19 +353,19 @@ icache_dummy icache_dummy(
       .clk  (aclk),
       .reset(reset),
 
-      .ws_allowin(ws_allowin),
-      .es_allowin(es_allowin2),
-
+      .es_ready(es_ready2),
       .ds_to_es_valid(ds_to_es_valid2),
       .ds_to_es_bus  (ds_to_es_bus2),
+      
+      .ws_ready(ws_ready),
+      .es_to_ws_valid(es_to_ws_valid2),
+      .es_to_ws_bus  (es_to_ws_bus2),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
       .exm_forward_bus(exm_forward_data2),
 
       .br_bus        (br_bus2),
-      .es_to_ws_valid(es_to_ws_valid2),
-      .es_to_ws_bus  (es_to_ws_bus2),
       .flush_IF      (flush_IF2),
       .flush_ID      (flush_ID2),
       .dcache_rdata_bus  (dcache_rdata_bus),
@@ -380,7 +375,7 @@ icache_dummy icache_dummy(
   WB_stage wb_stage (
       .clk            (~aclk),
       .reset          (reset),
-      .ws_allowin     (ws_allowin),
+      .ws_ready       (ws_ready),
       .es_to_ws_valid1(es_to_ws_valid1),
       .es_to_ws_valid2(es_to_ws_valid2),
       .es_to_ws_bus1  (es_to_ws_bus1),
@@ -413,12 +408,10 @@ icache_dummy icache_dummy(
       /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
-      .rhit(dcache_rhit),
       /// write address (aw) channel
       .awstrb(dcache_awstrb),
       /// write data (w) channel
       .wdata(dcache_wdata),
-      .whit(dcache_whit),
       .cacop_en(dcache_cacop_en),
       .cacop_code(dcache_cacop_code), // code[4:3]
       .cacop_addr(dcache_cacop_addr),
