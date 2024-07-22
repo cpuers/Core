@@ -113,6 +113,9 @@ module Agu(
     input [31:0] src1,
     input [31:0] src2,
     input [31:0] wdata,
+    output[31:0] mem_result,
+    output dcache_ok,
+    input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
 );
 
@@ -125,6 +128,10 @@ wire [31:0] dcache_wdata = wdata;
 wire        dcache_cacop_en = 1'b0;
 wire [ 1:0] dcache_cacop_code = 2'b0; // code[4:3]
 wire [31:0] dcache_cacop_addr = 32'b0;
+
+wire        dcache_ready;
+wire        dcache_rvalid;
+wire [31:0] dcache_rdata;
 
 wire [31:0] adder_a;
 wire [31:0] adder_b;
@@ -144,16 +151,10 @@ assign {adder_cout, dcache_addr} = adder_a + adder_b + adder_cin;
 assign dcache_wdata_bus = {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
         dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr};
 
-// wire [31:0] read_res_b;
-// wire [31:0] read_res_h;
-// assign read_res_b = adder_result[1:0]==2'b00 ? rdata: 
-//                     adder_result[1:0]==2'b01 ? {{24{rdata[15]}},rdata[15:8]}:
-//                     adder_result[1:0]==2'b10 ? {{24{rdata[23]}},rdata[23:16]}:{{24{rdata[31]}},rdata[31:24]};
-// assign read_res_h = adder_result[1:0]==2'b00 ? rdata : {{24{rdata[31]}},rdata[31:16]};          
-// assign mem_result =  bit_width[3]? rdata:
-//                      bit_width[1] ? {{16{read_res_h[15]&(~is_unsigned)}},read_res_h[15:0]}:
-//                                        {{24{read_res_b[7]&(~is_unsigned)}},read_res_b[7:0]};
+assign {dcache_ready, dcache_rvalid, dcache_rdata} = dcache_rdata_bus;
+assign mem_result = (dcache_rvalid) ? dcache_rdata : 32'b0;
 
+assign dcache_ok = (mem_rd && dcache_rvalid) || (mem_we && dcache_ready) || (!mem_rd && !mem_we);
 
 endmodule
 
