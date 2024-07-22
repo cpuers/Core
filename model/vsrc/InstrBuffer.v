@@ -52,20 +52,20 @@ module InstrBuffer (
         3'd2: begin
 
           buffer[tail_ptr] <= if1_to_ib[`IB_DATA_BUS_WD-1:0];
-          buffer[tail_ptr+1] <= if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD];
+          buffer[tail_ptr+`IB_WIDTH_LOG2'd1] <= if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD];
           tail_ptr <= tail_ptr + 2;
         end
         3'd3: begin
           buffer[tail_ptr] <= if1_to_ib[`IB_DATA_BUS_WD-1:0];
-          buffer[tail_ptr+1] <= if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD];
-          buffer[tail_ptr+2] <= if1_to_ib[3*`IB_DATA_BUS_WD-1:2*`IB_DATA_BUS_WD];
+          buffer[tail_ptr+`IB_WIDTH_LOG2'd1] <= if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD];
+          buffer[tail_ptr+`IB_WIDTH_LOG2'd2] <= if1_to_ib[3*`IB_DATA_BUS_WD-1:2*`IB_DATA_BUS_WD];
           tail_ptr <= tail_ptr + 3;
         end
         3'd4: begin
           buffer[tail_ptr] <= if1_to_ib[`IB_DATA_BUS_WD-1:0];
-          buffer[tail_ptr+1] <= if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD];
-          buffer[tail_ptr+2] <= if1_to_ib[3*`IB_DATA_BUS_WD-1:2*`IB_DATA_BUS_WD];
-          buffer[tail_ptr+3] <= if1_to_ib[4*`IB_DATA_BUS_WD-1:3*`IB_DATA_BUS_WD];
+          buffer[tail_ptr+`IB_WIDTH_LOG2'd1] <= if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD];
+          buffer[tail_ptr+`IB_WIDTH_LOG2'd2] <= if1_to_ib[3*`IB_DATA_BUS_WD-1:2*`IB_DATA_BUS_WD];
+          buffer[tail_ptr+`IB_WIDTH_LOG2'd3] <= if1_to_ib[4*`IB_DATA_BUS_WD-1:3*`IB_DATA_BUS_WD];
           tail_ptr <= tail_ptr + 4;
         end
         default: begin

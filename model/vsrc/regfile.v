@@ -21,7 +21,7 @@ module regfile (
   assign rs4data = (rs4 == 0) ? `WIDTH'b0 : mem[rs4];
 
   always @(posedge clock) begin
-    if (wen1 & ~(|rd1)) 
+    if (wen1 && (rd1!=5'b0)) 
     begin
       mem[rd1] <= wdata1;
     end 
@@ -29,7 +29,7 @@ module regfile (
     begin
 
     end
-    if (wen2 & ~(|rd2)) 
+    if (wen2 && (rd2!=5'b0)) 
     begin
       mem[rd2] <= wdata2;
     end 
