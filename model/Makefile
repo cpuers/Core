@@ -31,7 +31,7 @@ ARCHIVE  = $(WORK_DIR)/build/lib$(TOP).a
 INCFLAGS = $(addprefix -I, $(INC_PATH))
 BUILD_FLAGS = --build -j -MMD -O3 -cc -Wall --trace-fst \
                 --Wno-DECLFILENAME -DTEST
-VERILATOR_FLAGS = $(BUILD_FLAGS) $(INCFLAGS)
+VERILATOR_FLAGS = $(VERILATOR_FLAGS_TEST) $(BUILD_FLAGS) $(INCFLAGS)
 
 $(ARCHIVE): $(VSRCS)
 

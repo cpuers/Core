@@ -45,7 +45,7 @@ module icache_dummy(
 
     wire            buffer_receive_end;
     assign buffer_receive_end = 
-        (state == state_receive) && (ret_last | (buffer_cnt == 2'd3));
+        (state == state_receive) && (ret_valid && ret_last | (buffer_cnt == 2'd3));
 
     assign ready = state_is_idle;
     assign rvalid = buffer_receive_end;
@@ -134,7 +134,7 @@ module icache_dummy_v2 (
 
     wire            receive_finish;
     assign receive_finish = 
-        state_is_receive && (ret_last || receive_buffer_cnt == 2'd3);
+        state_is_receive && ret_valid && (ret_last || receive_buffer_cnt == 2'd3);
 
     //  (state_is_idle && (
     //      (!cacop_en && rd_rdy) ||
@@ -151,9 +151,9 @@ module icache_dummy_v2 (
     assign rdata = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
     //  (state_is_idle && valid && !cacop_en) ||
     //  (state_is_receive && receive_finish && valid && !cacop_en);
-    assign rd_req = (valid && !cacop_en) && (state_is_idle || state_is_receive);
+    assign rd_req = (valid && !cacop_en) && (state_is_idle || (state_is_receive && receive_finish));
     assign rd_type = 3'b100;
-    assign rd_addr = {28'b1, 4'b0} & araddr;
+    assign rd_addr = {{28{1'b1}}, 4'b0} & araddr;
 
     always @(posedge clock) begin
         if (reset) begin
@@ -469,15 +469,15 @@ module icache_v2(
     wire            lookup_hit;
     wire            lookup_v;
     wire    [19:0]  lookup_tag;
-    assign lookup_v = tagv_douta[0];
-    assign lookup_tag = tagv_douta[20:1];
+    assign lookup_v = tagv_douta[20];
+    assign lookup_tag = tagv_douta[19:0];
     assign lookup_hit = lookup_v && (lookup_tag == request_buffer_tag);
     /// receive
     reg     [31:0]  receive_buffer      [ 0:2];
     reg     [ 1:0]  receive_buffer_cnt;
     wire            receive_finish;
     wire   [127:0]  receive_result;
-    assign receive_finish = ret_last | (receive_buffer_cnt == 2'd3);
+    assign receive_finish = ret_valid && (ret_last | (receive_buffer_cnt == 2'd3));
     assign receive_result = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
     /// cacop
 
@@ -512,7 +512,7 @@ module icache_v2(
                 if (lookup_hit) begin
                     state <= state_idle;                    
                 end else begin
-                    state <= state_lookup;                    
+                    state <= state_request;                    
                 end
             end
             state_request: begin
@@ -549,16 +549,16 @@ module icache_v2(
     assign rdata = 
         ({128{lookup_ret}} & data_douta) |
         ({128{receive_ret}} & receive_result);
-    assign rd_req = (state_is_lookup && !lookup_hit) || state_is_request;
+    assign rd_req = state_is_request;
     assign rd_type = 3'b100;
-    assign rd_addr = {lookup_tag, 12'd0};
+    assign rd_addr = {request_buffer_tag, request_buffer_idx, 4'd0};
 
     // cache sram
 
     `ifdef TEST
     sram_sim #(
         .ADDR_WIDTH (8      ),
-        // tag: [20:1], v: [0]
+        // tag: [19:0], v: [20]
         .DATA_WIDTH (21     )
     ) u_tagv_sram(
         .clka   (clock      ),
@@ -603,7 +603,7 @@ module icache_v2(
         (state_is_cacop && lookup_hit);         // Reuse state_lookup datapath
     assign tagv_addra = cache_idx;
     assign tagv_dina = 
-        (state_is_receive) ? {request_buffer_tag, 1'b1} : 21'b0; 
+        (state_is_receive) ? {1'b1, request_buffer_tag} : 21'b0; 
 
     assign data_ena = 
         (state_is_idle && valid) || 

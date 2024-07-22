@@ -5,21 +5,6 @@ ifeq ($(MAKECMDGOALS),)
     .DEFAULT_GOAL = binary
 endif
 
-ifeq ($(findstring $(MAKECMDGOALS),clean|clean-all),)
-
-$(info # Building $(NAME))
-ifeq ($(wildcard $(CORE_HOME)/tests/tests.mk),)
-    $(error $$CORE_HOME must be Core's repo.)
-endif
-ifeq ($(VERILATOR_INCLUDE),)
-    VERILATOR_INCLUDE=$(shell realpath $$(dirname $$(which verilator))/../share/verilator/include)
-endif
-ifeq ($(TOP),)
-    $(error $$TOP must be set, check test specific Makefile.)
-endif
-
-endif
-
 WORK_DIR = $(shell pwd)
 DST_DIR  = $(WORK_DIR)/build
 $(shell mkdir -p $(DST_DIR))
@@ -36,10 +21,28 @@ ifneq ($(FW),)
         INC_PATH += framework/ $(abspath framework/)
     else 
         -include framework/framework.mk
+        SRCS += $(addprefix framework/,$(FW_SRCS))
+        VSRCS += $(addprefix framework/,$(FW_VSRCS))
+        INC_PATH += $(addprefix framework/,$(FW_INC_PATH))
     endif
     SRCS += $(shell find $(CORE_HOME)/framework/common/ -name '*.cpp')
     VSRCS += $(shell find $(CORE_HOME)/framework/common/ -name '*.v')
     INC_PATH += $(CORE_HOME)/framework/common
+endif
+
+ifeq ($(findstring $(MAKECMDGOALS),clean|clean-all),)
+
+$(info # Building $(NAME))
+ifeq ($(wildcard $(CORE_HOME)/tests/tests.mk),)
+    $(error $$CORE_HOME must be Core's repo.)
+endif
+ifeq ($(VERILATOR_INCLUDE),)
+    VERILATOR_INCLUDE=$(shell realpath $$(dirname $$(which verilator))/../share/verilator/include)
+endif
+ifeq ($(TOP),)
+    $(error $$TOP must be set, check test specific Makefile.)
+endif
+
 endif
 
 VSRCS := $(sort $(realpath $(VSRCS)))
@@ -63,10 +66,10 @@ LINKAGE  = $(OBJS) \
 INC_PATH += . \
     $(addsuffix /build/$(TOP), $(addprefix $(CORE_HOME)/, $(LIBS))) \
     $(addsuffix /include/, $(addprefix $(CORE_HOME)/, $(LIBS))) \
-	$(VERILATOR_INCLUDE)
+	$(VERILATOR_INCLUDE) $(VERILATOR_INCLUDE)/vltstd
 INCFLAGS += $(addprefix -I, $(INC_PATH))
 
-CFLAGS += -g -O3 -MMD -Wall -Werror $(INCFLAGS) \
+CFLAGS += -ggdb -MMD -Wall -Werror -fPIC $(INCFLAGS) \
           -DVTOP=V$(TOP) -DTEST=\"$(NAME)\"
 CXXFLAGS += $(CFLAGS)
 ASFLAGS += -MMD $(INCFLAGS)
@@ -81,6 +84,9 @@ run: $(BINARY)
     else \
         printf '\x1b[0m[%20s] \x1b[31;1mFAILED\033[0m\n' '$(NAME)' ; \
     fi
+
+gdb: $(BINARY)
+	@gdb -q $(BINARY)
 
 wave: $(WAVE)
 	@gtkwave --save $(WAVE_CFG) $(WAVE)
@@ -102,7 +108,9 @@ $(DST_DIR)/%.o: %.S
 	@$(AS) $(ASFLAGS) -c -o $@ $(realpath $<)
 
 $(LIBS): %:
-	@$(MAKE) -s -C $(CORE_HOME)/$* TOP=$(TOP) VSRCS_TEST="$(VSRCS)" archive
+	@$(MAKE) -s -C $(CORE_HOME)/$* \
+        TOP=$(TOP) VSRCS_TEST="$(VSRCS)" VERILATOR_FLAGS_TEST="$(VERILATOR_FLAGS)" \
+        archive
 
 $(ARCHIVE): $(OBJS)
 	@echo + AR "->" $(shell realpath $@ --relative-to .)
@@ -114,7 +122,7 @@ $(BINARY): $(LIBS) $(OBJS)
 
 $(WAVE): $(BINARY)
 	@echo "=== SIMULATION BEGIN ==="
-	@$(BINARY)
+	-@$(BINARY)
 	@echo "=== SIMULATION END   ==="
 
 -include $(addprefix $(DST_DIR)/, $(addsuffix .d, $(basename $(SRCS))))
@@ -125,10 +133,13 @@ archive: $(ARCHIVE)
 clean:
 	rm -rf $(WORK_DIR)/build/
 	rm -f $(WORK_DIR)/framework
+
+clean-model:
+	-@$(MAKE) -s -C $(CORE_HOME)/model/ clean
 .PHONY: clean
 
 CLEAN_ALL = $(dir $(shell find . -mindepth 2 -name Makefile))
-clean-all: $(CLEAN_ALL) clean
+clean-all: $(CLEAN_ALL) clean clean-model
 $(CLEAN_ALL):
 	-@$(MAKE) -s -C $@ clean
 .PHONY: clean-all $(CLEAN_ALL)
