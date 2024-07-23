@@ -13,6 +13,7 @@
 // modify
 #define TLBENTRY    16
 #define TESTLOOP  10000
+#define MASK(x,y,z) 
 
 Vtlb_async *dut;
 
@@ -94,6 +95,7 @@ u16 ref_write(tlb_ctx *ctx) {
 
     int idx       = rand() % TLBENTRY;
     cur_write = idx;
+    init_mode[idx] = false;
     TLB[idx].vppn = ctx->vppn;
     TLB[idx].ps   = ctx->ps;
     TLB[idx].g    = ctx->g;
@@ -110,21 +112,28 @@ u16 ref_write(tlb_ctx *ctx) {
     TLB[idx].mat1 = ctx->mat1;
     TLB[idx].plv1 = ctx->plv1;
 
-    dut->vppn = ctx->vppn;
-    dut->ps   = ctx->ps;
-    dut->g    = ctx->g;
-    dut->asid = ctx->asid;
-    dut->e    = ctx->e;
-    dut->v0   = ctx->v0;
-    dut->d0   = ctx->d0;
-    dut->ppn0 = ctx->ppn0;
-    dut->mat0 = ctx->mat0;
-    dut->plv0 = ctx->plv0;
-    dut->v1   = ctx->v1;
-    dut->d1   = ctx->d1;
-    dut->ppn1 = ctx->ppn1;
-    dut->mat1 = ctx->mat1;
-    dut->plv1 = ctx->plv1;
+    dut->w_vppn = ctx->vppn;
+    //dut->w_g    = ctx->g; // no G
+    dut->w_ps   = ctx->ps;
+    dut->w_asid = ctx->asid;
+    dut->w_e    = ctx->e;
+    dut->w_idx  = idx;
+
+    dut->w_tlbelo0 = 0;
+    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->v0;
+    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->d0;
+    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->plv0;
+    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->mat0;
+    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->ppn0;
+    
+    dut->w_tlbelo1 = 0;
+    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->v1;
+    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->d1;
+    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->plv1;
+    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->mat1;
+    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->ppn1;
+
+    return idx;
 }
 
 
@@ -189,9 +198,10 @@ void read_tlb_read() { // TODO
 }
 */
 
+
+
 bool dut_read(int idx, tlb_ctx *ctx) {
 
-    int idx       = rand() % TLBENTRY;
     if(TLB[idx].vppn != ctx->vppn) { 
         std::cout << "Err: ref:" << TLB[idx].vppn << " dut: " << ctx->vppn << std::endl;
         return false;
@@ -276,6 +286,7 @@ void step() {
 int main() {
 
     dut = new Vtlb_async;
+    for(int i=0; i<TLBENTRY; i++) init_mode[i] = true;
 
     for(int i=0; i<TESTLOOP; i++) {
         tlb_ctx *cur = gen_context();
