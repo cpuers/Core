@@ -1,20 +1,20 @@
 
 
-module booth2_encoder(
-    input [31:0] data,
-    output [15:0] mul2,
-    output 
-);
+// module booth2_encoder(
+//     input [31:0] data,
+//     output [15:0] mul2,
+//     output 
+// );
 
-endmodule
+// endmodule
 
-module wallace_tree(
+// module wallace_tree(
     
-);
+// );
 
 
 
-endmodule
+// endmodule
 
 
 module mul(
@@ -24,6 +24,6 @@ module mul(
     output [63:0] result
     );
 
-
+    assign reset = x * y;
 
 endmodule
