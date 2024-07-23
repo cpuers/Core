@@ -15,6 +15,12 @@ u32 margin_cond[] = {
     0,-1,1,0x7fffffff,0xffffffff
 }
 
+Testbench::Testbench(int argc, char **argv) { }
+Testbench::~Testbench() {}
+u64 Testbench::reset(Vmul *dut) {}
+
+
+
 int main () {
     srand(time(0));
     for(int i=0; i<TESTLOOP; i++) {
