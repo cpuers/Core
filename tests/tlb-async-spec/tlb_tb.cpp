@@ -9,11 +9,14 @@
 #include <random>
 #include <ctime>
 #include <iostream>
+#include <cstring>
 
 // modify
+#define PALEN       32
 #define TLBENTRY    16
 #define TESTLOOP  10000
-#define MASK(x,y,z) 
+#define EXTRACT_BITS(n, x, y) ((n) >> (x) & ((1 << (y)) - 1))
+#define LOWB_SHIFT(n, x, y) (((n) & ((1 << (x)) - 1)) << (y))
 
 Vtlb_async *dut;
 
@@ -44,6 +47,20 @@ Testbench::Testbench(int argc, char **argv) {
     srand(time(0));
     // TLB don't need to init (accroding to manual)
     for(int i=0; i<TLBENTRY; i++) init_mode[i] = true;
+    
+    dut = new Vtlb_async;
+}
+
+u64 Testbench::reset(Vtlb_async *cur) {
+    delete cur;
+    dut = new Vtlb_async;
+    for(int i=0; i<TLBENTRY; i++) init_mode[i] = true;
+    memset(TLB, 0, sizeof(TLB));
+    return 4;
+}
+
+Testbench::~Testbench() {
+    std::cout << "PASS!" << std::endl;
 }
 
 u16 genbit(int len) {
@@ -120,18 +137,18 @@ u16 ref_write(tlb_ctx *ctx) {
     dut->w_idx  = idx;
 
     dut->w_tlbelo0 = 0;
-    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->v0;
-    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->d0;
-    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->plv0;
-    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->mat0;
-    dut->w_tlbelo0 = dut->w_tlbelo0 | ctx->ppn0;
+    dut->w_tlbelo0 = dut->w_tlbelo0 | LOWB_SHIFT(ctx->v0, 0, 1);
+    dut->w_tlbelo0 = dut->w_tlbelo0 | LOWB_SHIFT(ctx->d0, 1, 1);
+    dut->w_tlbelo0 = dut->w_tlbelo0 | LOWB_SHIFT(ctx->plv0, 2, 2);
+    dut->w_tlbelo0 = dut->w_tlbelo0 | LOWB_SHIFT(ctx->mat0, 4, 2);
+    dut->w_tlbelo0 = dut->w_tlbelo0 | LOWB_SHIFT(ctx->ppn0, 8, PALEN-13);
     
     dut->w_tlbelo1 = 0;
-    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->v1;
-    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->d1;
-    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->plv1;
-    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->mat1;
-    dut->w_tlbelo1 = dut->w_tlbelo1 | ctx->ppn1;
+    dut->w_tlbelo1 = dut->w_tlbelo1 | LOWB_SHIFT(ctx->v1,   0, 1);
+    dut->w_tlbelo1 = dut->w_tlbelo1 | LOWB_SHIFT(ctx->d1,   1, 1);
+    dut->w_tlbelo1 = dut->w_tlbelo1 | LOWB_SHIFT(ctx->plv1, 2, 2);
+    dut->w_tlbelo1 = dut->w_tlbelo1 | LOWB_SHIFT(ctx->mat1, 4, 2);
+    dut->w_tlbelo1 = dut->w_tlbelo1 | LOWB_SHIFT(ctx->ppn1, 8, PALEN-13);
 
     return idx;
 }
@@ -198,9 +215,41 @@ void read_tlb_read() { // TODO
 }
 */
 
+tlb_ctx *dut_read(int read_idx) {
+
+    dut->r_idx = read_idx;
+    dut->eval();
+    
+    tlb_ctx *dut_ctx = new tlb_ctx;
+
+    dut_ctx->vppn = dut->r_vppn;
+    dut_ctx->asid = dut->r_asid;
+    dut_ctx->ps   = dut->r_ps;
+
+    u32 elo0 = dut->r_tlbelo0;
+    u32 elo1 = dut->r_tlbelo1;
+    
+    dut_ctx->v0   = EXTRACT_BITS(elo0, 0, 1);
+    dut_ctx->d0   = EXTRACT_BITS(elo0, 1, 1);
+    dut_ctx->plv0 = EXTRACT_BITS(elo0, 2, 2);
+    dut_ctx->mat0 = EXTRACT_BITS(elo0, 4, 2);
+    dut_ctx->g    = EXTRACT_BITS(elo0, 6, 1);
+    dut_ctx->ppn0 = EXTRACT_BITS(elo0, 8, PALEN-13);
+
+    dut_ctx->v1   = EXTRACT_BITS(elo1, 0, 1);
+    dut_ctx->d1   = EXTRACT_BITS(elo1, 1, 1);
+    dut_ctx->plv1 = EXTRACT_BITS(elo1, 2, 2);
+    dut_ctx->mat1 = EXTRACT_BITS(elo1, 4, 2);
+    dut_ctx->g    = EXTRACT_BITS(elo1, 6, 1);
+    dut_ctx->ppn1 = EXTRACT_BITS(elo1, 8, PALEN-13);
+
+    return dut_ctx;
+}
 
 
-bool dut_read(int idx, tlb_ctx *ctx) {
+bool dut_check(int idx, tlb_ctx *ctx) {
+
+    dut->eval();
 
     if(TLB[idx].vppn != ctx->vppn) { 
         std::cout << "Err: ref:" << TLB[idx].vppn << " dut: " << ctx->vppn << std::endl;
@@ -276,35 +325,37 @@ PHY1:
     return true;
 }
 
-void step() {
+void clk_step() {
 
     dut->clock = ~dut->clock;
     dut->eval();
 }
 
+bool chk;
 
-int main() {
-
-    dut = new Vtlb_async;
-    for(int i=0; i<TLBENTRY; i++) init_mode[i] = true;
-
-    for(int i=0; i<TESTLOOP; i++) {
-        tlb_ctx *cur = gen_context();
-        ref_write(cur);
-        int read_idx;
-        do {
-            read_idx = rand() % TLBENTRY;
-        } while(read_idx == cur_write);
-        bool chk = dut_read(read_idx, cur);
-        if(chk == false) {
-            std::cout << "FAULT!" << std::endl;
-            break;
-        }
-        step();
-        delete cur;
+bool Testbench::check(Vtlb_async *dut, u64 time) {
+    if(chk == false) {
+        std::cout << "FAULT!" << std::endl;
     }
-
-    std::cout << "PASS!" << std::endl;
-
-    return 0;
+    return chk;
 }
+
+bool Testbench::step(Vtlb_async *dut, u64 time) {
+
+
+    // for(int i=0; i<TESTLOOP; i++) {
+    // }
+    
+    int tlb_idx = rand() % TLBENTRY;
+    tlb_ctx *cur_read = dut_read(tlb_idx);
+    chk = dut_check(tlb_idx, cur_read);
+
+    tlb_ctx *cur = gen_context();
+    ref_write(cur);
+
+    clk_step();
+
+    delete cur;
+    return time < TESTLOOP;
+}
+
