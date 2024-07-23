@@ -1,6 +1,5 @@
 /* verilator lint_off DECLFILENAME */
 
-/* verilator lint_off UNUSED */
 module dcache_dummy (
     input           clock,
     input           reset,
@@ -11,7 +10,9 @@ module dcache_dummy (
     output          ready,
     input           op,         // 0: read, 1: write
     input   [31:0]  addr,
+    /* verilator lint_off UNUSED */
     input           uncached,
+    /* verilator lint_on UNUSED */
     /// read data (r) channel
     output          rvalid,
     output  [31:0]  rdata,
@@ -21,9 +22,12 @@ module dcache_dummy (
     /// write data (w) channel
     input   [31:0]  wdata,
     output          whit,
-    input           cacop_en,
+    /* verilator lint_off UNUSED */
+    input           cacop_valid,
+    output          cacop_ready,
     input   [ 1:0]  cacop_code, // code[4:3]
     input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
 
     // axi bridge
     output          rd_req,
@@ -57,6 +61,7 @@ module dcache_dummy (
     assign ready = state_is_idle;
     assign rvalid = state_is_receive && ret_valid && ret_last;
     assign rdata = ret_data;
+    assign cacop_ready = 1'b1;
     wire request_is_read = (state_is_request && !req_op);
     wire request_is_write = (state_is_request && req_op);
     assign rd_req = request_is_read;
@@ -112,7 +117,6 @@ module dcache_dummy (
         endcase
     end
 endmodule
-/* verilator lint_on UNUSED */
 
 module dcache_dummy_v2 (
     input           clock,
@@ -136,8 +140,9 @@ module dcache_dummy_v2 (
     /// write data (w) channel
     input   [31:0]  wdata,
     output          whit,
-    input           cacop_en,
     /* verilator lint_off UNUSED */
+    input           cacop_valid,
+    output          cacop_ready,
     input   [ 1:0]  cacop_code, // code[4:3]
     input   [31:0]  cacop_addr,
     /* verilator lint_on UNUSED */
@@ -185,19 +190,19 @@ module dcache_dummy_v2 (
     //  ))
     assign ready = 
         state_can_accept_request && 
-        (cacop_en || (op && wr_rdy) || (!op && rd_rdy));
+        ((op && wr_rdy) || (!op && rd_rdy));
     assign rvalid = receive_finish;
     assign rdata = ret_data;
-    //  (state_is_idle && valid && !cacop_en && !op) ||
-    //  (state_is_receive && receive_finish && valid && !cacop_en && !op);
+    //  (state_is_idle && valid && !op) ||
+    //  (state_is_receive && receive_finish && valid && !op);
     assign rd_req = 
-        state_can_accept_request && valid && !cacop_en && !op;
+        state_can_accept_request && valid && !op;
     assign rd_type = 3'b010;
     assign rd_addr = {{30{1'b1}}, 2'b0} & addr;
-    //  (state_is_idle && valid && !cacop_en && op) ||
+    //  (state_is_idle && valid && op) ||
     //  (state_is_receive && receive_finish && valid && op);
     assign wr_req = 
-        state_can_accept_request && valid && !cacop_en && op;
+        state_can_accept_request && valid && op;
     assign wr_type = 3'b010;
     assign wr_addr = {{30{1'b1}}, 2'b0} & addr;
     assign wr_wstrb = awstrb;
@@ -206,6 +211,8 @@ module dcache_dummy_v2 (
     assign rhit = 1'b0;
     assign whit = 1'b0;
 
+    assign cacop_ready = 1'b1;
+
     always @(posedge clock) begin
         if (reset) begin
             state <= state_reset;
@@ -213,45 +220,37 @@ module dcache_dummy_v2 (
             state_idle: 
             // begin
             //     if (valid) begin
-            //         if (cacop_en) begin
-            //             state <= state_idle;                        
+            //         if (op) begin
+            //             if (wr_rdy) begin
+            //                 state <= state_idle;
+            //             end                            
             //         end else begin
-            //             if (op) begin
-            //                 if (wr_rdy) begin
-            //                     state <= state_idle;
-            //                 end                            
-            //             end else begin
-            //                 if (rd_rdy) begin
-            //                     state <= state_receive;
-            //                 end
-            //             end                       
-            //         end
+            //             if (rd_rdy) begin
+            //                 state <= state_receive;
+            //             end
+            //         end                       
             //     end
             // end
             begin
                 if (valid) begin
-                    if (!op && !cacop_en && rd_rdy) begin
+                    if (!op && rd_rdy) begin
                         state <= state_receive;
                     end
                 end
             end
             state_receive: begin
-                if (ret_valid) begin
+                if (ret_valid && ret_last) begin
+                    state <= state_idle;
                     if (valid) begin
-                        if (cacop_en) begin
-                            state <= state_idle;                        
+                        if (op) begin
+                            if (wr_rdy) begin
+                                state <= state_idle;
+                            end
                         end else begin
-                            state <= state_idle;                        
-                            if (op) begin
-                                if (wr_rdy) begin
-                                    state <= state_idle;
-                                end
-                            end else begin
-                                if (rd_rdy) begin
-                                    state <= state_receive;
-                                end
-                            end                       
-                        end
+                            if (rd_rdy) begin
+                                state <= state_receive;
+                            end
+                        end                       
                     end else begin
                         state <= state_idle;
                     end

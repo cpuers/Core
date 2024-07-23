@@ -8,9 +8,6 @@ ICacheTx::ICacheTx() {
   uncached = false;
   rdata = {0, 0, 0, 0};
   rhit = false;
-  cacop_en = false;
-  cacop_code = 0;
-  cacop_addr = 0;
 }
 ICacheTxR::ICacheTxR(u32 araddr) { this->araddr = araddr; }
 DCacheTx::DCacheTx() {
@@ -22,9 +19,6 @@ DCacheTx::DCacheTx() {
   awstrb = 0;
   wdata = 0;
   whit = false;
-  cacop_en = false;
-  cacop_code = 0;
-  cacop_addr = 0;
 }
 DCacheTxR::DCacheTxR(u32 addr) { this->addr = addr; }
 DCacheTxW::DCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
@@ -37,9 +31,6 @@ Tx::~Tx() {}
 void ICacheTx::push(VTOP *dut) {
   dut->i_araddr = this->araddr;
   dut->i_uncached = this->uncached;
-  dut->i_cacop_en = this->cacop_en;
-  dut->i_cacop_code = this->cacop_code;
-  dut->i_cacop_addr = this->cacop_addr;
 }
 void ICacheTx::pull(VTOP *dut) {
   for (u32 i = 0; i < 4; i++) {
@@ -53,9 +44,6 @@ void DCacheTx::push(VTOP *dut) {
   dut->d_uncached = this->uncached;
   dut->d_wdata = this->wdata;
   dut->d_awstrb = this->awstrb;
-  dut->d_cacop_en = this->cacop_en;
-  dut->d_cacop_code = this->cacop_code;
-  dut->d_cacop_addr = this->cacop_addr;
 }
 void DCacheTx::pull(VTOP *dut) {
   this->rdata = dut->d_rdata;
@@ -106,11 +94,6 @@ bool ICacheTxR::hit() {
   CacheTx::hit();
   return this->rhit;
 }
-ICacheTxUR::ICacheTxUR(u32 araddr) { 
-  this->araddr = araddr;
-  uncached = true; 
-}
-bool ICacheTxUR::hit() { return false; }
 bool DCacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
   if (values.find(rdata) == values.end()) {

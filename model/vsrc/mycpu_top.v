@@ -214,9 +214,13 @@ icache_dummy icache_dummy(
 
     .rvalid(icache_data_ok),
     .rdata(icache_rdata),
+    /* verilator lint_off PINCONNECTEMPTY */
+    .rhit(           ),
 
     //TODO
-    .cacop_en(dcache_cacop_en),
+    .cacop_valid(dcache_cacop_en),
+    .cacop_ready(               ),
+    /* verilator lint_on PINCONNECTEMPTY */
     .cacop_code(dcache_cacop_code), // code[4:3]
     .cacop_addr(dcache_cacop_addr),
     /* verilator lint_on UNUSED */
@@ -408,11 +412,16 @@ icache_dummy icache_dummy(
       /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
+    /* verilator lint_off PINCONNECTEMPTY */
+      .rhit(            ),
       /// write address (aw) channel
       .awstrb(dcache_awstrb),
       /// write data (w) channel
       .wdata(dcache_wdata),
-      .cacop_en(dcache_cacop_en),
+      .whit(            ),
+      .cacop_valid(dcache_cacop_en),
+      .cacop_ready(                ),
+    /* verilator lint_on PINCONNECTEMPTY */
       .cacop_code(dcache_cacop_code), // code[4:3]
       .cacop_addr(dcache_cacop_addr),
   

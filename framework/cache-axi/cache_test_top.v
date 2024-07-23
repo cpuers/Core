@@ -22,7 +22,8 @@ module cache_test_top (
     output wire          i_rvalid,
     output wire [127:0]  i_rdata,
     output wire          i_rhit,
-    input  wire          i_cacop_en,
+    input  wire          i_cacop_valid,
+    output wire          i_cacop_ready,
     input  wire  [ 1:0]  i_cacop_code,
     input  wire  [31:0]  i_cacop_addr,
 
@@ -37,7 +38,8 @@ module cache_test_top (
     input  wire  [ 3:0]  d_awstrb,
     input  wire  [31:0]  d_wdata,
     output wire          d_whit,
-    input  wire          d_cacop_en,
+    input  wire          d_cacop_valid,
+    output wire          d_cacop_ready,
     input  wire  [ 1:0]  d_cacop_code,
     input  wire  [31:0]  d_cacop_addr
 );
@@ -74,7 +76,8 @@ module cache_test_top (
         .rvalid     ( i_rvalid     ),
         .rdata      ( i_rdata      ),
         .rhit       ( i_rhit       ),
-        .cacop_en   ( i_cacop_en   ),
+        .cacop_valid( i_cacop_valid),
+        .cacop_ready( i_cacop_ready),
         .cacop_code ( i_cacop_code ),
         .cacop_addr ( i_cacop_addr ),
 
@@ -102,7 +105,8 @@ module cache_test_top (
         .awstrb     ( d_awstrb     ),
         .wdata      ( d_wdata      ),
         .whit       ( d_whit       ),
-        .cacop_en   ( d_cacop_en   ),
+        .cacop_valid( d_cacop_valid),
+        .cacop_ready( d_cacop_ready),
         .cacop_code ( d_cacop_code ),
         .cacop_addr ( d_cacop_addr ),
 

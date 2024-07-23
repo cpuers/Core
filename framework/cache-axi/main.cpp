@@ -94,8 +94,8 @@ public:
 
     bool stall() {
         return 
-            (!empty_i() && (ctxp->time() - timestamp_i > 100)) || 
-            (!empty_d() && (ctxp->time() - timestamp_d > 100));
+            (!empty_i() && (ctxp->time() - timestamp_i > 1000)) || 
+            (!empty_d() && (ctxp->time() - timestamp_d > 1000));
     }
 
     bool finish() {
@@ -273,7 +273,7 @@ bool step_and_check(Dut &dut, Ram &ram) {
         }
         delete t;
     }
-    return true;
+    return !dut.stall();
 }
 
 int main(int argc, char **argv, char **envp) {

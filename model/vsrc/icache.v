@@ -17,7 +17,8 @@ module icache_dummy(
     output wire [127:0]  rdata,
     output wire          rhit,
     /// cpu cacop
-    input  wire          cacop_en,
+    input  wire          cacop_valid,
+    output wire          cacop_ready,
     input  wire  [ 1:0]  cacop_code, // code[4:3]
     input  wire  [31:0]  cacop_addr,
     
@@ -49,11 +50,13 @@ module icache_dummy(
     assign buffer_receive_end = 
         (state == state_receive) && (ret_valid && ret_last | (buffer_cnt == 2'd3));
 
-    assign ready = state_is_idle && !cacop_en;
+    assign ready = state_is_idle;
     assign rvalid = buffer_receive_end;
     assign rdata = 
         {128{rvalid}} & {ret_data, buffer[2], buffer[1], buffer[0]};
     assign rhit = 1'b0;
+
+    assign cacop_ready = 1'b1;
 
     assign rd_req = state_is_request;
     assign rd_type = 3'b100;
@@ -65,9 +68,7 @@ module icache_dummy(
             state <= state_reset;
         end else case (state)
             state_idle: begin
-                if (cacop_en) begin
-                    state <= state_idle;
-                end else if (valid) begin
+                if (valid) begin
                     state <= state_request;
                     request_buffer <= araddr;
                 end
@@ -111,7 +112,8 @@ module icache_dummy_v2 (
     output wire [127:0]  rdata,
     output wire          rhit,
     /// cpu cacop
-    input  wire          cacop_en,
+    input  wire          cacop_valid,
+    output wire          cacop_ready,
     input  wire  [ 1:0]  cacop_code, // code[4:3]
     input  wire  [31:0]  cacop_addr,
     
@@ -139,16 +141,19 @@ module icache_dummy_v2 (
     assign receive_finish = 
         state_is_receive && ret_valid && (ret_last || receive_buffer_cnt == 2'd3);
 
-    //  (state_is_idle && !cacop_en && rd_rdy) ||
-    //  (state_is_receive && receive_finish && !cacop_en && rd_rdy);
-    assign ready = (state_is_idle || (state_is_receive && receive_finish)) && !cacop_en && rd_rdy;
+    //  (state_is_idle && rd_rdy) ||
+    //  (state_is_receive && receive_finish && rd_rdy);
+    assign ready = (state_is_idle || (state_is_receive && receive_finish)) && rd_rdy;
 
     assign rvalid = receive_finish;
     assign rdata = {ret_data, receive_buffer[2], receive_buffer[1], receive_buffer[0]};
     assign rhit = 1'b0;
-    //  (state_is_idle && !cacop_en && valid) ||
-    //  (state_is_receive && receive_finish && !cacop_en && valid);
-    assign rd_req = (state_is_idle || (state_is_receive && receive_finish)) && !cacop_en && valid;
+
+    assign cacop_ready = 1'b1;
+
+    //  (state_is_idle && valid) ||
+    //  (state_is_receive && receive_finish && valid);
+    assign rd_req = (state_is_idle || (state_is_receive && receive_finish)) && valid;
     assign rd_type = 3'b100;
     assign rd_addr = {{28{1'b1}}, 4'b0} & araddr;
 
@@ -157,10 +162,7 @@ module icache_dummy_v2 (
             state <= state_reset;
         end else case (state)
             state_idle: begin
-                if (cacop_en) begin
-                    state <= state_idle;
-                end 
-                else if (valid) begin
+                if (valid) begin
                     if (rd_rdy) begin
                         state <= state_receive;
                         receive_buffer_cnt <= 0;
@@ -170,17 +172,16 @@ module icache_dummy_v2 (
             state_receive: begin
                 if (ret_valid) begin
                     if (receive_finish) begin
-                        if (cacop_en) begin
-                            state <= state_idle;
-                        end 
-                        else if (valid) begin
+                        if (valid) begin
                             if (rd_rdy) begin
                                 state <= state_receive;
                                 receive_buffer_cnt <= 0;
                             end else begin
                                 state <= state_idle;
                             end
-                        end                                            
+                        end else begin
+                            state <= state_idle;
+                        end
                     end else begin
                         receive_buffer[receive_buffer_cnt] <= ret_data;
                         receive_buffer_cnt <= receive_buffer_cnt + 1;
@@ -1207,6 +1208,7 @@ endmodule
 // 
 //     localparam  ICACHE_WAY = 2;
 //     genvar i;   // way
+//     integer j;  // way
 // 
 //     // cache ports
 // 
@@ -1222,24 +1224,89 @@ endmodule
 //     wire   [127:0]  data_dina   [0:ICACHE_WAY-1];
 //     wire   [127:0]  data_douta  [0:ICACHE_WAY-1];
 // 
+//     // request buffer
+//     reg     [19:0]  request_buffer_tag;
+//     reg     [19:0]  request_buffer_idx;
+//     reg     [19:0]  request_buffer_uncached;
+//     reg [$clog2(ICACHE_WAY)-1:0] request_buffer_cacop_way;
+// 
 //     // state machine
 // 
 //     localparam      state_idle = 0;
 //     localparam      state_lookup = 1;
-//     localparam      state_receive = 2;
-//     localparam      state_cacop = 3;
-//     localparam      state_reset = 4;
+//     localparam      state_request = 2;
+//     localparam      state_receive = 3;
+//     localparam      state_cacop = 4;
+//     localparam      state_reset = 5;
 //     reg     [ 3:0]  state;
+//     wire state_is_idle = state == state_idle;
+//     wire state_is_lookup = state == state_lookup;
+//     wire state_is_request = state == state_request;
+//     wire state_is_receive = state == state_receive;
+//     wire state_is_cacop = state == state_cacop;
+//     /// idle & lookup & receive
+//     wire cacop_is_init = cacop_code == 2'd0;
+//     wire cacop_is_index = cacop_code == 2'd1;
+//     wire cacop_is_lookup = cacop_code == 2'd2;
+//     /// lookup
+//     wire    [ICACHE_WAY-1:0]    lookup_way_v;
+//     wire    [19:0]              lookup_way_tag  [0:ICACHE_WAY-1];
+//     wire    [ICACHE_WAY-1:0]    lookup_way_hit;
+//     wire                        lookup_hit;
+//     reg    [127:0]              lookup_hit_data; // combinational logic
+//     generate
+//         for (i = 0; i < ICACHE_WAY; i = i + 1) begin
+//             assign lookup_way_v[i] = tagv_douta[i][20];
+//             assign lookup_way_tag[i] = tagv_douta[i][19:0];
+//             assign lookup_way_hit[i] =
+//                 lookup_way_v[i] && (lookup_way_tag[i] == request_buffer_tag);
+//         end
+//     endgenerate
+//     assign lookup_hit = |lookup_way_hit;
+//     always @(*) begin
+//         lookup_hit_data = 128'b0;
+//         for (j = 0; j < ICACHE_WAY; j = j + 1) begin
+//             lookup_hit_data = lookup_hit_data |
+//                 ({128{lookup_way_hit[j]}} & data_douta[j]);
+//         end
+//     end
 // 
 //     always @(posedge clock) begin
 //         if (reset) begin
 //             state <= state_reset;
 //         end else case (state)
 //             state_idle: begin
-//                                 
+//                 if (cacop_en) begin
+//                     if (cacop_is_lookup) begin
+//                         state <= state_cacop;
+//                         request_buffer_cacop_way << cacop_addr[$clog2(ICACHE_WAY)-1:0];
+//                     end else begin
+//                         state <= state_idle;
+//                     end
+//                 end else if (valid) begin
+//                     state <= state_lookup;
+//                     request_buffer_idx <= araddr[11:4];
+//                     request_buffer_tag <= araddr[31:12];
+//                     request_buffer_uncached <= uncached;
+//                 end
 //             end
 //             state_lookup: begin
-//                 
+//                 if (lookup_hit) begin
+//                     if (cacop_en) begin
+//                         state <= state_idle;
+//                     end
+//                 end else begin
+//                     if (r_rdy) begin
+//                         state <= state_receive;
+//                     end else begin
+//                         state <= state_request;
+//                     end
+//                 end
+//             end
+//             state_request: begin
+//                 if (rd_rdy) begin
+//                     state <= state_receive;
+//                 end
 //             end
 //             state_receive: begin
 //                 

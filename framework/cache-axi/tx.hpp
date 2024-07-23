@@ -52,10 +52,6 @@ protected:
     template <typename T>
     using set = std::unordered_set<T>;
 public:
-    bool    uncached;
-    bool    cacop_en;
-    u8      cacop_code;
-    u32     cacop_addr;
     virtual void push(VTOP *dut) = 0;
     virtual void pull(VTOP *dut) = 0;
     virtual void watch(Ram *ram);
@@ -66,6 +62,7 @@ public:
 class ICacheTx : public CacheTx {
 public:
     using r_t = std::array<u32, 4>;
+    bool    uncached;
     u32     araddr;
     r_t     rdata;
     bool    rhit;
