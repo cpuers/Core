@@ -89,6 +89,8 @@ ICache 只支持读取和 CACOP 操作。读取时，一次性返回给定地址
 
 - 添加性能计数器接口；
 
+![状态机](images/icache_v5.svg)
+
 ## DCache
 
 ### 接口
