@@ -413,7 +413,8 @@ module icache_v2(
     output [127:0]  rdata,
     output          rhit,
     /// cpu cacop
-    input           cacop_en,
+    input           cacop_valid,
+    output          cacop_ready,
     input   [ 1:0]  cacop_code, // code[4:3]
     /* verilator lint_off UNUSED */
     input   [31:0]  cacop_addr,
@@ -491,7 +492,7 @@ module icache_v2(
             request_buffer_uncached <= 0;
         end else case (state)
             state_idle: begin
-                if (cacop_en) begin
+                if (cacop_valid) begin
                     if (idle_cacop_is_lookup) begin
                         state <= state_cacop;
                         request_buffer_tag <= cacop_addr[31:12];
@@ -551,6 +552,7 @@ module icache_v2(
     assign rdata = 
         ({128{lookup_ret}} & data_douta) |
         ({128{receive_ret}} & receive_result);
+    assign cacop_ready = state_is_idle;
     assign rd_req = state_is_request;
     assign rd_type = 3'b100;
     assign rd_addr = {request_buffer_tag, request_buffer_idx, 4'd0};
@@ -589,15 +591,15 @@ module icache_v2(
     // cache control
 
     wire    [ 7:0]  cache_idx =
-        ({8{state_is_idle & !cacop_en}}         & araddr[11:4]) |
-        ({8{state_is_idle &  cacop_en}}         & cacop_addr[11:4]) |
+        ({8{state_is_idle & !cacop_valid}}         & araddr[11:4]) |
+        ({8{state_is_idle &  cacop_valid}}         & cacop_addr[11:4]) |
         ({8{state_is_receive | state_is_cacop}} & request_buffer_idx);
 
     assign tagv_ena = 
-        (state_is_idle && (valid || cacop_en)) || 
+        (state_is_idle && (valid || cacop_valid)) || 
         (state_is_receive && receive_finish);
     assign tagv_wea = 
-        (state_is_idle && cacop_en && (
+        (state_is_idle && cacop_valid && (
             idle_cacop_is_init || 
             idle_cacop_is_index
         )) ||
@@ -634,7 +636,8 @@ module icache_v3(
     output [127:0]  rdata,
     output          rhit,
     /// cpu cacop
-    input           cacop_en,
+    input           cacop_valid,
+    output          cacop_ready,
     input   [ 1:0]  cacop_code, // code[4:3]
     /* verilator lint_off UNUSED */
     input   [31:0]  cacop_addr,
@@ -735,7 +738,7 @@ module icache_v3(
             request_buffer_cacop_way <= 0;
         end else case (state)
             state_idle: begin
-                if (cacop_en) begin
+                if (cacop_valid) begin
                     if (idle_cacop_is_lookup) begin
                         state <= state_cacop;
                         request_buffer_tag <= cacop_addr[31:12];
@@ -797,6 +800,7 @@ module icache_v3(
         ({128{lookup_ret}} & lookup_hit_data) |
         ({128{receive_ret}} & receive_result);
     assign rhit = state_is_lookup && lookup_hit;
+    assign cacop_ready = state_is_idle;
     assign rd_req = state_is_request;
     assign rd_type = 3'b100;
     assign rd_addr = {request_buffer_tag, request_buffer_idx, 4'd0};
@@ -839,8 +843,8 @@ module icache_v3(
     // cache control
 
     wire    [ 7:0]                      cache_idx =
-        ({8{state_is_idle & !cacop_en}}         & araddr[11:4]) |
-        ({8{state_is_idle &  cacop_en}}         & cacop_addr[11:4]) |
+        ({8{state_is_idle & !cacop_valid}}         & araddr[11:4]) |
+        ({8{state_is_idle &  cacop_valid}}         & cacop_addr[11:4]) |
         ({8{state_is_receive | state_is_cacop}} & request_buffer_idx);
     wire    [$clog2(ICACHE_WAY)-1:0]    cache_way = 
         ({$clog2(ICACHE_WAY){state_is_idle}}    & cacop_addr[$clog2(ICACHE_WAY)-1:0]) |
@@ -865,7 +869,7 @@ module icache_v3(
         for (i = 0; i < ICACHE_WAY; i = i + 1) begin
             assign tagv_ena[i] = tagv_ena_i;
             assign tagv_wea[i] = 
-                (state_is_idle && cacop_en && (cache_way == i) &&(
+                (state_is_idle && cacop_valid && (cache_way == i) &&(
                     idle_cacop_is_init || 
                     idle_cacop_is_index
                 )) ||
@@ -877,7 +881,7 @@ module icache_v3(
     endgenerate
 
     wire data_ena_i =
-        (state_is_idle && valid && !cacop_en) || 
+        (state_is_idle && valid && !cacop_valid) || 
         (state_is_receive && receive_finish && !request_buffer_uncached) ||
         (state_is_cacop);
     wire data_wea_i = state_is_receive && receive_finish && !request_buffer_uncached;
