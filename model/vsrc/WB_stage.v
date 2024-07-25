@@ -8,10 +8,12 @@ module WB_stage(
      
     output wire ws_ready,
 
-    input  wire es_to_ws_valid1,
-    input  wire es_to_ws_valid2,
+    input  wire [1:0] es_to_ws_valid1,
+    input  wire [1:0] es_to_ws_valid2,
     input  wire [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus1,
     input  wire [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus2,
+    input nblock1,
+    input nblock2,
 
     output wire [`WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus
 );
@@ -57,15 +59,15 @@ assign {ws_gr_we2       ,  //69:69
 //assign ws_ready_go = 1'b1;
 //assign ws_ready  = !ws_valid || ws_ready_go;
 
-assign ws_ready = 1'b1;//(es_to_ws_valid1 && es_to_ws_valid2);
+assign ws_ready = nblock1 && nblock2; // es_to_ws_valid1[1] & es_to_ws_valid2[1]; //nblock1 && nblock2; //1'b1;//(es_to_ws_valid1 && es_to_ws_valid2);
 
-assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1;
-assign rf_we1    = ws_gr_we1 && es_to_ws_valid1 && (ws_dest1 != ws_dest2);
+assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0];
+assign rf_we1    = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && ~(ws_dest1 == ws_dest2 && es_to_ws_valid2[1] && es_to_ws_valid2[0]);
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
-assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid1 && es_to_ws_valid2;
-assign rf_we2    = ws_gr_we2 && es_to_ws_valid1 && es_to_ws_valid2;
+assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid2[1] && es_to_ws_valid2[0];
+assign rf_we2    = ws_gr_we2 && es_to_ws_valid2[1] && es_to_ws_valid2[0];
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
 

@@ -79,10 +79,10 @@ module InstrBuffer (
           head_ptr <= head_ptr;
         end
         2'b01: begin
-          head_ptr <= head_ptr + 1;
+          head_ptr <= head_ptr + `IB_WIDTH_LOG2'h1;
         end
         2'b11: begin
-          head_ptr <= head_ptr + 2;
+          head_ptr <= head_ptr + `IB_WIDTH_LOG2'h2;
         end
         default: begin
           head_ptr <= head_ptr;
@@ -107,13 +107,13 @@ module InstrBuffer (
       default: 
       begin
           instr0_valid = buffer[head_ptr][`IB_DATA_BUS_WD-1];
-          instr1_valid = buffer[head_ptr+1][`IB_DATA_BUS_WD-1];
+          instr1_valid = buffer[head_ptr+ `IB_WIDTH_LOG2'h1][`IB_DATA_BUS_WD-1];
       end
     endcase  
   end
 
   assign pop_instr0 = buffer[head_ptr];
-  assign pop_instr1 = buffer[head_ptr+1];
+  assign pop_instr1 = buffer[head_ptr+`IB_WIDTH_LOG2'h1];
 
 
 endmodule

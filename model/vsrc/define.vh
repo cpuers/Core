@@ -12,7 +12,7 @@
 // 流水线寄存器位宽
 `define IF0_TO_IF1_BUS_WD 40
 //执行阶段旁路信息
-`define FORWAED_BUS_WD 38
+`define FORWAED_BUS_WD 39
 //写回寄存器信息
 `define WS_TO_RF_BUS_WD 140
 `define BR_BUS_WD 33

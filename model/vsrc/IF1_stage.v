@@ -12,7 +12,7 @@ module IF_stage1 (
     input                          data_ok,
     input  [    `FS_ICACHE_WD-1:0] rdata,
     input                          if0_valid,
-    output                         if1_ready
+    output reg                     if1_ready
 );
 
   reg  [`IB_DATA_BUS_WD-1:0] store_buf[ 3:0];
@@ -55,7 +55,7 @@ module IF_stage1 (
       3'd3: begin
         instrs[0] = {pc_valid[1], pc_is_jump[1], fs_pc, rdata[63:32]};
         instrs[1] = {pc_valid[2], pc_is_jump[2], fs_pc + 4, rdata[95:64]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2], fs_pc + 8, rdata[95:64]};
+        instrs[2] = {pc_valid[3], pc_is_jump[3], fs_pc + 8, rdata[127:96]};
         instrs[3] = {pc_valid[3], pc_is_jump[3], fs_pc + 12, rdata[127:96]};
       end
       default: begin
@@ -69,15 +69,15 @@ module IF_stage1 (
 
   always @(posedge clk) 
   begin
-    if (rst| flush_IF) 
+    if (rst | flush_IF) 
     begin
       is_watting <= 1'b0;
     end
-    else if (if0_valid & !is_watting&!data_ok)
+    else if (if0_valid & !is_watting & !data_ok & buf_empty)
     begin
       is_watting <= 1'b1;
     end
-    else if (is_watting &data_ok)
+    else if (is_watting & data_ok)
     begin
       is_watting <= 1'b0;
     end  
@@ -112,7 +112,7 @@ module IF_stage1 (
         if (!can_push & data_valid) 
         begin
           buf_empty <= 1'b0;
-          buf_num   <= push_num;
+          buf_num   <= instr_num;
           store_buf[0] <= instrs[0];
           store_buf[1] <= instrs[1];
           store_buf[2] <= instrs[2];
@@ -127,8 +127,27 @@ module IF_stage1 (
     end
   end
 
-  assign if1_ready =!is_watting && buf_empty;
-  assign push_num = rst?3'd0: can_push ? (buf_empty ? (is_watting && data_valid? instr_num : 3'd0) : buf_num) : 3'd0;
+  always @(posedge clk) 
+  begin
+    if (rst| flush_IF)
+    begin
+      if1_ready <= 1'b1;
+    end
+    if (buf_empty && !is_watting)
+    begin
+      if1_ready <= !(if0_valid & !data_ok);
+    end  
+    else if(is_watting)
+    begin
+      if1_ready <= can_push && data_ok;
+    end
+    else 
+    begin
+      if1_ready <= can_push;
+    end
+  end
+  assign push_num = rst ? 3'd0:  
+         can_push ? (buf_empty ? instr_num &{3{data_valid}}: buf_num) : 3'd0;
 
   assign if1_to_ib[`IB_DATA_BUS_WD-1:0] = buf_empty? instrs[0]: store_buf[0];
   assign if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD] =buf_empty?instrs[1]:  store_buf[1];

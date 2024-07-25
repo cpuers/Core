@@ -70,8 +70,8 @@ module core_top (
   wire                           ws_ready;
   wire                           ds_to_es_valid1;
   wire                           ds_to_es_valid2;
-  wire                           es_to_ws_valid1;
-  wire                           es_to_ws_valid2;
+  wire                     [1:0] es_to_ws_valid1;
+  wire                     [1:0] es_to_ws_valid2;
 
   wire flush_IF1;
   wire flush_IF2;
@@ -91,6 +91,8 @@ module core_top (
   wire [  `ES_TO_WS_BUS_WD -1:0] es_to_ws_bus1;
   wire [  `ES_TO_WS_BUS_WD -1:0] es_to_ws_bus2;
   wire [  `WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
+  wire                           es_nblock1;
+  wire                           es_nblock2;
 
   wire                           if0_valid;
   wire                           if0_valid_to_if1;
@@ -342,6 +344,7 @@ icache_dummy icache_dummy(
       .ws_ready(ws_ready),
       .es_to_ws_valid(es_to_ws_valid1),
       .es_to_ws_bus  (es_to_ws_bus1),
+      .nblock        (es_nblock1),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
@@ -364,6 +367,7 @@ icache_dummy icache_dummy(
       .ws_ready(ws_ready),
       .es_to_ws_valid(es_to_ws_valid2),
       .es_to_ws_bus  (es_to_ws_bus2),
+      .nblock        (es_nblock2),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
@@ -384,6 +388,8 @@ icache_dummy icache_dummy(
       .es_to_ws_valid2(es_to_ws_valid2),
       .es_to_ws_bus1  (es_to_ws_bus1),
       .es_to_ws_bus2  (es_to_ws_bus2),
+      .nblock1        (es_nblock1),
+      .nblock2        (es_nblock2),
       .ws_to_rf_bus   (ws_to_rf_bus)
   );
   
