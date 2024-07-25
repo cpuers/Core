@@ -262,7 +262,6 @@ module MulCon(
 );
   wire signed [63:0] product;
   wire [63:0] uproduct;
-
   Umul Umul(
     .multiplicand(src1),
     .multiplier(src2),
