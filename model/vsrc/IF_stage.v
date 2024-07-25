@@ -64,7 +64,7 @@ module IF_stage0 (
     if (rst | flush_IF) begin
       if0_to_if1_r <= 0;
       IF0_valid_r <= 1'b0;
-    end else if (!IF1_ready||!addr_ok) begin
+    end else if (!addr_ok&&!IF1_ready) begin
       if0_to_if1_r <= if0_to_if1_r;
       IF0_valid_r <= IF0_valid_r;
     end else begin

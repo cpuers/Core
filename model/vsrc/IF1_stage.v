@@ -127,23 +127,23 @@ module IF_stage1 (
     end
   end
 
-  always @(posedge clk) 
+  always @(*) 
   begin
     if (rst| flush_IF)
     begin
-      if1_ready <= 1'b1;
+      if1_ready = 1'b1;
     end
     if (buf_empty && !is_watting)
     begin
-      if1_ready <= !(if0_valid & !data_ok);
+      if1_ready = !(if0_valid & !data_ok);
     end  
     else if(is_watting)
     begin
-      if1_ready <= can_push && data_ok;
+      if1_ready = can_push && data_ok;
     end
     else 
     begin
-      if1_ready <= can_push;
+      if1_ready = can_push;
     end
   end
   assign push_num = rst ? 3'd0:  
