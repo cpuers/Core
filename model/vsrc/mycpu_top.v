@@ -70,8 +70,8 @@ module core_top (
   wire                           ws_ready;
   wire                           ds_to_es_valid1;
   wire                           ds_to_es_valid2;
-  wire                           es_to_ws_valid1;
-  wire                           es_to_ws_valid2;
+  wire                     [1:0] es_to_ws_valid1;
+  wire                     [1:0] es_to_ws_valid2;
 
   wire flush_IF1;
   wire flush_IF2;
@@ -91,6 +91,8 @@ module core_top (
   wire [  `ES_TO_WS_BUS_WD -1:0] es_to_ws_bus1;
   wire [  `ES_TO_WS_BUS_WD -1:0] es_to_ws_bus2;
   wire [  `WS_TO_RF_BUS_WD -1:0] ws_to_rf_bus;
+  wire                           es_nblock1;
+  wire                           es_nblock2;
 
   wire                           if0_valid;
   wire                           if0_valid_to_if1;
@@ -106,10 +108,11 @@ module core_top (
   wire                           icache_data_ok;
   wire [      `FS_ICACHE_WD-1:0] icache_rdata;
   
-
+  wire [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus1;
+  wire [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus2;
+  wire [`MS_TO_ES_BUS_WD-1:0] ms_to_es_bus;
   wire [`EXM_DCACHE_RD -1:0] dcache_rdata_bus;
-  wire [`EXM_DCACHE_WD -1:0] dcache_wdata1_bus;
-  wire [`EXM_DCACHE_WD -1:0] dcache_wdata2_bus;
+  wire [`EXM_DCACHE_WD -1:0] dcache_wdata_bus;
 
   wire        dcache_valid; 
   wire        dcache_ready;
@@ -160,7 +163,7 @@ module core_top (
   assign dcache_rdata_bus = {dcache_ready, dcache_rvalid, dcache_rdata};
 
   assign {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
-          dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = (dcache_wdata1_bus[105]) ? dcache_wdata1_bus : dcache_wdata2_bus;
+          dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = dcache_wdata_bus;
   assign need_jump = (br_bus1[32]) ? br_bus1[32] : (br_bus2[32]) ? br_bus2[32] : 1'b0;
   assign jump_pc = (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
   
@@ -342,6 +345,10 @@ icache_dummy icache_dummy(
       .ws_ready(ws_ready),
       .es_to_ws_valid(es_to_ws_valid1),
       .es_to_ws_bus  (es_to_ws_bus1),
+      .nblock        (es_nblock1),
+
+      .es_to_ms_bus   (es_to_ms_bus1),
+      .ms_to_es_bus   (ms_to_es_bus),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
@@ -349,9 +356,7 @@ icache_dummy icache_dummy(
 
       .br_bus        (br_bus1),
       .flush_IF      (flush_IF1),
-      .flush_ID      (flush_ID1),
-      .dcache_rdata_bus  (dcache_rdata_bus),
-      .dcache_wdata_bus  (dcache_wdata1_bus)
+      .flush_ID      (flush_ID1)
   );
   EXM_stage EXM_stage2 (
       .clk  (aclk),
@@ -364,6 +369,10 @@ icache_dummy icache_dummy(
       .ws_ready(ws_ready),
       .es_to_ws_valid(es_to_ws_valid2),
       .es_to_ws_bus  (es_to_ws_bus2),
+      .nblock        (es_nblock2),
+
+      .es_to_ms_bus   (es_to_ms_bus2),
+      .ms_to_es_bus   (ms_to_es_bus),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
@@ -371,9 +380,17 @@ icache_dummy icache_dummy(
 
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
-      .flush_ID      (flush_ID2),
-      .dcache_rdata_bus  (dcache_rdata_bus),
-      .dcache_wdata_bus  (dcache_wdata2_bus)
+      .flush_ID      (flush_ID2)
+  );
+
+  MEM_stage MEM_stage (
+      .clk              (aclk),
+      .reset            (reset),
+      .es_to_ms_bus1    (es_to_ms_bus1),
+      .es_to_ms_bus2    (es_to_ms_bus2),
+      .ms_to_es_bus     (ms_to_es_bus),
+      .dcache_rdata_bus (dcache_rdata_bus),
+      .dcache_wdata_bus (dcache_wdata_bus)
   );
 
   WB_stage wb_stage (
@@ -384,6 +401,8 @@ icache_dummy icache_dummy(
       .es_to_ws_valid2(es_to_ws_valid2),
       .es_to_ws_bus1  (es_to_ws_bus1),
       .es_to_ws_bus2  (es_to_ws_bus2),
+      .nblock1        (es_nblock1),
+      .nblock2        (es_nblock2),
       .ws_to_rf_bus   (ws_to_rf_bus)
   );
   
@@ -398,7 +417,7 @@ icache_dummy icache_dummy(
   assign debug1_wb_rf_wdata      = wb_stage.rf_wdata2;
   `endif
 
-  dcache_dummy dcache(
+  dcache_dummy_v2 dcache(
       .clock(aclk),
       .reset(reset),
   

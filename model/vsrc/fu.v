@@ -106,12 +106,13 @@ endmodule
 
 
 module Agu(
-    input [2:0] alu_op,
+    input clk,
+    input reset,
+    input [31:0] mem_addr,
+    input is_unsigned,
     input mem_we,
-    input [3:0] mem_ewe,
+    input [3:0] bit_width,
     input mem_rd,
-    input [31:0] src1,
-    input [31:0] src2,
     input [31:0] wdata,
     output[31:0] mem_result,
     output dcache_ok,
@@ -119,12 +120,21 @@ module Agu(
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
 );
 
-wire        dcache_valid = mem_we | mem_rd;
+// reg         wait_rready;
+// reg         wait_rvalid;
+// reg         wait_wready;
+wire [3:0] we;
+wire [31:0] write_data;
+wire [31:0] read_data0;
+wire [31:0] read_data;
+reg [2:0]   waits; // 2=wready, 1=rvalid, 0=rready
+
+wire        dcache_valid = (mem_we && (waits==3'b000 || waits==3'b100)) || (mem_rd && (waits==3'b000 || waits==3'b001));
 wire        dcache_op = (mem_rd) ? 1'b0 :1'b1;       // 0: read, 1: write
-wire [31:0] dcache_addr;
+wire [31:0] dcache_addr = mem_addr;
 wire        dcache_uncached = 1'b0;
-wire [ 3:0] dcache_awstrb = mem_ewe;
-wire [31:0] dcache_wdata = wdata;
+wire [ 3:0] dcache_awstrb = we;
+wire [31:0] dcache_wdata = write_data;
 wire        dcache_cacop_en = 1'b0;
 wire [ 1:0] dcache_cacop_code = 2'b0; // code[4:3]
 wire [31:0] dcache_cacop_addr = 32'b0;
@@ -133,68 +143,226 @@ wire        dcache_ready;
 wire        dcache_rvalid;
 wire [31:0] dcache_rdata;
 
-wire [31:0] adder_a;
-wire [31:0] adder_b;
-wire [31:0] adder_cin;
-/* verilator lint_off UNUSED */
-wire        adder_cout;
-/* verilator lint_on UNUSED */
-wire op_sub  = alu_op[0];
-wire op_slt  = alu_op[1];
-wire op_sltu = alu_op[2];
+wire [4:0] index = {3'b0,mem_addr[1:0]}<<3;
 
-assign adder_a   = src1;
-assign adder_b   = (op_sub | op_slt | op_sltu) ? ~src2 : src2;  //src1 - src2 rj-rk
-assign adder_cin = (op_sub | op_slt | op_sltu) ? 32'b0001      : 32'b0;
-assign {adder_cout, dcache_addr} = adder_a + adder_b + adder_cin;
+assign we = (bit_width==4'b0001) ? (index==5'b0) ? 4'b0001 : (index==5'b01000) ? 4'b0010 : (index==5'b10000) ? 4'b0100 : 4'b1000 :
+            (bit_width==4'b0011) ? (index==5'b0) ? 4'b0011 : 4'b1100 :
+            (bit_width==4'b1111) ? 4'b1111 : 4'b0000;
+assign write_data = wdata << index;
 
 assign dcache_wdata_bus = {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
         dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr};
 
 assign {dcache_ready, dcache_rvalid, dcache_rdata} = dcache_rdata_bus;
-assign mem_result = (dcache_rvalid) ? dcache_rdata : 32'b0;
 
-assign dcache_ok = (mem_rd && dcache_rvalid) || (mem_we && dcache_ready) || (!mem_rd && !mem_we);
+assign read_data0 = dcache_rdata >> index;
+assign read_data = (bit_width == 4'b0001)? {{24{read_data0[7] & !is_unsigned}},read_data0[7:0]}:
+                   (bit_width == 4'b0011)? {{16{read_data0[15]& !is_unsigned}},read_data0[15:0]}:
+                    read_data0;
+assign mem_result = (dcache_rvalid) ? read_data : 32'b0;
+
+//assign dcache_ok = (mem_rd && dcache_rvalid) || (mem_we && dcache_ready) || (!mem_rd && !mem_we);
+//assign dcache_ok = (mem_rd && !wait_rready && !wait_rvalid) || (mem_we && !wait_wready) || (!mem_rd && !mem_we);
+assign dcache_ok = !(waits==3'b000 && mem_rd && (!dcache_ready || !dcache_rvalid)) &&
+                   !(waits==3'b000 && mem_we && !dcache_ready) &&
+                   !(waits==3'b001 && (!dcache_ready || !dcache_rvalid)) &&
+                   !(waits==3'b010 && !dcache_rvalid) &&
+                   !(waits==3'b100 && !dcache_ready);
+
+always @(posedge clk) begin
+    if(reset) begin
+      waits<=3'b0;
+    end
+    else if(mem_rd && waits==3'b000) begin
+      if(!dcache_ready) begin
+        waits<=3'b001; 
+      end else if(dcache_ready) begin
+        waits<=3'b010;
+      end
+    end
+    else if(mem_we && waits==3'b000) begin
+      if(!dcache_ready) begin
+        waits<=3'b100;
+      end else if(dcache_ready) begin
+        waits<=3'b000;
+      end
+    end
+    else if(waits==3'b001) begin
+      if(dcache_ready) begin
+        waits<=3'b010;
+      end
+    end
+    else if(waits==3'b010) begin
+
+      if(dcache_rvalid) begin
+        waits<=3'b000;
+      end
+    end
+    else if(waits==3'b100) begin
+      if(dcache_ready) begin
+        waits<=3'b000;
+      end
+    end
+    else begin
+      waits<=waits;
+    end
+end
+// always @(posedge clk) begin
+//     if(reset) begin
+//       waits<=3'b0;
+//     end
+//     else if(mem_rd && waits==3'b000) begin
+//       if(!dcache_ready) begin
+//         waits<=3'b001; 
+//       end else if(dcache_ready && !dcache_rvalid) begin
+//         waits<=3'b010;
+//       end else if(dcache_ready && dcache_rvalid) begin
+//         waits<=3'b000;
+//       end
+//     end
+//     else if(mem_we && waits==3'b000) begin
+//       if(!dcache_ready) begin
+//         waits<=3'b100;
+//       end else if(dcache_ready) begin
+//         waits<=3'b000;
+//       end
+//     end
+//     else if(waits==3'b001) begin
+//       if(dcache_ready && !dcache_rvalid) begin
+//         waits<=3'b010;
+//       end else if(dcache_ready && dcache_rvalid) begin
+//         waits<=3'b000;
+//       end
+//     end
+//     else if(waits==3'b010) begin
+//       if(dcache_rvalid) begin
+//         waits<=3'b000;
+//       end
+//     end
+//     else if(waits==3'b100) begin
+//       if(dcache_ready) begin
+//         waits<=3'b000;
+//       end
+//     end
+//     else begin
+//       waits<=waits;
+//     end
+// end
 
 endmodule
 
-module Mul(
+
+module MulCon(
   input valid,
   input is_unsigned,
   input use_high,
-  input [31:0] multiplicand,
-  input [31:0] multiplier,
+  input wire [31:0] src1,
+  input wire [31:0] src2,
   output [31:0] result
 );
-  wire [63:0] product;
-  /* verilator lint_off UNUSED */
+  wire signed [63:0] product;
   wire [63:0] uproduct;
-  /* verilator lint_on UNUSED */
-  assign product = valid ? multiplicand * multiplier : 64'b0;
-  assign uproduct = valid ? multiplicand * multiplier : 64'b0;
+
+  Umul Umul(
+    .multiplicand(src1),
+    .multiplier(src2),
+    .product(uproduct)
+  );
+
+  mul mul(
+    .multiplicand(src1),
+    .multiplier(src2),
+    .product(product)
+  );
+  // wire signed [31:0] multiplicand = umultiplicand;
+  // wire signed [31:0] multiplier = umultiplier;
+  // wire signed [63:0] product;
+  // /* verilator lint_off UNUSED */
+  // wire [63:0] uproduct;
+  // /* verilator lint_on UNUSED */
+
+  // assign product = valid ? multiplicand * multiplier : 64'b0;
+  // assign uproduct = valid ? umultiplicand * umultiplier : 64'b0;
   assign result = use_high ? is_unsigned ? uproduct[63:32] : product[63:32] : product[31:0];
 endmodule
 
-module Div(
+module DivCon(
   input valid,
   input is_unsigned,
   input use_mod,
-  input [31:0] dividend,
-  input [31:0] divisor,
+  input wire [31:0] src1,
+  input wire [31:0] src2,
   output [31:0] result
 );
-  wire [31:0] quotient;
-  wire [31:0] remainder;
+
+  //wire signed [31:0] dividend = udividend[31:0];
+  //wire signed [31:0] divisor = udivisor[31:0];
+  wire signed [31:0] quotient;
+  wire signed [31:0] remainder;
   wire [31:0] uquotient;
   wire [31:0] uremainder;
-  assign quotient  = valid ? dividend / divisor : 32'b0;
-  assign remainder = valid ? dividend % divisor : 32'b0;
+  
+  Udiv udiv(
+    .dividend(src1),
+    .divisor(src2),
+    .quotient(uquotient),
+    .remainder(uremainder)
+  );
+  div div(
+    .dividend(src1),
+    .divisor(src2),
+    .quotient(quotient),
+    .remainder(remainder)
+  );
+  // assign quotient  = valid ? dividend / divisor : 32'b0;
+  // assign remainder = valid ? dividend % divisor : 32'b0;
 
-  assign uquotient  = valid ? dividend / divisor :32'b0;
-  assign uremainder = valid ? dividend % divisor :32'b0;
+  // assign uquotient  = valid ? udividend / udivisor :32'b0;
+  // assign uremainder = valid ? udividend % udivisor :32'b0;
   assign result = use_mod?
                    is_unsigned? uremainder : remainder:
                    is_unsigned? uquotient : quotient;
+
+endmodule
+
+
+module Umul (
+    input  [31:0] multiplicand,  // 32-bit unsigned multiplicand
+    input  [31:0] multiplier,    // 32-bit unsigned multiplier
+    output [63:0] product        // 64-bit unsigned product
+);
+  assign product = multiplicand * multiplier;
+endmodule
+
+module mul (
+    input signed [31:0] multiplicand, // 32-bit signed multiplicand
+    input signed [31:0] multiplier,  // 32-bit signed multiplier
+    output signed [63:0] product     // 64-bit signed product
+);
+  // 对于32位有符号数，由于已经是完整的32位，包括符号位，因此不需要额外扩展
+  assign product = multiplicand * multiplier;
+endmodule
+
+module Udiv (
+    input  wire [31:0] dividend,
+    input  wire [31:0] divisor,
+    output wire [31:0] quotient,
+    output wire [31:0] remainder
+);
+
+  assign quotient  = dividend / divisor;
+  assign remainder = dividend % divisor;
+
+endmodule
+module div (
+    input signed [31:0] dividend,  // 32位有符号被除数
+    input signed [31:0] divisor,  // 32位有符号除数
+    output wire signed [31:0] quotient,  // 商
+    output wire signed [31:0] remainder  // 余数
+);
+
+  assign quotient  = dividend / divisor;
+  assign remainder = dividend % divisor;
 
 endmodule
 
