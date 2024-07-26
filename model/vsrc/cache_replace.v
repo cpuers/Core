@@ -9,16 +9,16 @@ module replace_rand_2 (
     always @(*) begin
         case (valid_way)
             2'b00: begin
-                assign replace_en = 2'b10;
+                replace_en = 2'b10;
             end
             2'b01: begin
-                assign replace_en = 2'b10;
+                replace_en = 2'b10;
             end
             2'b10: begin
-                assign replace_en = 2'b01;
+                replace_en = 2'b01;
             end
             2'b11: begin
-                assign replace_en = selector ? 2'b10 : 2'b01;
+                replace_en = selector ? 2'b10 : 2'b01;
             end
         endcase
     end
@@ -49,16 +49,16 @@ module replace_lru_2 (
     always @(*) begin
         case (valid_way)
             2'b00: begin
-                assign replace_en = 2'b10;
+                replace_en = 2'b10;
             end
             2'b01: begin
-                assign replace_en = 2'b10;
+                replace_en = 2'b10;
             end
             2'b10: begin
-                assign replace_en = 2'b01;
+                replace_en = 2'b01;
             end
             2'b11: begin
-                assign replace_en = lru_in ? 2'b01 : 2'b10;
+                replace_en = lru_in ? 2'b01 : 2'b10;
             end
         endcase
     end
