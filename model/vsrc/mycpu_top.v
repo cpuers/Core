@@ -200,43 +200,51 @@ module core_top (
   wire iuncached;
   assign {ws_pc1, rf_we1, rf_waddr1, rf_wdata1, ws_pc2, rf_we2, rf_waddr2, rf_wdata2} = ws_to_rf_bus;
   wire [1:0] IB_pop_op;
+  
+  wire                   jump_excp_fail;
+  wire [`CSR_BUS_WD-1:0] csr_bus1;
+  wire [`CSR_BUS_WD-1:0] csr_bus2;
+  wire                   csr_we;
+  wire [           13:0] csr_addr;
+  wire [           31:0] csr_wdata;
+
   BPU BPU (
       .pc(if0_pc),
       .next_pc(pbu_next_pc),
       .pc_is_jump(pbu_pc_is_jump),
       .pc_valid(pbu_pc_valid)
   );
-icache_dummy icache_dummy(
-    .clock(aclk),
-    .reset(reset),
-
-    .valid(if0_valid),      // in cpu, valid no dep on ok;
-    .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
-    .araddr(iaddr),
-    .uncached(iuncached),
-
-    .rvalid(icache_data_ok),
-    .rdata(icache_rdata),
-    /* verilator lint_off PINCONNECTEMPTY */
-    .rhit(           ),
-
-    //TODO
-    .cacop_valid(dcache_cacop_en),
-    .cacop_ready(               ),
-    /* verilator lint_on PINCONNECTEMPTY */
-    .cacop_code(dcache_cacop_code), // code[4:3]
-    .cacop_addr(dcache_cacop_addr),
-    /* verilator lint_on UNUSED */
-    
-    // axi bridge
-    .rd_req(inst_rd_req),
-    .rd_type(inst_rd_type),
-    .rd_addr(inst_rd_addr),
-    .rd_rdy(inst_rd_rdy),
-    .ret_valid(inst_ret_valid),
-    .ret_last(inst_ret_last),
-    .ret_data(inst_ret_data)
-);
+  icache_dummy icache_dummy(
+      .clock(aclk),
+      .reset(reset),
+  
+      .valid(if0_valid),      // in cpu, valid no dep on ok;
+      .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
+      .araddr(iaddr),
+      .uncached(iuncached),
+  
+      .rvalid(icache_data_ok),
+      .rdata(icache_rdata),
+      /* verilator lint_off PINCONNECTEMPTY */
+      .rhit(           ),
+  
+      //TODO
+      .cacop_valid(dcache_cacop_en),
+      .cacop_ready(               ),
+      /* verilator lint_on PINCONNECTEMPTY */
+      .cacop_code(dcache_cacop_code), // code[4:3]
+      .cacop_addr(dcache_cacop_addr),
+      /* verilator lint_on UNUSED */
+      
+      // axi bridge
+      .rd_req(inst_rd_req),
+      .rd_type(inst_rd_type),
+      .rd_addr(inst_rd_addr),
+      .rd_rdy(inst_rd_rdy),
+      .ret_valid(inst_ret_valid),
+      .ret_last(inst_ret_last),
+      .ret_data(inst_ret_data)
+  );
   IF_stage0 IF_stage0 (
       .clk      (aclk),
       .flush_IF (flush_IF1 | flush_IF2),
@@ -356,7 +364,10 @@ icache_dummy icache_dummy(
 
       .br_bus        (br_bus1),
       .flush_IF      (flush_IF1),
-      .flush_ID      (flush_ID1)
+      .flush_ID      (flush_ID1),
+
+      .csr_bus       (csr_bus1),
+      .jump_excp_fail(jump_excp_fail)
   );
   EXM_stage EXM_stage2 (
       .clk  (aclk),
@@ -380,7 +391,10 @@ icache_dummy icache_dummy(
 
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
-      .flush_ID      (flush_ID2)
+      .flush_ID      (flush_ID2),
+
+      .csr_bus       (csr_bus2),
+      .jump_excp_fail(jump_excp_fail)
   );
 
   MEM_stage MEM_stage (
@@ -403,7 +417,11 @@ icache_dummy icache_dummy(
       .es_to_ws_bus2  (es_to_ws_bus2),
       .nblock1        (es_nblock1),
       .nblock2        (es_nblock2),
-      .ws_to_rf_bus   (ws_to_rf_bus)
+      .ws_to_rf_bus   (ws_to_rf_bus),
+
+      .csr_we         (csr_we),
+      .csr_addr       (csr_addr),
+      .csr_wdata      (csr_wdata)
   );
   
   `ifdef TEAMPACKAGE_EN
