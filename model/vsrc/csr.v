@@ -42,7 +42,7 @@ module csr (
     reg [31:0] csr_save3;
     reg [31:0] test;
     
-    assign jump_excp_fail = csr_wen;
+    assign jump_excp_fail = csr_wen& in_excp;
     assign excp_jump = (in_excp | is_etrn) & ~jump_excp_fail;
     assign excp_pc = in_excp ? csr_eentry : csr_era;
     always @(*) 
@@ -86,6 +86,7 @@ module csr (
             csr_crmd[`PLV] <=2'b0;
             csr_crmd[`IE] <= 1'b0;
             csr_crmd[`DA] <= 1'b1;
+            csr_crmd[`PG] <= 1'b0;
             csr_crmd[`DATF] <= 2'b0;
             csr_crmd[`DATM] <= 2'b0;
             csr_crmd[`CRMD_REV] <= 23'b0;               
@@ -108,10 +109,7 @@ module csr (
         begin
             csr_crmd[`PLV] <= csr_prmd[`PPLV];
             csr_crmd[`IE] <= csr_prmd[`PIE];
-        end
-        begin
-            csr_crmd <= csr_crmd;
-        end    
+        end  
     end
     
     always @(posedge clk)
@@ -125,7 +123,7 @@ module csr (
             csr_prmd[`PPLV] <= wdata[`PPLV];
             csr_prmd[`PIE] <= wdata[`PIE];
         end
-        else if (in_excp)
+        else if (in_excp&!csr_wen)
         begin
             csr_prmd[`PPLV] <= csr_crmd[`PLV];
             csr_prmd[`PIE] <= csr_crmd[`IE];
@@ -136,15 +134,16 @@ module csr (
     begin
         if(rst)
         begin
-            csr_estat[`ESTAT_REV0] <= 1'b0;
-            csr_estat[`ESTAT_REV1] <= 3'b0;
-            csr_estat[`ESTAT_REV2] <= 1'b0;
-            csr_estat[`IS_SOFT] <= 2'b0;
+            csr_estat <= 32'h0;
         end
         else if(csr_wen && (csr_waddr==`ESTAT))
         begin
             csr_estat[`IS_SOFT] <= wdata[`IS_SOFT];
-            
+        end
+        else if(in_excp &!csr_wen)
+        begin
+            csr_estat[`Ecode] <= excp_Ecode;
+            csr_estat[`EsubCode] <= excp_subEcode;
         end
     end
 
@@ -158,7 +157,7 @@ module csr (
         begin
             csr_era <= wdata;
         end
-        else if(in_excp)
+        else if(in_excp&!csr_wen)
         begin
             csr_era <=excp_era;
         end

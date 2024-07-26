@@ -25,7 +25,9 @@ module EXM_stage(
     output                          flush_ID,
 
     output [     `CSR_BUS_WD - 1:0] csr_bus,
-    input                           jump_excp_fail
+    input                           jump_excp_fail,
+    input                           excp_jump,
+    input  [                  31:0] excp_pc
 
 );
 
@@ -34,6 +36,7 @@ wire        in_excp;
 wire [5:0]  excp_Ecode;
 wire [8:0]  excp_subEcode;
 wire        is_etrn;
+wire        need_add_4;
 wire        use_csr_data;
 wire        csr_wen;
 wire [13:0] csr_addr;
@@ -42,6 +45,7 @@ wire [31:0] csr_rdata;
 wire [31:0] csr_wdata_t;
 wire [31:0] csr_wdata;
 wire        use_mark;
+wire [31:0] csr_pc;
 
 wire [11:0] alu_op;
 wire [ 3:0] bit_width;
@@ -83,7 +87,9 @@ wire [31:0] div_result;
 wire [31:0] mem_result;
 wire [31:0] final_result;
 
+wire [31:0] branch_target;
 wire [31:0] jump_target;
+
 wire        zero;
 wire        less;
 
@@ -103,6 +109,7 @@ assign {
     excp_Ecode, //6
     excp_subEcode, //9
     is_etrn, //1   中断
+    need_add_4, //1
     use_csr_data, //1
     csr_wen, //1
     csr_addr, //14
@@ -233,16 +240,17 @@ BranchCond u_branch (
     .zero(zero),
     .pc(es_pc),
     .rj_value(rj_value),
-    .jump_target(jump_target),
+    .jump_target(branch_target),
     .imm(imm),
     .pre_fail(pre_fail)
 );
+assign jump_target = (excp_jump) ? excp_pc : branch_target;
+assign flush_IF = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
+assign flush_ID = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
+assign br_bus = reset ? 0 : {flush_IF, jump_target};
 
-assign br_bus = reset ? 0 : {pre_fail&&ds_to_es_valid, jump_target};
-assign flush_IF = pre_fail&&ds_to_es_valid;
-assign flush_ID = pre_fail&&ds_to_es_valid;
-
-assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc};
+assign csr_pc = es_pc;
+assign csr_bus = {is_etrn & ds_to_es_valid, in_excp & ds_to_es_valid, excp_Ecode, excp_subEcode, csr_pc};
 
 
 endmodule

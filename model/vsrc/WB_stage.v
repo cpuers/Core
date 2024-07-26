@@ -88,7 +88,7 @@ assign rf_we1    = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && ~(ws
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
-assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1] && es_to_ws_valid2[0] ;
+assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1] && es_to_ws_valid2[0];
 assign rf_we2    = ws_gr_we2 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1] && es_to_ws_valid2[0];
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
@@ -105,12 +105,12 @@ assign ws_to_rf_bus = {ws_pc1,
 
 always @(*) begin
     if(csr_we1==1'b1) begin
-        csr_we = csr_we1;
+        csr_we = csr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0];
         csr_addr = csr_addr1;
         csr_wdata = csr_wdata1;
     end
     else if(csr_we2==1'b1) begin
-        csr_we = csr_we2;
+        csr_we = csr_we2 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1] && es_to_ws_valid2[0];
         csr_addr = csr_addr2;
         csr_wdata = csr_wdata2;
     end

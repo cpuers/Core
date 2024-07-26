@@ -461,7 +461,7 @@ module ID_decoder (
 
 
   //跳转控制信号
-  assign may_jump = (inst_beq || inst_bne ||inst_blt||inst_bge||inst_bltu||inst_bgeu|| inst_jirl || inst_bl || inst_b) ;
+  assign may_jump = (inst_beq || inst_bne ||inst_blt||inst_bge||inst_bltu||inst_bgeu|| inst_jirl || inst_bl || inst_b|| inst_ertn) ;
   assign use_rj_value = inst_jirl;
   assign use_less = inst_blt | inst_bltu | inst_bge | inst_bgeu;
   assign need_less = inst_blt | inst_bltu;
@@ -474,6 +474,7 @@ module ID_decoder (
   wire [8:0] excp_subEcode;
   wire [5:0]ds_excp_Ecode;
   wire [8:0]ds_excp_subEcode;
+  wire need_add_4;
   wire have_excp;
   
   assign have_excp = inst_syscall;
@@ -482,14 +483,15 @@ module ID_decoder (
                             inst_syscall ? 9'h0 : 9'h0;
   assign ds_excp_Ecode = in_excp?excp_Ecode:
                           inst_syscall ? 6'hb:6'h0;
+  assign need_add_4 = inst_syscall;
   assign is_etrn = inst_ertn;
   assign csr_num = ds_inst[23:10];
   assign use_csr_data = op_31_26_d[6'h01];
   assign csr_wen = inst_csrwr | inst_csrxchg;
   assign csr_use_mark = inst_csrxchg;
-  assign is_ls = |bit_width | in_excp | have_excp;
+  assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data;
  
-  assign {pc_is_jump, ds_pc,in_excp,excp_Ecode,excp_subEcode, ds_inst} = fs_to_ds_bus;
+  assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;
 
 
 
@@ -498,6 +500,7 @@ module ID_decoder (
     ds_excp_Ecode,
     ds_excp_subEcode,
     is_etrn,
+    need_add_4,
     use_csr_data,
     csr_wen,
     csr_num,

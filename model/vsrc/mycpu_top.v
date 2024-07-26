@@ -206,11 +206,15 @@ module core_top (
   wire [1:0] IB_pop_op;
   
   wire                   jump_excp_fail;
+  wire [`CSR_BUS_WD-1:0] csr_bus;
   wire [`CSR_BUS_WD-1:0] csr_bus1;
   wire [`CSR_BUS_WD-1:0] csr_bus2;
-  wire                   csr_we;
-  wire [           13:0] csr_addr;
+  wire                   csr_wen;
+  wire [           13:0] csr_waddr;
   wire [           31:0] csr_wdata;
+  wire                   excp_jump;
+  wire [           31:0] excp_pc;
+  assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 : (csr_bus2[`CSR_BUS_WD-1] || csr_bus2[`CSR_BUS_WD-2]) ? csr_bus2 : `CSR_BUS_WD'b0;
 
   BPU BPU (
       .pc(if0_pc),
@@ -329,16 +333,16 @@ module core_top (
     .csr_data2(csr_data2),
     
     //TODO
-    .csr_waddr(),
-    .csr_wen(),
-    .wdata(),
+    .csr_waddr(csr_waddr),
+    .csr_wen(csr_wen),
+    .wdata(csr_wdata),
 
     //FOR EXE
-    .csr_bus(),
-    .jump_excp_fail(),
+    .csr_bus(csr_bus),
+    .jump_excp_fail(jump_excp_fail),
 
-    .excp_jump(),
-    .excp_pc()
+    .excp_jump(excp_jump),
+    .excp_pc(excp_pc)
 
 
 );
@@ -399,7 +403,10 @@ module core_top (
       .flush_ID      (flush_ID1),
 
       .csr_bus       (csr_bus1),
-      .jump_excp_fail(jump_excp_fail)
+      .jump_excp_fail(jump_excp_fail),
+      .excp_jump(excp_jump),
+      .excp_pc(excp_pc)
+
   );
   EXM_stage EXM_stage2 (
       .clk  (aclk),
@@ -426,7 +433,10 @@ module core_top (
       .flush_ID      (flush_ID2),
 
       .csr_bus       (csr_bus2),
-      .jump_excp_fail(jump_excp_fail)
+      .jump_excp_fail(jump_excp_fail),
+      .excp_jump(excp_jump),
+      .excp_pc(excp_pc)
+
   );
 
   MEM_stage MEM_stage (
@@ -451,8 +461,8 @@ module core_top (
       .nblock2        (es_nblock2),
       .ws_to_rf_bus   (ws_to_rf_bus),
 
-      .csr_we         (csr_we),
-      .csr_addr       (csr_addr),
+      .csr_we         (csr_wen),
+      .csr_addr       (csr_waddr),
       .csr_wdata      (csr_wdata)
   );
   
