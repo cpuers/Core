@@ -72,6 +72,10 @@ module core_top (
   wire                           ds_to_es_valid2;
   wire                     [1:0] es_to_ws_valid1;
   wire                     [1:0] es_to_ws_valid2;
+  wire                     [13:0]csr_addr1;
+  wire                     [13:0]csr_addr2;
+  wire                      [31:0] csr_data1;
+  wire                      [31:0] csr_data2;
 
   wire flush_IF1;
   wire flush_IF2;
@@ -314,6 +318,30 @@ module core_top (
       .rs3data(read_data2),
       .rs4data(read_data3)
   );
+  csr my_csr (
+    .clk(~aclk),
+    .rst(reset),
+
+    //for ID
+    .csr_addr1(csr_addr1),
+    .csr_data1(csr_data1),
+    .csr_addr2(csr_addr2),
+    .csr_data2(csr_data2),
+    
+    //TODO
+    .csr_waddr(),
+    .csr_wen(),
+    .wdata(),
+
+    //FOR EXE
+    .csr_bus(),
+    .jump_excp_fail(),
+
+    .excp_jump(),
+    .excp_pc()
+
+
+);
   ID_stage ID_stage (
       .clk             (aclk),
       .rst             (reset),
@@ -338,7 +366,11 @@ module core_top (
       .read_data0      (read_data0),
       .read_data1      (read_data1),
       .read_data2      (read_data2),
-      .read_data3      (read_data3)
+      .read_data3      (read_data3),
+      .csr_num1(csr_addr1),
+      .csr_num2(csr_addr2),
+      .csr_data1(csr_data1),
+      .csr_data2(csr_data2)
 
   );
 

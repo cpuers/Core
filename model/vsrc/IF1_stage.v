@@ -23,7 +23,10 @@ module IF_stage1 (
   wire [ 3:0] pc_is_jump;
   wire [31:0] fs_pc;
   wire [ 2:0] instr_num;
-  assign {pc_valid, pc_is_jump, fs_pc} = if0_if1_bus;
+  wire in_excp;
+  wire [5:0] excp_Ecode;
+  wire [8:0] excp_subEcode;
+  assign {in_excp,excp_Ecode,excp_subEcode,pc_valid, pc_is_jump, fs_pc} = if0_if1_bus;
   
   assign instr_num = {1'b0, ~fs_pc[3:2]} + 3'b1;
   reg [2:0] buf_num;
@@ -41,28 +44,28 @@ module IF_stage1 (
     case (instr_num)
 
       3'd1: begin
-        instrs[0] = {pc_valid[3], pc_is_jump[3], fs_pc, rdata[127:96]};
-        instrs[1] = {pc_valid[1], pc_is_jump[1], fs_pc + 4, rdata[63:32]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2], fs_pc + 8, rdata[95:64]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3], fs_pc + 12, rdata[127:96]};
+        instrs[0] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[127:96]};
+        instrs[1] = {pc_valid[1], pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[63:32]};
+        instrs[2] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
+        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
       3'd2: begin
-        instrs[0] = {pc_valid[2], pc_is_jump[2], fs_pc , rdata[95:64]};
-        instrs[1] = {pc_valid[3], pc_is_jump[3], fs_pc + 4, rdata[127:96]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2], fs_pc + 8, rdata[95:64]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3], fs_pc + 12, rdata[127:96]};
+        instrs[0] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc , rdata[95:64]};
+        instrs[1] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[127:96]};
+        instrs[2] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
+        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
       3'd3: begin
-        instrs[0] = {pc_valid[1], pc_is_jump[1], fs_pc, rdata[63:32]};
-        instrs[1] = {pc_valid[2], pc_is_jump[2], fs_pc + 4, rdata[95:64]};
-        instrs[2] = {pc_valid[3], pc_is_jump[3], fs_pc + 8, rdata[127:96]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3], fs_pc + 12, rdata[127:96]};
+        instrs[0] = {pc_valid[1], pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[63:32]};
+        instrs[1] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[95:64]};
+        instrs[2] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[127:96]};
+        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
       default: begin
-        instrs[0] = {pc_valid[0], pc_is_jump[0], fs_pc, rdata[31:0]};
-        instrs[1] = {pc_valid[1], pc_is_jump[1], fs_pc + 4, rdata[63:32]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2], fs_pc + 8, rdata[95:64]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3], fs_pc + 12, rdata[127:96]};
+        instrs[0] = {pc_valid[0], pc_is_jump[0],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[31:0]};
+        instrs[1] = {pc_valid[1], pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[63:32]};
+        instrs[2] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
+        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
     endcase
   end

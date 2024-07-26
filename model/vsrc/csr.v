@@ -5,8 +5,10 @@ module csr (
     input rst,
 
     //for ID
-    input [13:0] csr_addr,
-    output  reg [31:0] csr_data,
+    input [13:0] csr_addr1,
+    output  reg [31:0] csr_data1,
+    input [13:0] csr_addr2,
+    output  reg [31:0] csr_data2,
     
     //TODO
     input [13:0] csr_waddr,
@@ -45,18 +47,35 @@ module csr (
     assign excp_pc = in_excp ? csr_eentry : csr_era;
     always @(*) 
     begin
-        case (csr_addr)
-            `CRMD: csr_data = csr_crmd;
-            `PRMD: csr_data = csr_prmd;
-            `ESTAT: csr_data = csr_estat;
-            `ERA: csr_data = csr_era;   
-            `EENTRY:csr_data = csr_eentry;
-            `SAVE0: csr_data = csr_save0;
-            `SAVE1: csr_data = csr_save1;
-            `SAVE2: csr_data = csr_save2;
-            `SAVE3: csr_data = csr_save3;
+        case (csr_addr1)
+            `CRMD: csr_data1 = csr_crmd;
+            `PRMD: csr_data1 = csr_prmd;
+            `ESTAT: csr_data1 = csr_estat;
+            `ERA: csr_data1 = csr_era;   
+            `EENTRY:csr_data1 = csr_eentry;
+            `SAVE0: csr_data1 = csr_save0;
+            `SAVE1: csr_data1 = csr_save1;
+            `SAVE2: csr_data1 = csr_save2;
+            `SAVE3: csr_data1 = csr_save3;
         default: 
-            csr_data = 32'h0;
+            csr_data1 = 32'h0;
+        endcase    
+    end
+
+    always @(*) 
+    begin
+        case (csr_addr2)
+            `CRMD: csr_data2 = csr_crmd;
+            `PRMD: csr_data2 = csr_prmd;
+            `ESTAT: csr_data2 = csr_estat;
+            `ERA: csr_data2 = csr_era;   
+            `EENTRY:csr_data2 = csr_eentry;
+            `SAVE0: csr_data2 = csr_save0;
+            `SAVE1: csr_data2 = csr_save1;
+            `SAVE2: csr_data2 = csr_save2;
+            `SAVE3: csr_data2 = csr_save3;
+        default: 
+            csr_data2 = 32'h0;
         endcase    
     end
 

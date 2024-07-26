@@ -41,8 +41,15 @@ module IF_stage0 (
   wire [`IF0_TO_IF1_BUS_WD-1:0] if0_to_if1_w;
 
 
+  //TODO
+  wire in_excp;
+  wire [5:0] excp_Ecode;
+  wire [8:0] excp_subEcode;
+  assign in_excp = 1'b0;
+  assign excp_Ecode = 6'b0;
+  assign excp_subEcode = 9'b0;
 
-  assign if0_to_if1_w = {pc_valid, pc_is_jump, fs_pc};
+  assign if0_to_if1_w = {in_excp,excp_Ecode,excp_subEcode, pc_valid, pc_is_jump, fs_pc};
   assign valid = ~rst& IF1_ready;
   always @(posedge clk) begin
     if (rst) begin

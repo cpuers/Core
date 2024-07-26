@@ -22,6 +22,11 @@ module ID_stage (
     input EXE_ready,
     input flush_ID,
 
+    output [13:0] csr_num1,
+    input [31:0] csr_data1,
+    output [13:0] csr_num2,
+    output [31:0] csr_data2,
+
     //for regfile
     output [ 4:0] read_addr0,
     output [ 4:0] read_addr1,
@@ -33,6 +38,7 @@ module ID_stage (
     input  [31:0] read_data3
 
 );
+  
   wire EXE_instr0_valid_w;
   wire [`DS_TO_ES_BUS_WD-1:0] EXE_instr0_w;
   wire [`DS_TO_ES_BUS_WD-1:0] EXE_instr1_w;
@@ -79,6 +85,8 @@ module ID_stage (
   wire instr1_may_jump;
   wire instr0_is_ls;
   wire instr1_is_ls;
+
+
   ID_decoder ID_decoder0 (
       .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-2:0]),
       .ds_to_es_bus(EXE_instr0_w),
@@ -91,7 +99,9 @@ module ID_stage (
       .use_rkd(instr0_use_rkd),
       .dest(instr0_dest),
       .may_jump(instr0_may_jump),
-      .is_ls(instr0_is_ls)
+      .is_ls(instr0_is_ls),
+      .csr_num(csr_num1),
+      .csr_data(csr_data1)
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -105,7 +115,9 @@ module ID_stage (
       .use_rkd(instr1_use_rkd),
       .dest(instr1_dest),
       .may_jump(instr1_may_jump),
-      .is_ls(instr1_is_ls)
+      .is_ls(instr1_is_ls),
+      .csr_num(csr_num2),
+      .csr_data(csr_data2)
   );
 
   // 判断发射逻辑
@@ -138,7 +150,9 @@ module ID_decoder (
     output [4:0] rf_raddr1,
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
-    input [31:0] rf_rdata2
+    input [31:0] rf_rdata2,
+    output [13:0] csr_num,
+    input [31:0] csr_data
 );
 
   wire        use_rj_value;
@@ -175,6 +189,9 @@ module ID_decoder (
   wire [ 4:0] rd;
   wire [ 4:0] rj;
   wire [ 4:0] rk;
+  wire [31:0] rj_d;
+  wire [31:0] rk_d;
+  wire [31:0] rd_d;
   wire [11:0] i12;
   wire [19:0] i20;
   wire [15:0] i16;
@@ -244,10 +261,22 @@ module ID_decoder (
   wire        inst_mod_w;
   wire        inst_divu_w;
   wire        inst_modu_w;
+ 
+  wire        inst_csrrd;
+  wire        inst_csrwr;
+  wire        inst_csrxchg;
+  wire        inst_syscall;
+  wire        inst_ertn;
+
+  wire use_csr_data;
+  wire csr_wen;
+  wire csr_use_mark;
+  wire is_etrn;
 
   wire        use_mul;
   wire        use_high;
   wire        is_unsigned;
+  
 
   wire        use_div;
   wire        use_mod;
@@ -262,7 +291,7 @@ module ID_decoder (
 
   wire [31:0] ds_pc;
 
-
+  
   assign op_31_26 = ds_inst[31:26];
   assign op_25_22 = ds_inst[25:22];
   assign op_21_20 = ds_inst[21:20];
@@ -293,7 +322,12 @@ module ID_decoder (
       .in (op_19_15),
       .out(op_19_15_d)
   );
+  
+  decoder_5_32 u_dec4(.in(rd  ), .out(rd_d  ));
+  decoder_5_32 u_dec5(.in(rj  ), .out(rj_d  ));
+  decoder_5_32 u_dec6(.in(rk  ), .out(rk_d  ));
 
+  
   assign inst_add_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h00];
   assign inst_sub_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h02];
   assign inst_slt = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h1] & op_19_15_d[5'h04];
@@ -340,6 +374,11 @@ module ID_decoder (
   assign inst_mod_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h01];
   assign inst_divu_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h02];
   assign inst_modu_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h03];
+  assign inst_csrrd   = op_31_26_d[6'h01] & ~ds_inst[25] & ~ds_inst[24] & rj_d[5'h00];
+  assign inst_csrwr   = op_31_26_d[6'h01] & ~ds_inst[25] & ~ds_inst[24] & rj_d[5'h01];
+  assign inst_csrxchg = op_31_26_d[6'h01] & ~ds_inst[25] & ~ds_inst[24] & (~rj_d[5'h00] & ~rj_d[5'h01]);
+  assign inst_syscall = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
+  assign inst_ertn = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & rk_d[5'h0e] & rj_d[5'h00] & rd_d[5'h00];
 
   assign use_div = inst_div_w | inst_divu_w | inst_modu_w | inst_mod_w;
   assign use_mod = inst_mod_w | inst_modu_w;
@@ -379,7 +418,7 @@ module ID_decoder (
              need_si12_u ? {{20{1'b0}}, i12[11:0]}:
              need_si12 ? {{20{i12[11]}}, i12[11:0]} : {{{20{1'b0}}, i12[11:0]}};
 
-  assign src_reg_is_rd = inst_beq | inst_bne|inst_blt|inst_bltu|inst_bge|inst_bgeu | inst_st_w | inst_st_b |inst_st_h;
+  assign src_reg_is_rd = inst_beq | inst_bne|inst_blt|inst_bltu|inst_bge|inst_bgeu | inst_st_w | inst_st_b |inst_st_h| inst_csrrd|inst_csrxchg| inst_csrwr;
 
   assign src1_is_pc = inst_jirl | inst_bl | inst_pcaddu;
 
@@ -407,10 +446,10 @@ module ID_decoder (
                      inst_ld_b | inst_ld_bu|inst_st_b ? 4'h1 : 4'h0;
   assign res_from_mem = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_hu | inst_ld_bu;
   assign dst_is_r1 = inst_bl;
-  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu;
+  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &~inst_syscall &~inst_ertn;
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
   assign dest = dst_is_r1 ? 5'd1 : rd;
-  assign is_ls = |bit_width;
+
   assign rf_raddr1 = rj;
   assign rf_raddr2 = src_reg_is_rd ? rd : rk;
 
@@ -430,12 +469,40 @@ module ID_decoder (
   assign use_zero = inst_beq || inst_bne;
   assign need_zero = inst_beq;
 
-
-  assign {pc_is_jump, ds_pc, ds_inst} = fs_to_ds_bus;
+  wire in_excp;
+  wire [5:0] excp_Ecode;
+  wire [8:0] excp_subEcode;
+  wire [5:0]ds_excp_Ecode;
+  wire [8:0]ds_excp_subEcode;
+  wire have_excp;
+  
+  assign have_excp = inst_syscall;
+  
+  assign ds_excp_subEcode = in_excp?  excp_subEcode : 
+                            inst_syscall ? 9'h0 : 9'h0;
+  assign ds_excp_Ecode = in_excp?excp_Ecode:
+                          inst_syscall ? 6'hb:6'h0;
+  assign is_etrn = inst_ertn;
+  assign csr_num = ds_inst[23:10];
+  assign use_csr_data = op_31_26_d[6'h01];
+  assign csr_wen = inst_csrwr | inst_csrxchg;
+  assign csr_use_mark = inst_csrxchg;
+  assign is_ls = |bit_width | in_excp | have_excp;
+ 
+  assign {pc_is_jump, ds_pc,in_excp,excp_Ecode,excp_subEcode, ds_inst} = fs_to_ds_bus;
 
 
 
   assign ds_to_es_bus = {
+    in_excp | have_excp,
+    ds_excp_Ecode,
+    ds_excp_subEcode,
+    is_etrn,
+    use_csr_data,
+    csr_wen,
+    csr_num,
+    csr_data,
+    csr_use_mark,
     alu_op,  // 12
     bit_width,  // 4
 
