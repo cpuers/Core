@@ -206,7 +206,7 @@ module core_top (
       .pc_is_jump(pbu_pc_is_jump),
       .pc_valid(pbu_pc_valid)
   );
-icache_dummy icache_dummy(
+icache_v5 icache_dummy(
     .clock(aclk),
     .reset(reset),
 

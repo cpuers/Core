@@ -1450,6 +1450,28 @@ module icache_v5(
         end
     endgenerate
     `else
+    
+    generate
+        for (i = 0; i < ICACHE_WAY; i = i + 1) begin
+            icache_tagv_sram u_tagv_sram(
+                .clka           (clock          ),
+                .ena            (tagv_ena   [i] ),
+                .wea            (tagv_wea   [i] ),
+                .addra          (tagv_addra [i] ),
+                .dina           (tagv_dina  [i] ),
+                .douta          (tagv_douta [i] )       
+            );
+            
+            icache_data_sram u_data_sram(
+                .clka           (clock          ),
+                .ena            (data_ena   [i] ),
+                .wea            (data_wea   [i] ),
+                .addra          (data_addra [i] ),
+                .dina           (data_dina  [i] ),
+                .douta          (data_douta [i] )
+            );
+        end
+    endgenerate
 
     `endif
 
