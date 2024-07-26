@@ -11,6 +11,8 @@
 `define DS_TO_ES_BUS_WD 177
 // 流水线寄存器位宽
 `define IF0_TO_IF1_BUS_WD 40
+
+`define CSR_BUS_WD 49
 //执行阶段旁路信息
 `define FORWAED_BUS_WD 39
 //写回寄存器信息
