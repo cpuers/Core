@@ -19,6 +19,7 @@ reg [3:0]  bit_width;
 reg [31:0] wdata;
 wire [31:0] mem_result;
 wire        dcache_ok;
+wire        excp_ale;
 
 reg [31:0] ms_pc;
 
@@ -79,7 +80,7 @@ always @(*) begin
     end 
 end
 
-assign ms_to_es_bus = {dcache_ok, mem_result};
+assign ms_to_es_bus = {excp_ale, dcache_ok, mem_result};
 
 Agu u_agu(
     .clk                (clk),
@@ -93,7 +94,8 @@ Agu u_agu(
     .mem_result         (mem_result),
     .dcache_ok          (dcache_ok),
     .dcache_rdata_bus   (dcache_rdata_bus),
-    .dcache_wdata_bus   (dcache_wdata_bus)
+    .dcache_wdata_bus   (dcache_wdata_bus),
+    .excp_ale           (excp_ale)
 );
 
 endmodule

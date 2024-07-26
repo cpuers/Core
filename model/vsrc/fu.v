@@ -117,7 +117,8 @@ module Agu(
     output[31:0] mem_result,
     output dcache_ok,
     input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
-    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
+    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
+    output excp_ale
 );
 
 // reg         wait_rready;
@@ -160,6 +161,9 @@ assign read_data = (bit_width == 4'b0001)? {{24{read_data0[7] & !is_unsigned}},r
                    (bit_width == 4'b0011)? {{16{read_data0[15]& !is_unsigned}},read_data0[15:0]}:
                     read_data0;
 assign mem_result = (dcache_rvalid) ? read_data : 32'b0;
+
+assign excp_ale = (bit_width == 4'b1111) ? mem_addr[0] | mem_addr[1] :
+                (bit_width == 4'b0011) ? mem_addr[0] : 1'b0;
 
 //assign dcache_ok = (mem_rd && dcache_rvalid) || (mem_we && dcache_ready) || (!mem_rd && !mem_we);
 //assign dcache_ok = (mem_rd && !wait_rready && !wait_rvalid) || (mem_we && !wait_wready) || (!mem_rd && !mem_we);

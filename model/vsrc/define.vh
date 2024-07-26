@@ -20,7 +20,7 @@
 `define ES_TO_WS_BUS_WD 117
 
 `define ES_TO_MS_BUS_WD 103
-`define MS_TO_ES_BUS_WD 33
+`define MS_TO_ES_BUS_WD 34
 `define EXM_DCACHE_RD 34
 `define EXM_DCACHE_WD 106
 

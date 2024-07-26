@@ -33,9 +33,13 @@ module EXM_stage(
 
 //wire [`FORWAED_BUS_WD -1:0]  exm_forward_bus_w;
 wire        in_excp;
-wire [5:0]  excp_Ecode;
-wire [8:0]  excp_subEcode;
+wire        in_excp_t;
 wire        is_etrn;
+wire        is_etrn_t;
+wire [5:0]  excp_Ecode;
+wire [5:0]  excp_Ecode_t;
+wire [8:0]  excp_subEcode;
+wire [8:0]  excp_subEcode_t;
 wire        need_add_4;
 wire        use_csr_data;
 wire        csr_wen;
@@ -45,7 +49,6 @@ wire [31:0] csr_rdata;
 wire [31:0] csr_wdata_t;
 wire [31:0] csr_wdata;
 wire        use_mark;
-wire [31:0] csr_pc;
 
 wire [11:0] alu_op;
 wire [ 3:0] bit_width;
@@ -78,6 +81,7 @@ wire        use_div;
 wire        use_mod;
 
 wire        pre_fail;
+wire        flush;
 
 wire [31:0] src1;
 wire [31:0] src2;
@@ -93,22 +97,23 @@ wire [31:0] jump_target;
 wire        zero;
 wire        less;
 
-reg  [`FORWAED_BUS_WD-1:0]  exm_forward_bus_r;
+reg  [ `FORWAED_BUS_WD-1:0] exm_forward_bus_r;
 
-wire [                 1:0]  es_to_ws_valid_w;
-wire [`ES_TO_WS_BUS_WD-1:0]  es_to_ws_bus_w;
-reg  [`ES_TO_WS_BUS_WD+1:0]  es_to_ws_bus_r;
-wire                         dcache_ok;
+wire [                 1:0] es_to_ws_valid_w;
+wire [`ES_TO_WS_BUS_WD-1:0] es_to_ws_bus_w;
+reg  [`ES_TO_WS_BUS_WD+1:0] es_to_ws_bus_r;
+wire                        dcache_ok;
+wire                        excp_ale;
 
 wire [1:0] forw_rj;
 wire [1:0] forw_rkd;
 wire [1:0] forw_csr;
 
 assign {
-    in_excp, //1   例外
-    excp_Ecode, //6
-    excp_subEcode, //9
-    is_etrn, //1   中断
+    in_excp_t, //1   例外
+    excp_Ecode_t, //6
+    excp_subEcode_t, //9
+    is_etrn_t, //1   中断
     need_add_4, //1
     use_csr_data, //1
     csr_wen, //1
@@ -180,12 +185,14 @@ assign es_to_ws_valid  = es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD];
 assign es_to_ws_bus    = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
 assign exm_forward_bus = exm_forward_bus_r; //es_to_ws_bus_r[`ES_TO_WS_BUS_WD:32]; //exm_forward_bus_r;
 
+//csr forward
 assign forw_csr[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[84] && use_csr_data && forward_data1[83:70]==csr_addr;
 assign forw_csr[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[84] && use_csr_data && forward_data2[83:70]==csr_addr;
 assign csr_rdata = forw_csr[0] ? forward_data1[69:38] : forw_csr[1] ? forward_data2[69:38] : csr_rdata_t;
 assign csr_wdata_t = (rj_value & rkd_value) | (~rj_value & csr_rdata);
 assign csr_wdata = use_mark ?  csr_wdata_t : rkd_value;
 
+//regfile forward
 assign forw_rj[0]  = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && forward_data1[36:32]==rf_raddr1;
 assign forw_rj[1]  = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && forward_data2[36:32]==rf_raddr1;
 assign forw_rkd[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && forward_data1[36:32]==rf_raddr2;
@@ -193,13 +200,29 @@ assign forw_rkd[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && fo
 assign rj_value  = forw_rj[0] ? forward_data1[31:0] : forw_rj[1] ? forward_data2[31:0] : rj_value_t;
 assign rkd_value = forw_rkd[0]? forward_data1[31:0] : forw_rkd[1]? forward_data2[31:0] : rkd_value_t;
 
+//src
 assign src1 = src1_is_pc ? es_pc : rj_value;
 assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 
 assign final_result = use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
-assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&&ds_to_es_valid, res_from_mem&&ds_to_es_valid, bit_width, rkd_value, es_pc};
-assign {dcache_ok, mem_result} = ms_to_es_bus;
+//for mem
+assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid, res_from_mem&ds_to_es_valid, bit_width, rkd_value, es_pc};
+assign {excp_ale, dcache_ok, mem_result} = ms_to_es_bus;
+
+//flush: jump or excp or etrn 
+assign flush = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
+assign jump_target = (excp_jump) ? excp_pc : branch_target;
+assign flush_IF = flush;
+assign flush_ID = flush;
+assign br_bus = reset ? 0 : {flush, jump_target};
+
+//csr
+assign is_etrn = is_etrn_t;
+assign in_excp = in_excp_t | excp_ale;
+assign excp_Ecode = (excp_ale) ? 6'h9 : excp_Ecode_t;
+assign excp_subEcode = (excp_ale) ? 9'h0 : excp_subEcode_t;
+assign csr_bus = {is_etrn&ds_to_es_valid, in_excp&ds_to_es_valid, excp_Ecode, excp_subEcode, es_pc};
 
 Alu u_alu (
     .alu_op    (alu_op),
@@ -244,13 +267,6 @@ BranchCond u_branch (
     .imm(imm),
     .pre_fail(pre_fail)
 );
-assign jump_target = (excp_jump) ? excp_pc : branch_target;
-assign flush_IF = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
-assign flush_ID = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
-assign br_bus = reset ? 0 : {flush_IF, jump_target};
-
-assign csr_pc = es_pc;
-assign csr_bus = {is_etrn & ds_to_es_valid, in_excp & ds_to_es_valid, excp_Ecode, excp_subEcode, csr_pc};
 
 
 endmodule
