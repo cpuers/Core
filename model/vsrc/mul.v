@@ -44,29 +44,29 @@ module rad4Booth(
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
-    output [16*64-1:0] partialProduct
+    output [17*64-1:0] partialProduct
 //    ,output wire [15:0] neg, 
 //    output wire [15:0] two,
 //    output wire [15:0] zero
 );
-    wire [63:0] pp_arr [15:0];
+    wire [63:0] pp_arr [16:0];
     genvar i;
-    generate for (i = 0; i < 16; i = i+1) begin: partialProductConvert
+    generate for (i = 0; i < 17; i = i+1) begin: partialProductConvert
         assign partialProduct[64*(i+1)-1: 64*i] = pp_arr[i];
     end endgenerate
-    wire [33:0] ex_y = {mul_signed & y[31], y, 1'b0};
+    wire [34:0] ex_y = {mul_signed & y[31], mul_signed & y[31], y, 1'b0};
     wire [63:0] ex_x;
     assign ex_x = (mul_signed & x[31]) ? {32'hffffffff, x} : {32'd0, x};
 
-    wire [63:0] pp_m2 = -(ex_x << 1);
+    wire [63:0] pp_m2 = (-ex_x)<<1;
     wire [63:0] pp_m1 = -ex_x;
     wire [63:0] pp_1  = ex_x;
     wire [63:0] pp_2  = (ex_x << 1);
     
-    wire [15:0] neg, two, zero;
+    wire [16:0] neg, two, zero;
     
     genvar j;
-    generate for (j = 0; j < 16; j=j+1) begin
+    generate for (j = 0; j < 17; j=j+1) begin
         boothEncoder be(
             .a(ex_y[j*2+2:j*2]),
             .neg(neg[j]),
@@ -118,6 +118,24 @@ module compressor_42 (
     endgenerate
 endmodule
 
+module csa_adder(
+    input [63:0] a,
+    input [63:0] b,
+    input [63:0] c,
+    output [63:0] sum,
+    output [63:0] carry
+);
+
+    genvar i;
+    generate
+        for (i = 0; i<64; i = i+1) begin
+            assign carry[i] = (a[i] & b[i]) || (b[i] & c[i]) || (a[i] & c[i]);
+            assign sum[i] = a[i] ^ b[i] ^ c[i]; 
+        end
+    endgenerate
+
+endmodule
+
 module WallaceTree(
     input [31:0] x,
     input [31:0] y,
@@ -126,12 +144,12 @@ module WallaceTree(
     output overflow
 );
     
-    wire [63:0] pp [15:0];
+    wire [63:0] pp [16:0];
     rad4Booth myboo(
         .x(x),
         .y(y),
         .mul_signed(mul_signed),
-        .partialProduct({pp[15], pp[14], pp[13], pp[12], pp[11], pp[10], pp[9], pp[8], 
+        .partialProduct({pp[16], pp[15], pp[14], pp[13], pp[12], pp[11], pp[10], pp[9], pp[8], 
     pp[7], pp[6], pp[5], pp[4], pp[3], pp[2], pp[1], pp[0]})
     );
     
@@ -185,9 +203,18 @@ module WallaceTree(
         .Em1(0), .overflow(cout3_0)
     );
     
-    assign result   = l3res00 + l3res01;
+    wire [63:0] l4res0, l4res1;
+    assign l4res0[0] = 0;
+    
+    csa_adder l4(
+        .a(l3res00),
+        .b(l3res01),
+        .c(pp[16]),
+        .carry(l4res0[63:1]),
+        .sum(l4res1)
+    );
+    assign result   = l4res0 + l4res1;
     assign overflow = cout3_0;
     
 endmodule
-
 
