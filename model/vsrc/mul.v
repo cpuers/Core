@@ -4,13 +4,14 @@ module mul (
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
+    input use_high,
     // input clock, 
     // input reset,
-    output [63:0] result
+    output [31:0] mul_result
     //output avoidCompileErr
 );
     //assign avoidCompileErr = clock ^ reset;
-
+    wire [63:0] result;
     WallaceTree mywt(
         .x(x),
         .y(y),
@@ -18,6 +19,7 @@ module mul (
         .result(result)
     );
 
+    assign mul_result = use_high ? result[63:32] : result[31:0];
     // wire [63:0] ex_x = (mul_signed & x[31]) ? {32'h11111111, x} : {32'd0, x};
     // wire [63:0] ex_y = (mul_signed & y[31]) ? {32'h11111111, y} : {32'd0, y};
     
