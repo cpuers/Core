@@ -56,7 +56,7 @@ module rad4Booth(
     end endgenerate
     wire [33:0] ex_y = {mul_signed & y[31], y, 1'b0};
     wire [63:0] ex_x;
-    assign ex_x = (mul_signed & x[31]) ? {32'h11111111, x} : {32'd0, x};
+    assign ex_x = (mul_signed & x[31]) ? {32'hffffffff, x} : {32'd0, x};
 
     wire [63:0] pp_m2 = -(ex_x << 1);
     wire [63:0] pp_m1 = -ex_x;
