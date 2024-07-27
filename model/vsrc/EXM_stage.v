@@ -239,14 +239,22 @@ Alu u_alu (
     .less      (less)
 );
 
-MulCon u_mul(
-    .valid        (use_mul),
-    .is_unsigned  (is_unsigned),
-    .use_high     (use_high),
-    .src1 (src1),
-    .src2   (src2),
-    .result       (mul_result)
+mul u_mul(
+    .x          (src1),
+    .y          (src2),
+    .mul_signed (~is_unsigned),
+    .use_high   (use_high),
+    .mul_result (mul_result)
 );
+
+// MulCon mul_temp(
+//     .valid        (use_mul),
+//     .is_unsigned  (is_unsigned),
+//     .use_high     (use_high),
+//     .src1 (src1),
+//     .src2   (src2),
+//     .result       (mul_result0)
+// );
 
 DivCon u_div(
     .valid        (use_div),
