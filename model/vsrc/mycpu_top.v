@@ -206,6 +206,7 @@ module core_top (
   wire [1:0] IB_pop_op;
   
   wire                   jump_excp_fail;
+  wire                   have_intrpt;
   wire [`CSR_BUS_WD-1:0] csr_bus;
   wire [`CSR_BUS_WD-1:0] csr_bus1;
   wire [`CSR_BUS_WD-1:0] csr_bus2;
@@ -342,7 +343,9 @@ module core_top (
     .jump_excp_fail(jump_excp_fail),
 
     .excp_jump(excp_jump),
-    .excp_pc(excp_pc)
+    .excp_pc(excp_pc),
+    .intrpt(intrpt),
+    .have_intrpt(have_intrpt)
 
 
 );
@@ -374,7 +377,8 @@ module core_top (
       .csr_num1(csr_addr1),
       .csr_num2(csr_addr2),
       .csr_data1(csr_data1),
-      .csr_data2(csr_data2)
+      .csr_data2(csr_data2),
+      .have_intrpt(have_intrpt)
 
   );
 

@@ -24,12 +24,10 @@ module WB_stage(
 
 // reg         ws_valid;
 // wire        ws_ready_go;
-wire        csr_rd1;
 wire        csr_we1;
 wire [13:0] csr_addr1;
 wire [31:0] csr_wdata1;
 
-wire        csr_rd2;
 wire        csr_we2;
 wire [13:0] csr_addr2;
 wire [31:0] csr_wdata2;

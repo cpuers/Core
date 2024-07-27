@@ -35,3 +35,30 @@
 `define SAVE2 14'h32 
 `define SAVE3 14'h33 
 `define SAVE_data 31:0
+
+`define ECFG 14'h4
+`define LIE_9_0 9:0
+`define ECFG_REV0 10
+`define LIE_12_11 12:11
+`define ECFG_REV1 31:13
+
+`define BADV 14'h7
+`define VAddr 31:0
+
+`define TID 14'h40
+
+`define TCFG 14'h41
+`define En 0
+`define Periodic 1
+`define InitVal 31:2
+
+`define TVAL 14'h42
+
+`define TICLR 14'h44
+`define CLR 0
+`define TICLR_REV 31:1
+
+
+// It's UB
+`define TIMER_64_H 14'h99
+`define TIMER_64_L 14'h9a

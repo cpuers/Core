@@ -40,7 +40,10 @@ wire [5:0]  excp_Ecode;
 wire [5:0]  excp_Ecode_t;
 wire [8:0]  excp_subEcode;
 wire [8:0]  excp_subEcode_t;
-wire        need_add_4;
+wire        use_badv_t;
+wire        use_badv;
+wire [31:0] bad_addr;
+wire [31:0] bad_addr_t;
 wire        use_csr_data;
 wire        csr_wen;
 wire [13:0] csr_addr;
@@ -114,7 +117,8 @@ assign {
     excp_Ecode_t, //6
     excp_subEcode_t, //9
     is_etrn_t, //1   中断
-    need_add_4, //1
+    use_badv_t,
+    bad_addr_t, //1
     use_csr_data, //1
     csr_wen, //1
     csr_addr, //14
@@ -155,7 +159,7 @@ assign nblock = dcache_ok || ~ds_to_es_valid;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 assign es_to_ws_valid_w[1] = nblock && ~jump_excp_fail;
 assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, 
-                         gr_we, dest, final_result, es_pc};
+                         gr_we&!in_excp, dest, final_result, es_pc};
 
 assign es_ready = nblock && ws_ready && ~jump_excp_fail; 
 
@@ -207,7 +211,7 @@ assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 assign final_result = use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
 //for mem
-assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid, res_from_mem&ds_to_es_valid, bit_width, rkd_value, es_pc};
+assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid&!in_excp_t, res_from_mem&ds_to_es_valid&!in_excp_t, bit_width, rkd_value, es_pc};
 assign {excp_ale, dcache_ok, mem_result} = ms_to_es_bus;
 
 //flush: jump or excp or etrn 
@@ -218,11 +222,13 @@ assign flush_ID = flush;
 assign br_bus = reset ? 0 : {flush, jump_target};
 
 //csr
-assign is_etrn = is_etrn_t;
-assign in_excp = in_excp_t | excp_ale;
-assign excp_Ecode = (excp_ale) ? 6'h9 : excp_Ecode_t;
-assign excp_subEcode = (excp_ale) ? 9'h0 : excp_subEcode_t;
-assign csr_bus = {is_etrn&ds_to_es_valid, in_excp&ds_to_es_valid, excp_Ecode, excp_subEcode, es_pc};
+assign is_etrn = is_etrn_t&ds_to_es_valid;
+assign in_excp = (in_excp_t | (excp_ale & (mem_we | res_from_mem)))&ds_to_es_valid;
+assign excp_Ecode = (in_excp_t) ? excp_Ecode_t : 6'h9;
+assign excp_subEcode = (in_excp_t) ? excp_subEcode_t : 9'h0;
+assign use_badv = (in_excp_t) ? use_badv_t : excp_ale; 
+assign bad_addr = (in_excp_t) ? bad_addr_t : alu_result;
+assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc,use_badv, bad_addr};
 
 Alu u_alu (
     .alu_op    (alu_op),

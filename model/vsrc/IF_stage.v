@@ -42,15 +42,17 @@ module IF_stage0 (
 
 
   //TODO
+  wire is_ADEF;
   wire in_excp;
   wire [5:0] excp_Ecode;
   wire [8:0] excp_subEcode;
-  assign in_excp = 1'b0;
-  assign excp_Ecode = 6'b0;
+  assign is_ADEF = |fs_pc[1:0];
+  assign in_excp = is_ADEF;
+  assign excp_Ecode = 6'h8;
   assign excp_subEcode = 9'b0;
 
   assign if0_to_if1_w = {in_excp,excp_Ecode,excp_subEcode, pc_valid, pc_is_jump, fs_pc};
-  assign valid = ~rst& IF1_ready;
+  assign valid = ~rst& IF1_ready & ~is_ADEF;
   always @(posedge clk) begin
     if (rst) begin
       pc_r <= 32'h1c000000;

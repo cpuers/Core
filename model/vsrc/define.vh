@@ -8,11 +8,11 @@
 `define IB_WIDTH_LOG2 4
 
 `define IB_DATA_BUS_WD 82
-`define DS_TO_ES_BUS_WD 244
+`define DS_TO_ES_BUS_WD 276 
 // 流水线寄存器位宽
 `define IF0_TO_IF1_BUS_WD 56
 
-`define CSR_BUS_WD 49
+`define CSR_BUS_WD 82 
 //执行阶段旁路信息
 `define FORWAED_BUS_WD 86
 

@@ -28,7 +28,7 @@ module IF_stage1 (
   wire [8:0] excp_subEcode;
   assign {in_excp,excp_Ecode,excp_subEcode,pc_valid, pc_is_jump, fs_pc} = if0_if1_bus;
   
-  assign instr_num = {1'b0, ~fs_pc[3:2]} + 3'b1;
+  assign instr_num = in_excp ?  3'b1 : ({1'b0, ~fs_pc[3:2]} + 3'b1);
   reg [2:0] buf_num;
   reg buf_empty;
   wire can_push;
@@ -76,7 +76,7 @@ module IF_stage1 (
     begin
       is_watting <= 1'b0;
     end
-    else if (if0_valid & !is_watting & !data_ok & buf_empty)
+    else if (!in_excp& if0_valid & !is_watting & !data_ok & buf_empty)
     begin
       is_watting <= 1'b1;
     end
@@ -138,7 +138,7 @@ module IF_stage1 (
     end
     if (buf_empty && !is_watting)
     begin
-      if1_ready = !(if0_valid & !data_ok);
+      if1_ready = !(if0_valid & !data_ok & !in_excp);
     end  
     else if(is_watting)
     begin
@@ -150,7 +150,7 @@ module IF_stage1 (
     end
   end
   assign push_num = rst ? 3'd0:  
-         can_push ? (buf_empty ? instr_num &{3{data_valid}}: buf_num) : 3'd0;
+         can_push ? (buf_empty ? instr_num &{3{data_valid|in_excp}}: buf_num) : 3'd0;
 
   assign if1_to_ib[`IB_DATA_BUS_WD-1:0] = buf_empty? instrs[0]: store_buf[0];
   assign if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD] =buf_empty?instrs[1]:  store_buf[1];

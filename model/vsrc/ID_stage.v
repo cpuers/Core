@@ -1,5 +1,5 @@
 `include "define.vh"
-
+`include "csr.vh"
 module ID_stage (
     input clk,
     input rst,
@@ -25,7 +25,8 @@ module ID_stage (
     output [13:0] csr_num1,
     input [31:0] csr_data1,
     output [13:0] csr_num2,
-    output [31:0] csr_data2,
+    input [31:0] csr_data2,
+    input have_intrpt,
 
     //for regfile
     output [ 4:0] read_addr0,
@@ -101,7 +102,8 @@ module ID_stage (
       .may_jump(instr0_may_jump),
       .is_ls(instr0_is_ls),
       .csr_num(csr_num1),
-      .csr_data(csr_data1)
+      .csr_data(csr_data1),
+      .have_intrpt(have_intrpt)
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -117,7 +119,8 @@ module ID_stage (
       .may_jump(instr1_may_jump),
       .is_ls(instr1_is_ls),
       .csr_num(csr_num2),
-      .csr_data(csr_data2)
+      .csr_data(csr_data2),
+      .have_intrpt(have_intrpt)
   );
 
   // 判断发射逻辑
@@ -139,6 +142,7 @@ module ID_decoder (
     input [`IB_DATA_BUS_WD-2:0] fs_to_ds_bus,
     //to es
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
+    
 
     // judge RAW 
     output is_ls,
@@ -151,6 +155,7 @@ module ID_decoder (
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
     input [31:0] rf_rdata2,
+    input have_intrpt,
     output [13:0] csr_num,
     input [31:0] csr_data
 );
@@ -175,6 +180,7 @@ module ID_decoder (
   wire        src2_is_imm;
   wire        res_from_mem;
   wire        dst_is_r1;
+  wire        dst_is_rj;
   wire        gr_we;
   wire        mem_we;
   wire        src_reg_is_rd;
@@ -266,12 +272,19 @@ module ID_decoder (
   wire        inst_csrwr;
   wire        inst_csrxchg;
   wire        inst_syscall;
+  wire        inst_break;
   wire        inst_ertn;
+
+  wire        inst_rdcntvl_w;
+  wire        inst_rdcntvh_w;
+  wire        inst_rdcntid;
 
   wire use_csr_data;
   wire csr_wen;
   wire csr_use_mark;
   wire is_etrn;
+  wire have_ine;
+  wire use_badv;
 
   wire        use_mul;
   wire        use_high;
@@ -378,7 +391,11 @@ module ID_decoder (
   assign inst_csrwr   = op_31_26_d[6'h01] & ~ds_inst[25] & ~ds_inst[24] & rj_d[5'h01];
   assign inst_csrxchg = op_31_26_d[6'h01] & ~ds_inst[25] & ~ds_inst[24] & (~rj_d[5'h00] & ~rj_d[5'h01]);
   assign inst_syscall = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h16];
+  assign inst_break = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h2] & op_19_15_d[5'h14];
   assign inst_ertn = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & rk_d[5'h0e] & rj_d[5'h00] & rd_d[5'h00];
+  assign inst_rdcntvh_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h19] & rj_d[5'h00];
+  assign inst_rdcntvl_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rj_d[5'h00] & !rd_d[5'h00];
+  assign inst_rdcntid = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rd_d[5'h00] & !rj_d[5'h00];
 
   assign use_div = inst_div_w | inst_divu_w | inst_modu_w | inst_mod_w;
   assign use_mod = inst_mod_w | inst_modu_w;
@@ -446,14 +463,27 @@ module ID_decoder (
                      inst_ld_b | inst_ld_bu|inst_st_b ? 4'h1 : 4'h0;
   assign res_from_mem = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_hu | inst_ld_bu;
   assign dst_is_r1 = inst_bl;
+  assign dst_is_rj = inst_rdcntid;
   assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &~inst_syscall &~inst_ertn;
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
-  assign dest = dst_is_r1 ? 5'd1 : rd;
+  assign dest = dst_is_r1 ? 5'd1 :
+                dst_is_rj  ? rj : rd;
 
   assign rf_raddr1 = rj;
   assign rf_raddr2 = src_reg_is_rd ? rd : rk;
-
-
+  
+  assign have_ine = !(inst_add_w |inst_sub_w |inst_slt |inst_slti |inst_sltui
+                    |inst_sltu|inst_nor|inst_and|inst_or|inst_xor
+                    |inst_andi|inst_ori|inst_xori|inst_slli_w|inst_srli_w
+                    |inst_srai_w|inst_sll_w|inst_srl_w|inst_sra_w|inst_addi_w
+                    |inst_ld_w  |inst_ld_b  |inst_ld_h  |inst_ld_bu  |inst_ld_hu
+                    |inst_st_w|inst_st_h|inst_st_b|inst_jirl|inst_b
+                    |inst_bl|inst_beq|inst_bne|inst_blt|inst_bge
+                    |inst_bltu|inst_bgeu|inst_lu12i_w |inst_pcaddu|inst_mul_w
+                    |inst_mulh_w|inst_mulhu_w|inst_div_w|inst_mod_w|inst_divu_w
+                    |inst_modu_w|inst_csrrd|inst_csrwr|inst_csrxchg|inst_syscall
+                    |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w);
+                      
 
   assign rj_value = rf_rdata1;
   assign rkd_value = rf_rdata2;
@@ -477,16 +507,21 @@ module ID_decoder (
   wire need_add_4;
   wire have_excp;
   
-  assign have_excp = inst_syscall;
-  
-  assign ds_excp_subEcode = in_excp?  excp_subEcode : 
-                            inst_syscall ? 9'h0 : 9'h0;
-  assign ds_excp_Ecode = in_excp?excp_Ecode:
-                          inst_syscall ? 6'hb:6'h0;
+  assign have_excp =  have_intrpt|inst_syscall | inst_break | have_ine;
+  assign use_badv = in_excp;
+  assign ds_excp_subEcode = have_intrpt ? 9'h0: 
+                            in_excp?  excp_subEcode : 9'h0;
+  assign ds_excp_Ecode =  have_intrpt ? 6'h0 : 
+                          in_excp ? excp_Ecode:
+                          inst_syscall ? 6'hb:
+                          inst_break ? 6'hc :
+                          have_ine   ? 6'hd :6'h0;
   assign need_add_4 = inst_syscall;
   assign is_etrn = inst_ertn;
-  assign csr_num = ds_inst[23:10];
-  assign use_csr_data = op_31_26_d[6'h01];
+  assign csr_num = inst_rdcntvh_w ?  `TIMER_64_H :
+                   inst_rdcntvl_w ?   `TIMER_64_L:
+                   inst_rdcntid?      `TID : ds_inst[23:10];
+  assign use_csr_data = op_31_26_d[6'h01] | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w;
   assign csr_wen = inst_csrwr | inst_csrxchg;
   assign csr_use_mark = inst_csrxchg;
   assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data;
@@ -500,7 +535,8 @@ module ID_decoder (
     ds_excp_Ecode,
     ds_excp_subEcode,
     is_etrn,
-    need_add_4,
+    use_badv,
+    ds_pc,
     use_csr_data,
     csr_wen,
     csr_num,

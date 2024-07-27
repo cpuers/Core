@@ -130,7 +130,7 @@ wire [31:0] read_data0;
 wire [31:0] read_data;
 reg [2:0]   waits; // 2=wready, 1=rvalid, 0=rready
 
-wire        dcache_valid = (mem_we && (waits==3'b000 || waits==3'b100)) || (mem_rd && (waits==3'b000 || waits==3'b001));
+wire        dcache_valid = ~excp_ale&((mem_we && (waits==3'b000 || waits==3'b100)) || (mem_rd && (waits==3'b000 || waits==3'b001)));
 wire        dcache_op = (mem_rd) ? 1'b0 :1'b1;       // 0: read, 1: write
 wire [31:0] dcache_addr = mem_addr;
 wire        dcache_uncached = 1'b0;
@@ -174,7 +174,7 @@ assign dcache_ok = !(waits==3'b000 && mem_rd && (!dcache_ready || !dcache_rvalid
                    !(waits==3'b100 && !dcache_ready);
 
 always @(posedge clk) begin
-    if(reset) begin
+    if(reset | excp_ale) begin
       waits<=3'b0;
     end
     else if(mem_rd && waits==3'b000) begin

@@ -20,7 +20,11 @@ module csr (
     output jump_excp_fail,
 
     output excp_jump,
-    output [31:0] excp_pc
+    output [31:0] excp_pc,
+
+    //intrpt
+    output have_intrpt,
+    input [7:0] intrpt
 
 
 );
@@ -29,8 +33,10 @@ module csr (
     wire [8:0] excp_subEcode;
     wire [31:0] excp_era;
     wire is_etrn;
-
-    assign {is_etrn, in_excp,excp_Ecode,excp_subEcode,excp_era} = csr_bus;
+    wire tval_is_nzero;
+    wire [31:0] bad_vaddr;
+    wire use_badv;
+    assign {is_etrn, in_excp,excp_Ecode,excp_subEcode,excp_era,use_badv,bad_vaddr} = csr_bus;
     reg [31:0] csr_crmd;
     reg [31:0] csr_prmd;
     reg [31:0] csr_estat;
@@ -40,11 +46,19 @@ module csr (
     reg [31:0] csr_save1;
     reg [31:0] csr_save2;
     reg [31:0] csr_save3;
-    reg [31:0] test;
+    reg [31:0] csr_ecfg;
+    reg [31:0] csr_tid;
+    reg [31:0] csr_tcfg;
+    reg [31:0] csr_tval;
+    reg [31:0] csr_badv;
+    reg [63:0] csr_timer_64;
+    reg timer_en;
+
     
     assign jump_excp_fail = csr_wen& in_excp;
     assign excp_jump = (in_excp | is_etrn) & ~jump_excp_fail;
     assign excp_pc = in_excp ? csr_eentry : csr_era;
+    assign have_intrpt = csr_crmd[`IE] &|(csr_ecfg[12:0]&csr_estat[12:0]);
     always @(*) 
     begin
         case (csr_addr1)
@@ -57,6 +71,13 @@ module csr (
             `SAVE1: csr_data1 = csr_save1;
             `SAVE2: csr_data1 = csr_save2;
             `SAVE3: csr_data1 = csr_save3;
+            `ECFG: csr_data1 = csr_ecfg;
+            `TID: csr_data1 = csr_tid;
+            `TCFG: csr_data1 = csr_tcfg;
+            `TVAL: csr_data1 = csr_tval;
+            `BADV: csr_data1 = csr_badv;
+            `TIMER_64_H: csr_data1 = csr_timer_64[63:32];
+            `TIMER_64_L: csr_data1 = csr_timer_64[31:0];
         default: 
             csr_data1 = 32'h0;
         endcase    
@@ -74,11 +95,19 @@ module csr (
             `SAVE1: csr_data2 = csr_save1;
             `SAVE2: csr_data2 = csr_save2;
             `SAVE3: csr_data2 = csr_save3;
+            `ECFG: csr_data2  = csr_ecfg;
+            `TID: csr_data2 = csr_tid;
+            `TCFG: csr_data2 = csr_tcfg;
+            `TVAL:csr_data2 = csr_tval;
+            `BADV: csr_data2 = csr_badv;
+            `TIMER_64_L: csr_data2 = csr_timer_64[31:0];
+            `TIMER_64_H: csr_data2 = csr_timer_64[63:32];
         default: 
             csr_data2 = 32'h0;
         endcase    
     end
 
+    //crmd
     always @(posedge clk) 
     begin
         if (rst) 
@@ -89,7 +118,8 @@ module csr (
             csr_crmd[`PG] <= 1'b0;
             csr_crmd[`DATF] <= 2'b0;
             csr_crmd[`DATM] <= 2'b0;
-            csr_crmd[`CRMD_REV] <= 23'b0;               
+            csr_crmd[`CRMD_REV] <= 23'b0;     
+            timer_en <= 1'b0;          
         end
         else if(csr_wen && (csr_waddr == `CRMD))
         begin
@@ -111,7 +141,8 @@ module csr (
             csr_crmd[`IE] <= csr_prmd[`PIE];
         end  
     end
-    
+
+    //prmd
     always @(posedge clk)
     begin
         if (rst)
@@ -130,6 +161,7 @@ module csr (
         end 
     end
 
+    //estat
     always @(posedge clk) 
     begin
         if(rst)
@@ -144,6 +176,16 @@ module csr (
         begin
             csr_estat[`Ecode] <= excp_Ecode;
             csr_estat[`EsubCode] <= excp_subEcode;
+        end
+        csr_estat[`IS_HARD] <= intrpt;
+
+        if(timer_en & !tval_is_nzero)
+        begin
+            csr_estat[`IS_TI] <=1'b1;
+        end
+        else if (csr_wen &csr_waddr == `TICLR)
+        begin
+            csr_estat[`IS_TI] <= ~wdata[`CLR];
         end
     end
 
@@ -216,7 +258,7 @@ module csr (
     begin
         if(rst)
         begin
-            csr_save0 <= 32'h0;
+            csr_save3 <= 32'h0;
         end
         else if (csr_wen && (csr_waddr == `SAVE3))
         begin
@@ -224,4 +266,101 @@ module csr (
         end
     end
 
+    //ECFG
+
+    always @(posedge clk) 
+    begin
+        if (rst) 
+        begin
+            csr_ecfg <= 32'b0;    
+        end
+        if(csr_wen && (csr_waddr == `ECFG))
+        begin
+            csr_ecfg[`LIE_9_0] <= wdata[`LIE_9_0];
+            csr_ecfg[`LIE_12_11] <= wdata[`LIE_12_11];
+        end
+    end
+
+    //TID
+
+    always @(posedge clk)
+    begin
+        if(rst)
+        begin
+            csr_tid <= 32'h0;
+        end
+        else if(csr_wen && (csr_waddr ==`TID))
+        begin
+            csr_tid <= wdata;
+        end
+    end
+
+    //TCFG 
+    always @(posedge clk) 
+    begin
+        if (rst) 
+        begin
+            csr_tcfg <= 32'h0;    
+        end
+        if (csr_wen && (csr_waddr==`TCFG)) 
+        begin
+            csr_tcfg[`En] <= wdata[`En];
+            timer_en <= wdata[`En];
+            csr_tcfg[`Periodic] <= wdata[`Periodic];
+            csr_tcfg[`InitVal] <= wdata[`InitVal];
+        end    
+    end
+    
+    
+    assign tval_is_nzero = |csr_tval;
+    //TVAL
+    always @(posedge clk) 
+    begin
+        if (rst)
+        begin
+            csr_tval <= 32'h0;
+        end
+        else if(csr_wen && (csr_waddr == `TCFG))
+        begin
+            csr_tval <= {wdata[`InitVal],2'b0};
+        end
+        else if(timer_en)
+        begin
+            if (tval_is_nzero) 
+            begin
+                csr_tval <= csr_tval - 32'b1;
+            end
+            else
+            begin
+                csr_tval <= csr_tcfg[`Periodic] ? {csr_tcfg[`InitVal],2'b0} : 32'h0;
+                timer_en <= csr_tcfg[`Periodic];
+            end
+        end     
+    end
+
+    //BADV
+    always @(posedge clk) 
+    begin
+        if (rst) 
+        begin
+            csr_badv <= 32'h0;    
+        end
+        else if(in_excp & use_badv)
+        begin
+            csr_badv <= bad_vaddr;
+        end    
+    end
+
+    //Timer_64;
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            csr_timer_64 <= 64'h0;    
+        end 
+        else
+        begin
+            csr_timer_64 <=csr_timer_64 + 64'h1;
+        end   
+    end
 endmodule
