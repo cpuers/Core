@@ -43,11 +43,15 @@ module srt_divider (
     localparam FINISHED  = 2'b11;
     // -------------------------------------------//
 
-    reg [31:0] dividend_reg, divisor_reg;
     reg [32:0] S; // 
     reg [32:0] D, mD;
     reg [5:0] counter, rounds, shifter;
-    
+    wire Q_is_neg, S_is_neg, D_is_neg, R_is_neg;
+    assign Q_is_neg = div_signed & (dividend[31] ^ divisor[31]);
+    assign S_is_neg = div_signed & dividend[31];
+    assign D_is_neg = div_signed & divisor[31];
+    assign R_is_neg = S_is_neg;
+    reg q_sign, rem_sign;
     wire [5:0] s_zero, s_one, d_zero;
     
     
@@ -64,7 +68,7 @@ module srt_divider (
         .zero_count(d_zero)
     );
     
-    wire ulp = (S[32] & (~div_signed));
+    wire ulp = (S[32] & (~q_sign));
     reg [31:0] posQ, negQ; // on the fly (not used)
     
     initial begin
@@ -78,8 +82,11 @@ module srt_divider (
     always @(posedge srt_clk) begin
         if(reset) begin
             status <= WAITING;
-            S <= {div_signed & dividend[31], dividend};
-            D <= {div_signed & divisor[31],  divisor };
+            S  <= {div_signed & dividend[31], dividend};
+            D  <= {div_signed & divisor[31],  divisor };
+            mD <= 33'd0;
+            q_sign  <= 1'b0;
+            rem_sign<= 1'b0;
             counter <= 6'd0;
             rounds  <= 6'd0;
             div_zero_err <= 1'b0;
@@ -89,11 +96,14 @@ module srt_divider (
             case(status)
                 WAITING: begin 
                     status <= NORMALIZE;
-                    S <= {div_signed & dividend[31], dividend};
-                    D <= {div_signed & divisor[31],  divisor };
+                    S <= S_is_neg ? {1'b0, -dividend} : {1'b0, dividend};
+                    D <= D_is_neg ? {1'b1, -divisor } : {1'b0,  divisor};
+                    q_sign   <= Q_is_neg;
+                    rem_sign <= R_is_neg;
+                    complete <= 1'b0;
                     posQ <= 32'd0;
                     negQ <= 32'd0;
-                    counter <= 6'd63;
+                    counter <= 6'd0;
                     rounds  <= 6'd0;
                     div_zero_err <= 1'b0;
                 end
@@ -102,17 +112,12 @@ module srt_divider (
                         div_zero_err <= 1'b1;
                         complete <= 1'b1;
                         status <= WAITING;
-                    end else if(d_zero < s_zero) begin
-                        complete <= 1'b1;
-                        status <= WAITING;
-                        Q <= 32'd0;
-                        rem <= dividend;
                     end else begin
-                        S  <= {div_signed & dividend[31]  , dividend   << s_zero};
-                        D  <= {div_signed & divisor[31]   , divisor    << d_zero};
-                        mD <= {(~divisor[31]), (-divisor) << d_zero};
-                        posQ <= 32'd0;
-                        negQ <= 32'd0;
+                        S  <= {1'b0  , S    << s_zero};
+                        D  <= {D[31] , D    << d_zero};
+                        mD <= {~D[31], (-D) << d_zero};
+                        posQ    <= 32'd0;
+                        negQ    <= 32'd0;
                         shifter <= s_zero;
                         counter <= 6'd0;
                         rounds  <= d_zero - s_zero;
@@ -172,8 +177,11 @@ module srt_divider (
                 end
                 FINISHED: begin
                     complete <= 1'b1;
-                    rem <= (ulp ? (S+D) : S) >> (rounds + shifter);
-                    Q <= posQ - negQ - ulp;
+                    rem <= rem_sign ? -((S[32] ? (S+D) : S) >> (rounds + shifter)) : ((S[32] ? (S+D) : S) >> (rounds + shifter));
+                    Q <= q_sign ? (negQ - posQ + 32'd1) : (posQ - negQ - ulp);
+                    S <= {1'b0, dividend};
+                    D <= {1'b0, divisor };
+                    mD <= 33'd0;
                     status <= WAITING;
                 end
             endcase
