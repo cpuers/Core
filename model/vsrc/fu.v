@@ -266,13 +266,13 @@ module MulCon(
 );
   wire signed [63:0] product;
   wire [63:0] uproduct;
-  Umul Umul(
+  Umul_temp Umul(
     .multiplicand(src1),
     .multiplier(src2),
     .product(uproduct)
   );
 
-  mul mul(
+  mul_temp mul(
     .multiplicand(src1),
     .multiplier(src2),
     .product(product)
@@ -305,13 +305,13 @@ module DivCon(
   wire [31:0] uquotient;
   wire [31:0] uremainder;
   
-  Udiv udiv(
+  Udiv_temp udiv(
     .dividend(src1),
     .divisor(src2),
     .quotient(uquotient),
     .remainder(uremainder)
   );
-  div div(
+  div_temp div(
     .dividend(src1),
     .divisor(src2),
     .quotient(quotient),
@@ -329,7 +329,7 @@ module DivCon(
 endmodule
 
 
-module Umul (
+module Umul_temp (
     input  [31:0] multiplicand,  // 32-bit unsigned multiplicand
     input  [31:0] multiplier,    // 32-bit unsigned multiplier
     output [63:0] product        // 64-bit unsigned product
@@ -337,7 +337,7 @@ module Umul (
   assign product = multiplicand * multiplier;
 endmodule
 
-module mul (
+module mul_temp (
     input signed [31:0] multiplicand, // 32-bit signed multiplicand
     input signed [31:0] multiplier,  // 32-bit signed multiplier
     output signed [63:0] product     // 64-bit signed product
@@ -346,7 +346,7 @@ module mul (
   assign product = multiplicand * multiplier;
 endmodule
 
-module Udiv (
+module Udiv_temp (
     input  wire [31:0] dividend,
     input  wire [31:0] divisor,
     output wire [31:0] quotient,
@@ -357,7 +357,7 @@ module Udiv (
   assign remainder = dividend % divisor;
 
 endmodule
-module div (
+module div_temp (
     input signed [31:0] dividend,  // 32位有符号被除数
     input signed [31:0] divisor,  // 32位有符号除数
     output wire signed [31:0] quotient,  // 商
@@ -384,9 +384,9 @@ module BranchCond (
     /* verilator lint_off UNUSED */
     input  wire [31:0] imm,
     output wire [31:0] jump_target,
+    output wire need_jump,
     output wire        pre_fail
 );
-  wire need_jump;
   assign need_jump = may_jump & 
                    ~(use_less & ~(need_less & less| ~need_less & ~ less)) &
                    ~(use_zero & ~(need_zero & zero| ~need_zero & ~ zero ));

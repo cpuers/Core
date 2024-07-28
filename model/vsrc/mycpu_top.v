@@ -217,11 +217,23 @@ module core_top (
   wire [           31:0] excp_pc;
   assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 : (csr_bus2[`CSR_BUS_WD-1] || csr_bus2[`CSR_BUS_WD-2]) ? csr_bus2 : `CSR_BUS_WD'b0;
 
+  wire [`BPU_DS_BUS_WD-1:0] bpu_ds_bus1;
+  wire [`BPU_DS_BUS_WD-1:0] bpu_ds_bus2;
+  
+  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus1;
+  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
+  
   BPU BPU (
+      .clk(aclk),
+      .reset(reset),
       .pc(if0_pc),
       .next_pc(pbu_next_pc),
       .pc_is_jump(pbu_pc_is_jump),
-      .pc_valid(pbu_pc_valid)
+      .pc_valid(pbu_pc_valid),
+      .bpu_ds_bus1(bpu_ds_bus1),
+      .bpu_ds_bus2(bpu_ds_bus2),
+      .bpu_es_bus1(bpu_es_bus1),
+      .bpu_es_bus2(bpu_es_bus2)
   );
   icache_dummy icache_dummy(
       .clock(aclk),
@@ -378,7 +390,9 @@ module core_top (
       .csr_num2(csr_addr2),
       .csr_data1(csr_data1),
       .csr_data2(csr_data2),
-      .have_intrpt(have_intrpt)
+      .have_intrpt(have_intrpt),
+      .bpu_ds_bus1(bpu_ds_bus1),
+      .bpu_ds_bus2(bpu_ds_bus2)
 
   );
 
@@ -409,7 +423,8 @@ module core_top (
       .csr_bus       (csr_bus1),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc)
+      .excp_pc(excp_pc),
+      .bpu_es_bus(bpu_es_bus1)
 
   );
   EXM_stage EXM_stage2 (
@@ -439,7 +454,8 @@ module core_top (
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc)
+      .excp_pc(excp_pc),
+      .bpu_es_bus(bpu_es_bus2)
 
   );
 

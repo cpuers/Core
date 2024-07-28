@@ -8,6 +8,8 @@ module ID_stage (
     /* verilator lint_off UNUSED */
     input [`IB_DATA_BUS_WD-1:0] IF_instr0,
     input [`IB_DATA_BUS_WD-1:0] IF_instr1,
+    output [`BPU_DS_BUS_WD-1:0] bpu_ds_bus1,
+    output [`BPU_DS_BUS_WD-1:0] bpu_ds_bus2,
     /* verilator lint_on UNUSED */
     input IF_instr0_valid,
     input IF_instr1_valid,
@@ -103,7 +105,8 @@ module ID_stage (
       .is_ls(instr0_is_ls),
       .csr_num(csr_num1),
       .csr_data(csr_data1),
-      .have_intrpt(have_intrpt)
+      .have_intrpt(have_intrpt),
+      .bpu_ds_bus(bpu_ds_bus1)
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -120,7 +123,8 @@ module ID_stage (
       .is_ls(instr1_is_ls),
       .csr_num(csr_num2),
       .csr_data(csr_data2),
-      .have_intrpt(have_intrpt)
+      .have_intrpt(have_intrpt),
+      .bpu_ds_bus(bpu_ds_bus2)
   );
 
   // 判断发射逻辑
@@ -142,6 +146,7 @@ module ID_decoder (
     input [`IB_DATA_BUS_WD-2:0] fs_to_ds_bus,
     //to es
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
+    output [`BPU_DS_BUS_WD-1:0] bpu_ds_bus,
     
 
     // judge RAW 
@@ -403,7 +408,7 @@ module ID_decoder (
   assign use_high = inst_mulh_w | inst_mulhu_w;
   assign use_mul = inst_mul_w | inst_mulhu_w | inst_mulh_w;
   assign is_unsigned = inst_mulhu_w | inst_divu_w | inst_modu_w | inst_ld_bu | inst_ld_hu;
-
+  assign bpu_ds_bus = {ds_pc,may_jump};
   assign alu_op[0] = inst_add_w | inst_addi_w | 
                      inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu | 
                      inst_st_w |inst_st_b|inst_st_h|

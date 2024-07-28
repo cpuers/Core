@@ -6,10 +6,14 @@ module div (
     input div,
     input div_signed,
     input [31:0] x, y,
-    output [31:0] s, r,
-    output complete
+    input use_mod,
+    output [31:0] div_result,
+    //output [31:0] s, r,
+    output div_ok
 );
-    
+    wire [31:0] s;
+    wire [31:0] r;
+    wire complete;
     srt_divider my_srt(
         .srt_clk(div_clk),
         .reset(reset),
@@ -18,6 +22,8 @@ module div (
         .dividend(x), .divisor(y), .Q(s), .rem(r),
         .complete(complete)
     );
+    assign div_result = use_mod? r : s;
+    assign div_ok = complete || !div;
     
 endmodule
 

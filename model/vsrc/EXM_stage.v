@@ -27,7 +27,9 @@ module EXM_stage(
     output [     `CSR_BUS_WD - 1:0] csr_bus,
     input                           jump_excp_fail,
     input                           excp_jump,
-    input  [                  31:0] excp_pc
+    input  [                  31:0] excp_pc,
+
+    output [    `BPU_ES_BUS_WD-1:0] bpu_es_bus
 
 );
 
@@ -91,11 +93,14 @@ wire [31:0] src2;
 wire [31:0] alu_result; 
 wire [31:0] mul_result;
 wire [31:0] div_result;
+wire [31:0] div_result0;
 wire [31:0] mem_result;
 wire [31:0] final_result;
+wire        div_ok;
 
 wire [31:0] branch_target;
 wire [31:0] jump_target;
+wire        need_jump;
 
 wire        zero;
 wire        less;
@@ -155,7 +160,7 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign nblock = dcache_ok || ~ds_to_es_valid;
+assign nblock = (dcache_ok && div_ok) || !ds_to_es_valid;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 assign es_to_ws_valid_w[1] = nblock && ~jump_excp_fail;
 assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, 
@@ -208,7 +213,7 @@ assign rkd_value = forw_rkd[0]? forward_data1[31:0] : forw_rkd[1]? forward_data2
 assign src1 = src1_is_pc ? es_pc : rj_value;
 assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 
-assign final_result = use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
+assign final_result = use_csr_data ? csr_rdata : res_from_mem ? mem_result : (use_div&div_ok) ? div_result : use_mul ? mul_result : alu_result;
 
 //for mem
 assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid&!in_excp_t, res_from_mem&ds_to_es_valid&!in_excp_t, bit_width, rkd_value, es_pc};
@@ -230,6 +235,8 @@ assign use_badv = (in_excp_t) ? use_badv_t : excp_ale;
 assign bad_addr = (in_excp_t) ? bad_addr_t : alu_result;
 assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc,use_badv, bad_addr};
 
+assign bpu_es_bus = {es_pc, need_jump, pre_fail, branch_target};
+
 Alu u_alu (
     .alu_op    (alu_op),
     .alu_src1  (src1),
@@ -247,22 +254,34 @@ mul u_mul(
     .mul_result (mul_result)
 );
 
+// div u_div(
+//     .div_clk(clk),
+//     .reset(reset),
+//     .div(use_div && ds_to_es_valid && !in_excp_t),
+//     .div_signed(!is_unsigned),
+//     .x(src1),
+//     .y(src2),
+//     .use_mod(use_mod),
+//     .div_result(div_result),
+//     .div_ok(div_ok)
+// );
+
 // MulCon mul_temp(
 //     .valid        (use_mul),
 //     .is_unsigned  (is_unsigned),
 //     .use_high     (use_high),
 //     .src1 (src1),
 //     .src2   (src2),
-//     .result       (mul_result0)
+//     .result       (mul_result)
 // );
 
-DivCon u_div(
+DivCon div_t(
     .valid        (use_div),
     .is_unsigned  (is_unsigned),
     .use_mod      (use_mod),
     .src1     (src1),
     .src2      (src2),
-    .result       (div_result)
+    .result       (div_result0)
 );
 
 BranchCond u_branch (
@@ -279,6 +298,7 @@ BranchCond u_branch (
     .rj_value(rj_value),
     .jump_target(branch_target),
     .imm(imm),
+    .need_jump(need_jump),
     .pre_fail(pre_fail)
 );
 
