@@ -91,8 +91,10 @@ wire [31:0] src2;
 wire [31:0] alu_result; 
 wire [31:0] mul_result;
 wire [31:0] div_result;
+wire [31:0] div_result0;
 wire [31:0] mem_result;
 wire [31:0] final_result;
+wire        div_ok;
 
 wire [31:0] branch_target;
 wire [31:0] jump_target;
@@ -155,7 +157,7 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign nblock = dcache_ok || ~ds_to_es_valid;
+assign nblock = (dcache_ok && div_ok) || !ds_to_es_valid;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 assign es_to_ws_valid_w[1] = nblock && ~jump_excp_fail;
 assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, 
@@ -256,13 +258,25 @@ mul u_mul(
 //     .result       (mul_result0)
 // );
 
-DivCon u_div(
+div u_div(
+    .div_clk(clk),
+    .reset(reset),
+    .div(use_div && ds_to_es_valid && !in_excp_t),
+    .div_signed(!is_unsigned),
+    .x(src1),
+    .y(src2),
+    .use_mod(use_mod),
+    .div_result(div_result),
+    .div_ok(div_ok)
+);
+
+DivCon t_div(
     .valid        (use_div),
     .is_unsigned  (is_unsigned),
     .use_mod      (use_mod),
     .src1     (src1),
     .src2      (src2),
-    .result       (div_result)
+    .result       (div_result0)
 );
 
 BranchCond u_branch (

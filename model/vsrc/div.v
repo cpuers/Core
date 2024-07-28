@@ -1,15 +1,22 @@
 // Radix-2 SRT divisor
 
-
 module div (
     input div_clk, reset,
     input div,
     input div_signed,
     input [31:0] x, y,
-    output [31:0] s, r,
-    output complete, div0_err
+    input use_mod,
+    output [31:0] div_result,
+    //output [31:0] s, r,
+    output div_ok
 );
-    
+    wire [31:0] s;
+    wire [31:0] r;
+    wire complete;
+    wire div0_err;
+    assign div_result = use_mod? r : s;
+    assign div_ok = complete || !div;
+
     srt_divider my_srt(
         .srt_clk(div_clk),
         .reset(reset),
