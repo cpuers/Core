@@ -76,7 +76,7 @@ module srt_divider (
         .zero_count(d_zero)
     );
     
-    wire ulp = (S[32] & (~q_sign));
+    wire ulp = S[32];
     reg [31:0] posQ, negQ; // on the fly (not used)
     
     initial begin
