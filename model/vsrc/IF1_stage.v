@@ -101,8 +101,12 @@ module IF_stage1 (
       begin
         if (can_push) 
         begin
-          buf_empty <= 1'b1;
-          buf_num   <= 3'b0;
+          buf_empty <= ~data_valid;
+            buf_num <= data_valid ? instr_num: 3'b0;
+            store_buf[0] <= instrs[0];
+            store_buf[1] <= instrs[1];
+            store_buf[2] <= instrs[2];
+            store_buf[3] <= instrs[3];
         end 
         else 
         begin
@@ -136,9 +140,10 @@ module IF_stage1 (
     begin
       if1_ready = 1'b1;
     end
-    if (buf_empty && !is_watting)
+    else if (buf_empty && !is_watting)
     begin
-      if1_ready = !(if0_valid & !data_ok & !in_excp);
+      //if1_ready = !(if0_valid & !data_ok & !in_excp);
+      if1_ready =(if0_valid & in_excp)| !(if0_valid & (!data_ok|(data_ok & !can_push)));
     end  
     else if(is_watting)
     begin
@@ -146,7 +151,7 @@ module IF_stage1 (
     end
     else 
     begin
-      if1_ready = can_push;
+      if1_ready = can_push&&!data_valid;
     end
   end
   assign push_num = rst ? 3'd0:  

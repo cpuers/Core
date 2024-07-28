@@ -197,10 +197,10 @@ assign csr_wdata_t = (rj_value & rkd_value) | (~rj_value & csr_rdata);
 assign csr_wdata = use_mark ?  csr_wdata_t : rkd_value;
 
 //regfile forward
-assign forw_rj[0]  = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && forward_data1[36:32]==rf_raddr1;
-assign forw_rj[1]  = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && forward_data2[36:32]==rf_raddr1;
-assign forw_rkd[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && forward_data1[36:32]==rf_raddr2;
-assign forw_rkd[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && forward_data2[36:32]==rf_raddr2;
+assign forw_rj[0]  = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && forward_data1[36:32]!=0 && forward_data1[36:32]==rf_raddr1;
+assign forw_rj[1]  = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && forward_data2[36:32]!=0 && forward_data2[36:32]==rf_raddr1;
+assign forw_rkd[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && forward_data1[36:32]!=0 && forward_data1[36:32]==rf_raddr2;
+assign forw_rkd[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && forward_data2[36:32]!=0 && forward_data2[36:32]==rf_raddr2;
 assign rj_value  = forw_rj[0] ? forward_data1[31:0] : forw_rj[1] ? forward_data2[31:0] : rj_value_t;
 assign rkd_value = forw_rkd[0]? forward_data1[31:0] : forw_rkd[1]? forward_data2[31:0] : rkd_value_t;
 
