@@ -384,9 +384,9 @@ module BranchCond (
     /* verilator lint_off UNUSED */
     input  wire [31:0] imm,
     output wire [31:0] jump_target,
-    output wire need_jump,
     output wire        pre_fail
 );
+  wire need_jump;
   assign need_jump = may_jump & 
                    ~(use_less & ~(need_less & less| ~need_less & ~ less)) &
                    ~(use_zero & ~(need_zero & zero| ~need_zero & ~ zero ));

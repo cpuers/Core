@@ -217,55 +217,43 @@ module core_top (
   wire [           31:0] excp_pc;
   assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 : (csr_bus2[`CSR_BUS_WD-1] || csr_bus2[`CSR_BUS_WD-2]) ? csr_bus2 : `CSR_BUS_WD'b0;
 
-  wire [`BPU_DS_BUS_WD-1:0] bpu_ds_bus1;
-  wire [`BPU_DS_BUS_WD-1:0] bpu_ds_bus2;
-  
-  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus1;
-  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
-  
   BPU BPU (
-      .clk(aclk),
-      .reset(reset),
       .pc(if0_pc),
       .next_pc(pbu_next_pc),
       .pc_is_jump(pbu_pc_is_jump),
-      .pc_valid(pbu_pc_valid),
-      .bpu_ds_bus1(bpu_ds_bus1),
-      .bpu_ds_bus2(bpu_ds_bus2),
-      .bpu_es_bus1(bpu_es_bus1),
-      .bpu_es_bus2(bpu_es_bus2)
+      .pc_valid(pbu_pc_valid)
   );
-  icache_dummy icache_dummy(
-      .clock(aclk),
-      .reset(reset),
-  
-      .valid(if0_valid),      // in cpu, valid no dep on ok;
-      .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
-      .araddr(iaddr),
-      .uncached(iuncached),
-  
-      .rvalid(icache_data_ok),
-      .rdata(icache_rdata),
-      /* verilator lint_off PINCONNECTEMPTY */
-      .rhit(           ),
-  
-      //TODO
-      .cacop_valid(dcache_cacop_en),
-      .cacop_ready(               ),
-      /* verilator lint_on PINCONNECTEMPTY */
-      .cacop_code(dcache_cacop_code), // code[4:3]
-      .cacop_addr(dcache_cacop_addr),
-      /* verilator lint_on UNUSED */
-      
-      // axi bridge
-      .rd_req(inst_rd_req),
-      .rd_type(inst_rd_type),
-      .rd_addr(inst_rd_addr),
-      .rd_rdy(inst_rd_rdy),
-      .ret_valid(inst_ret_valid),
-      .ret_last(inst_ret_last),
-      .ret_data(inst_ret_data)
-  );
+icache_v5 icache_dummy(
+    .clock(aclk),
+    .reset(reset),
+
+    .valid(if0_valid),      // in cpu, valid no dep on ok;
+    .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
+    .araddr(iaddr),
+    .uncached(iuncached),
+
+    .rvalid(icache_data_ok),
+    .rdata(icache_rdata),
+    /* verilator lint_off PINCONNECTEMPTY */
+    .rhit(           ),
+
+    //TODO
+    .cacop_valid(dcache_cacop_en),
+    .cacop_ready(               ),
+    /* verilator lint_on PINCONNECTEMPTY */
+    .cacop_code(dcache_cacop_code), // code[4:3]
+    .cacop_addr(dcache_cacop_addr),
+    /* verilator lint_on UNUSED */
+    
+    // axi bridge
+    .rd_req(inst_rd_req),
+    .rd_type(inst_rd_type),
+    .rd_addr(inst_rd_addr),
+    .rd_rdy(inst_rd_rdy),
+    .ret_valid(inst_ret_valid),
+    .ret_last(inst_ret_last),
+    .ret_data(inst_ret_data)
+);
   IF_stage0 IF_stage0 (
       .clk      (aclk),
       .flush_IF (flush_IF1 | flush_IF2),
@@ -390,9 +378,7 @@ module core_top (
       .csr_num2(csr_addr2),
       .csr_data1(csr_data1),
       .csr_data2(csr_data2),
-      .have_intrpt(have_intrpt),
-      .bpu_ds_bus1(bpu_ds_bus1),
-      .bpu_ds_bus2(bpu_ds_bus2)
+      .have_intrpt(have_intrpt)
 
   );
 
@@ -423,8 +409,7 @@ module core_top (
       .csr_bus       (csr_bus1),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc),
-      .bpu_es_bus(bpu_es_bus1)
+      .excp_pc(excp_pc)
 
   );
   EXM_stage EXM_stage2 (
@@ -454,8 +439,7 @@ module core_top (
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc),
-      .bpu_es_bus(bpu_es_bus2)
+      .excp_pc(excp_pc)
 
   );
 

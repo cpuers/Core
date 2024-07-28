@@ -27,12 +27,5 @@
 //写回寄存器信息
 `define WS_TO_RF_BUS_WD 140
 
-`define BPU_DS_BUS_WD 33
-`define BPU_ES_BUS_WD 66
-
-`define BPU_NUM 32
-`define BPU_IDX 5
-`define BPU_PC 31:2
-`define RAS_NUM 4
 
 `endif
