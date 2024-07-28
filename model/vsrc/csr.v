@@ -108,6 +108,23 @@ module csr (
     end
 
     //crmd
+    
+        
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            timer_en <= 1'b0; 
+        end    
+        else if (csr_wen && (csr_waddr==`TCFG))
+        begin
+            timer_en <= wdata[`En];
+        end
+        else if(timer_en && ~tval_is_nzero)
+        begin
+            timer_en <= csr_tcfg[`Periodic];
+        end
+    end
     always @(posedge clk) 
     begin
         if (rst) 
@@ -119,7 +136,7 @@ module csr (
             csr_crmd[`DATF] <= 2'b0;
             csr_crmd[`DATM] <= 2'b0;
             csr_crmd[`CRMD_REV] <= 23'b0;     
-            timer_en <= 1'b0;          
+                     
         end
         else if(csr_wen && (csr_waddr == `CRMD))
         begin
@@ -305,7 +322,7 @@ module csr (
         if (csr_wen && (csr_waddr==`TCFG)) 
         begin
             csr_tcfg[`En] <= wdata[`En];
-            timer_en <= wdata[`En];
+            
             csr_tcfg[`Periodic] <= wdata[`Periodic];
             csr_tcfg[`InitVal] <= wdata[`InitVal];
         end    
@@ -333,7 +350,7 @@ module csr (
             else
             begin
                 csr_tval <= csr_tcfg[`Periodic] ? {csr_tcfg[`InitVal],2'b0} : 32'h0;
-                timer_en <= csr_tcfg[`Periodic];
+                
             end
         end     
     end

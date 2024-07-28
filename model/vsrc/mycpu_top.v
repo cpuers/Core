@@ -53,11 +53,11 @@ module core_top (
     `ifdef TEAMPACKAGE_EN
     ,
     output wire [31:0] debug0_wb_pc,
-    output wire [ 3:0] debug0_wb_rf_wen,
+    output wire  debug0_wb_rf_wen,
     output wire [ 4:0] debug0_wb_rf_wnum,
     output wire [31:0] debug0_wb_rf_wdata,
     output wire [31:0] debug1_wb_pc,
-    output wire [ 3:0] debug1_wb_rf_wen,
+    output wire  debug1_wb_rf_wen,
     output wire [ 4:0] debug1_wb_rf_wnum,
     output wire [31:0] debug1_wb_rf_wdata
     `endif
@@ -400,7 +400,6 @@ icache_v5 icache_dummy(
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
-      .exm_forward_bus(exm_forward_data1),
 
       .br_bus        (br_bus1),
       .flush_IF      (flush_IF1),
@@ -430,7 +429,6 @@ icache_v5 icache_dummy(
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
-      .exm_forward_bus(exm_forward_data2),
 
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
@@ -464,10 +462,13 @@ icache_v5 icache_dummy(
       .nblock1        (es_nblock1),
       .nblock2        (es_nblock2),
       .ws_to_rf_bus   (ws_to_rf_bus),
+      .forward_data1  (exm_forward_data1),
+      .forward_data2  (exm_forward_data2),
 
       .csr_we         (csr_wen),
       .csr_addr       (csr_waddr),
       .csr_wdata      (csr_wdata)
+
   );
   
   `ifdef TEAMPACKAGE_EN

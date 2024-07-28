@@ -162,8 +162,8 @@ assign read_data = (bit_width == 4'b0001)? {{24{read_data0[7] & !is_unsigned}},r
                     read_data0;
 assign mem_result = (dcache_rvalid) ? read_data : 32'b0;
 
-assign excp_ale = (bit_width == 4'b1111) ? mem_addr[0] | mem_addr[1] :
-                (bit_width == 4'b0011) ? mem_addr[0] : 1'b0;
+assign excp_ale = (&bit_width) ? mem_addr[0] | mem_addr[1] :
+                ~|(bit_width ^4'b0011) ? mem_addr[0] : 1'b0;
 
 //assign dcache_ok = (mem_rd && dcache_rvalid) || (mem_we && dcache_ready) || (!mem_rd && !mem_we);
 //assign dcache_ok = (mem_rd && !wait_rready && !wait_rvalid) || (mem_we && !wait_wready) || (!mem_rd && !mem_we);
@@ -256,38 +256,38 @@ end
 endmodule
 
 
-module MulCon(
-  input valid,
-  input is_unsigned,
-  input use_high,
-  input wire [31:0] src1,
-  input wire [31:0] src2,
-  output [31:0] result
-);
-  wire signed [63:0] product;
-  wire [63:0] uproduct;
-  Umul_temp Umul(
-    .multiplicand(src1),
-    .multiplier(src2),
-    .product(uproduct)
-  );
+// module MulCon(
+//   input valid,
+//   input is_unsigned,
+//   input use_high,
+//   input wire [31:0] src1,
+//   input wire [31:0] src2,
+//   output [31:0] result
+// );
+//   wire signed [63:0] product;
+//   wire [63:0] uproduct;
+//   Umul Umul(
+//     .multiplicand(src1),
+//     .multiplier(src2),
+//     .product(uproduct)
+//   );
 
-  mul_temp mul(
-    .multiplicand(src1),
-    .multiplier(src2),
-    .product(product)
-  );
-  // wire signed [31:0] multiplicand = umultiplicand;
-  // wire signed [31:0] multiplier = umultiplier;
-  // wire signed [63:0] product;
-  // /* verilator lint_off UNUSED */
-  // wire [63:0] uproduct;
-  // /* verilator lint_on UNUSED */
+//   mul mul(
+//     .multiplicand(src1),
+//     .multiplier(src2),
+//     .product(product)
+//   );
+//   // wire signed [31:0] multiplicand = umultiplicand;
+//   // wire signed [31:0] multiplier = umultiplier;
+//   // wire signed [63:0] product;
+//   // /* verilator lint_off UNUSED */
+//   // wire [63:0] uproduct;
+//   // /* verilator lint_on UNUSED */
 
-  // assign product = valid ? multiplicand * multiplier : 64'b0;
-  // assign uproduct = valid ? umultiplicand * umultiplier : 64'b0;
-  assign result = use_high ? is_unsigned ? uproduct[63:32] : product[63:32] : product[31:0];
-endmodule
+//   // assign product = valid ? multiplicand * multiplier : 64'b0;
+//   // assign uproduct = valid ? umultiplicand * umultiplier : 64'b0;
+//   assign result = use_high ? is_unsigned ? uproduct[63:32] : product[63:32] : product[31:0];
+// endmodule
 
 module DivCon(
   input valid,
@@ -329,22 +329,22 @@ module DivCon(
 endmodule
 
 
-module Umul_temp (
-    input  [31:0] multiplicand,  // 32-bit unsigned multiplicand
-    input  [31:0] multiplier,    // 32-bit unsigned multiplier
-    output [63:0] product        // 64-bit unsigned product
-);
-  assign product = multiplicand * multiplier;
-endmodule
+// module Umul (
+//     input  [31:0] multiplicand,  // 32-bit unsigned multiplicand
+//     input  [31:0] multiplier,    // 32-bit unsigned multiplier
+//     output [63:0] product        // 64-bit unsigned product
+// );
+//   assign product = multiplicand * multiplier;
+// endmodule
 
-module mul_temp (
-    input signed [31:0] multiplicand, // 32-bit signed multiplicand
-    input signed [31:0] multiplier,  // 32-bit signed multiplier
-    output signed [63:0] product     // 64-bit signed product
-);
-  // 对于32位有符号数，由于已经是完整的32位，包括符号位，因此不需要额外扩展
-  assign product = multiplicand * multiplier;
-endmodule
+// module mul (
+//     input signed [31:0] multiplicand, // 32-bit signed multiplicand
+//     input signed [31:0] multiplier,  // 32-bit signed multiplier
+//     output signed [63:0] product     // 64-bit signed product
+// );
+//   // 对于32位有符号数，由于已经是完整的32位，包括符号位，因此不需要额外扩展
+//   assign product = multiplicand * multiplier;
+// endmodule
 
 module Udiv_temp (
     input  wire [31:0] dividend,
