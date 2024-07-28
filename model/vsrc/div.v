@@ -7,7 +7,7 @@ module div (
     input div_signed,
     input [31:0] x, y,
     output [31:0] s, r,
-    output complete
+    output complete, div0_err
 );
     
     srt_divider my_srt(
@@ -16,7 +16,8 @@ module div (
         .div(div),
         .div_signed(div_signed),
         .dividend(x), .divisor(y), .Q(s), .rem(r),
-        .complete(complete)
+        .complete(complete),
+        .div_zero_err(div0_err)
     );
     
 endmodule
