@@ -61,7 +61,7 @@ module srt_divider (
     assign R_is_neg = S_is_neg;
     reg q_sign, rem_sign;
     wire [5:0] s_zero, s_one, d_zero;
-    
+    wire [5:0] delta_zero = d_zero - s_zero;
     
     leading0_detector div_s0_m1(
         .data(S[31:0]),
@@ -72,7 +72,7 @@ module srt_divider (
         .zero_count(s_one)
     );
     leading0_detector norm_d(
-        .data(D[31:0]),
+        .data({D[31] | D[32], D[30:0]}),
         .zero_count(d_zero)
     );
     
@@ -88,10 +88,11 @@ module srt_divider (
     end
     
     always @(posedge srt_clk) begin
-        if(reset) begin
+        if(reset | complete) begin
+            complete <= 1'b0;
             status <= WAITING;
-            S  <= {div_signed & dividend[31], dividend};
-            D  <= {div_signed & divisor[31],  divisor };
+            S  <= 33'd0;
+            D  <= 33'd0;
             mD <= 33'd0;
             q_sign  <= 1'b0;
             rem_sign<= 1'b0;
@@ -105,7 +106,7 @@ module srt_divider (
                 WAITING: begin 
                     status <= NORMALIZE;
                     S <= S_is_neg ? {1'b0, -dividend} : {1'b0, dividend};
-                    D <= D_is_neg ? {1'b1, -divisor } : {1'b0,  divisor};
+                    D <= D_is_neg ? {1'b0, -divisor } : {1'b0,  divisor};
                     q_sign   <= Q_is_neg;
                     rem_sign <= R_is_neg;
                     complete <= 1'b0;
@@ -120,7 +121,12 @@ module srt_divider (
                         div_zero_err <= 1'b1;
                         complete <= 1'b1;
                         status <= WAITING;
-                    end else begin
+                    end else if (delta_zero[5]) begin
+                        complete <= 1'b1;
+                        status <= WAITING;
+                        rem <= dividend;
+                        Q <= 32'd0;
+                    end begin
                         S  <= {1'b0  , S    << s_zero};
                         D  <= {D[31] , D    << d_zero};
                         mD <= {~D[31], (-D) << d_zero};
@@ -128,7 +134,7 @@ module srt_divider (
                         negQ    <= 32'd0;
                         shifter <= s_zero;
                         counter <= 6'd0;
-                        rounds  <= d_zero - s_zero;
+                        rounds  <= delta_zero;
                         status  <= DIVIDING;
                     end
                 end
