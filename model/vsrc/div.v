@@ -76,7 +76,7 @@ module srt_divider (
         .zero_count(d_zero)
     );
     
-    wire ulp = S[32];
+    wire [31:0] ulp = {31'd0, S[32]};
     reg [31:0] posQ, negQ; // on the fly (not used)
     
     initial begin
@@ -192,7 +192,7 @@ module srt_divider (
                 FINISHED: begin
                     complete <= 1'b1;
                     rem <= rem_sign ? -((S[32] ? (S+D) : S) >> (rounds + shifter)) : ((S[32] ? (S+D) : S) >> (rounds + shifter));
-                    Q <= q_sign ? (negQ - posQ + 32'd1) : (posQ - negQ - ulp);
+                    Q <= q_sign ? (negQ - posQ + ulp) : (posQ - negQ - ulp);
                     S <= {1'b0, dividend};
                     D <= {1'b0, divisor };
                     mD <= 33'd0;
