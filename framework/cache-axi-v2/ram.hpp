@@ -7,6 +7,7 @@
 #include <queue>
 
 #define MEM_SIZE 65536 // bytes
+static_assert((MEM_SIZE & (MEM_SIZE - 1)) == 0, "MEM_SIZE must be power of 2.");
 
 class Ram {
 private:
