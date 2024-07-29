@@ -324,7 +324,7 @@ icache_v5 icache_dummy(
       .rs4data(read_data3)
   );
   csr my_csr (
-    .clk(~aclk),
+    .clk(aclk),
     .rst(reset),
 
     //for ID
@@ -374,10 +374,6 @@ icache_v5 icache_dummy(
       .read_data1      (read_data1),
       .read_data2      (read_data2),
       .read_data3      (read_data3),
-      .csr_num1(csr_addr1),
-      .csr_num2(csr_addr2),
-      .csr_data1(csr_data1),
-      .csr_data2(csr_data2),
       .have_intrpt(have_intrpt)
 
   );
@@ -408,7 +404,9 @@ icache_v5 icache_dummy(
       .csr_bus       (csr_bus1),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc)
+      .excp_pc(excp_pc),
+      .csr_addr(csr_addr1),
+      .csr_rdata_t(csr_data1)
 
   );
   EXM_stage EXM_stage2 (
@@ -437,7 +435,9 @@ icache_v5 icache_dummy(
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc)
+      .excp_pc(excp_pc),
+      .csr_addr(csr_addr2),
+      .csr_rdata_t(csr_data2)
 
   );
 

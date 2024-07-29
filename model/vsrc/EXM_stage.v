@@ -27,7 +27,10 @@ module EXM_stage(
     output [     `CSR_BUS_WD - 1:0] csr_bus,
     input                           jump_excp_fail,
     input                           excp_jump,
-    input  [                  31:0] excp_pc
+    input  [                  31:0] excp_pc,
+    output [                  13:0] csr_addr,
+    input  [                  31:0] csr_rdata_t
+    
 
 );
 
@@ -46,8 +49,8 @@ wire [31:0] bad_addr;
 wire [31:0] bad_addr_t;
 wire        use_csr_data;
 wire        csr_wen;
-wire [13:0] csr_addr;
-wire [31:0] csr_rdata_t;
+//wire [13:0] csr_addr;
+//wire [31:0] csr_rdata_t;
 wire [31:0] csr_rdata;
 wire [31:0] csr_wdata_t;
 wire [31:0] csr_wdata;
@@ -125,7 +128,6 @@ assign {
     use_csr_data, //1
     csr_wen, //1
     csr_addr, //14
-    csr_rdata_t, //32  写入rf寄存器的值
     use_mark,
 
     alu_op,  // 12  操作类型

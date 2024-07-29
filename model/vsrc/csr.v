@@ -57,7 +57,8 @@ module csr (
     
     assign jump_excp_fail = csr_wen& in_excp;
     assign excp_jump = (in_excp | is_etrn) & ~jump_excp_fail;
-    assign excp_pc = in_excp ? csr_eentry : csr_era;
+    assign excp_pc = in_excp ? csr_eentry :
+                     csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
     assign have_intrpt = csr_crmd[`IE] &|(csr_ecfg[12:0]&csr_estat[12:0]);
     always @(*) 
     begin
