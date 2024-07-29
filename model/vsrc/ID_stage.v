@@ -114,7 +114,7 @@ module ID_stage (
                         ((|instr0_dest) & 
                           instr0_gr_we 
                         &((instr0_dest==read_addr2 & instr1_use_rj) |
-                         (instr1_dest==read_addr3 & instr1_use_rkd))) |
+                         (instr0_dest==read_addr3 & instr1_use_rkd))) |
                          instr0_is_ls |instr1_is_ls
                          ;
   assign IF_pop_op[0] = EXE_instr0_valid_w & EXE_ready;
@@ -373,7 +373,7 @@ module ID_decoder (
   assign src2_is_4 = inst_jirl | inst_bl;
 
   assign imm = need_si20 ? {i20[19:0], 12'b0}         :
-             need_ui5  ? rkd_value                     :
+             need_ui5  ?  {{27{rk[4]}}, rk}           :
              need_si26 ? {{6{i26[25]}},i26[25:0]}   :
              need_si16 ? {{16{i16[15]}},i16[15:0]}  :
              need_si12_u ? {{20{1'b0}}, i12[11:0]}:

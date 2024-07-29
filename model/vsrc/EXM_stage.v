@@ -9,8 +9,12 @@ module EXM_stage(
     input [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
     //for WB
     input ws_ready,
-    output es_to_ws_valid,
+    output [1:0] es_to_ws_valid,
     output [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus,
+    output nblock,
+    //for MEM
+    output [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus,
+    input  [`MS_TO_ES_BUS_WD-1:0] ms_to_es_bus,
 
     input [`FORWAED_BUS_WD -1:0] forward_data1,
     input [`FORWAED_BUS_WD -1:0] forward_data2,
@@ -18,15 +22,11 @@ module EXM_stage(
 
     output [`BR_BUS_WD -1:0] br_bus,
     output        flush_IF,
-    output        flush_ID,
-
-    input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
-    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
+    output        flush_ID
 );
-//reg  [`FORWAED_BUS_WD -1:0]  exm_forward_bus_r;
+
 //wire [`FORWAED_BUS_WD -1:0]  exm_forward_bus_w;
 
-wire [`ES_TO_WS_BUS_WD -1:0] es_to_ws_bus_w;
 wire [                 11:0] alu_op;
 wire [                  3:0] bit_width;
 wire                         may_jump;  // 1 
@@ -67,13 +67,19 @@ wire [                 31:0] div_result;
 wire [                 31:0] mem_result;
 wire [                 31:0] final_result;
 
-wire                   [31:0] jump_target;
-wire                          zero;
-wire                          less;
+wire                  [31:0] jump_target;
+wire                         zero;
+wire                         less;
 
+reg  [`FORWAED_BUS_WD-1:0]  exm_forward_bus_r;
+
+wire [                 1:0]  es_to_ws_valid_w;
+wire [`ES_TO_WS_BUS_WD-1:0]  es_to_ws_bus_w;
+reg  [`ES_TO_WS_BUS_WD+1:0]  es_to_ws_bus_r;
 wire                         dcache_ok;
-wire                         es_to_ws_valid_w;
-reg  [  `ES_TO_WS_BUS_WD:0]  es_to_ws_bus_r;
+
+wire [1:0] forw_rj;
+wire [1:0] forw_rkd;
 
 assign {
     alu_op,  // 12  操作类型
@@ -106,34 +112,50 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-
-assign es_to_ws_valid_w = ds_to_es_valid && dcache_ok;
+assign nblock = dcache_ok || ~ds_to_es_valid;
+assign es_to_ws_valid_w[0] = ds_to_es_valid;
+assign es_to_ws_valid_w[1] = nblock;
 assign es_to_ws_bus_w = {gr_we, dest, final_result, es_pc};
-//assign exm_forward_bus_w = {final_result, dest, gr_we};
 
-assign es_ready = ~es_to_ws_valid & ws_ready; 
+assign es_ready = nblock & ws_ready; 
 
 always @(posedge clk) begin
     if (reset) begin
       es_to_ws_bus_r <= 0;
-      //exm_forward_bus_r <= 0;
-    end else if (!ws_ready) begin
-      es_to_ws_bus_r <= es_to_ws_bus_r;
-      //exm_forward_bus_r <= exm_forward_bus_r;
+      es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1]<=1'b1;
     end else begin
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus_w;
-      es_to_ws_bus_r[`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
-     //exm_forward_bus_r <= exm_forward_bus_w;
+      es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
     end
+
+    if(reset) begin
+        exm_forward_bus_r <= 0;
+    end
+    if(!nblock && (forw_rj[0] || forw_rj[1] || forw_rkd[0] || forw_rkd[1])) begin
+        exm_forward_bus_r <= exm_forward_bus_r;
+    end
+    else begin
+        exm_forward_bus_r[`FORWAED_BUS_WD-2:0] <= es_to_ws_bus_w[`ES_TO_WS_BUS_WD-1:32];
+        exm_forward_bus_r[`FORWAED_BUS_WD-1] <= es_to_ws_valid_w[0];
+    end
+
 end
 
-
-assign es_to_ws_valid  = es_to_ws_bus_r[`ES_TO_WS_BUS_WD];
+assign es_to_ws_valid  = es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD];
 assign es_to_ws_bus    = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
-assign exm_forward_bus = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:32]; //exm_forward_bus_r;
+assign exm_forward_bus = exm_forward_bus_r; //es_to_ws_bus_r[`ES_TO_WS_BUS_WD:32]; //exm_forward_bus_r;
 
-assign rj_value =  (forward_data1[37] && forward_data1[36:32]==rf_raddr1) ? forward_data1[31:0] : (forward_data2[37] && forward_data2[36:32]==rf_raddr1) ? forward_data2[31:0] :rj_value_t;
-assign rkd_value = (forward_data1[37] && forward_data1[36:32]==rf_raddr2) ? forward_data1[31:0] : (forward_data2[37] && forward_data2[36:32]==rf_raddr2) ? forward_data2[31:0] :rkd_value_t;
+assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&&ds_to_es_valid, res_from_mem&&ds_to_es_valid, bit_width, rkd_value, es_pc};
+assign {dcache_ok, mem_result} = ms_to_es_bus;
+assign final_result = res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
+
+assign forw_rj[0] = forward_data1[38] && forward_data1[37] && forward_data1[36:32]==rf_raddr1;
+assign forw_rj[1] = forward_data2[38] && forward_data2[37] && forward_data2[36:32]==rf_raddr1;
+assign forw_rkd[0]= forward_data1[38] && forward_data1[37] && forward_data1[36:32]==rf_raddr2;
+assign forw_rkd[1]= forward_data2[38] && forward_data2[37] && forward_data2[36:32]==rf_raddr2;
+
+assign rj_value  = forw_rj[0] ? forward_data1[31:0] : forw_rj[1] ? forward_data2[31:0] : rj_value_t;
+assign rkd_value = forw_rkd[0]? forward_data1[31:0] : forw_rkd[1]? forward_data2[31:0] : rkd_value_t;
 assign src1 = src1_is_pc ? es_pc : rj_value;
 assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 
@@ -146,37 +168,22 @@ Alu u_alu (
     .less      (less)
 );
 
-Mul u_mul(
+MulCon u_mul(
     .valid        (use_mul),
     .is_unsigned  (is_unsigned),
     .use_high     (use_high),
-    .multiplicand (src1),
-    .multiplier   (src2),
+    .src1 (src1),
+    .src2   (src2),
     .result       (mul_result)
 );
 
-Div u_div(
+DivCon u_div(
     .valid        (use_div),
     .is_unsigned  (is_unsigned),
     .use_mod      (use_mod),
-    .dividend     (src1),
-    .divisor      (src2),
+    .src1     (src1),
+    .src2      (src2),
     .result       (div_result)
-);
-
-
-Agu u_agu(
-    .alu_op     (alu_op[3:1]),
-    .mem_we     (mem_we),
-    .mem_ewe    (mem_we ? bit_width : 4'h0),
-    .mem_rd     (res_from_mem),
-    .src1       (src1),
-    .src2       (src2),  
-    .wdata      (rkd_value),
-    .mem_result (mem_result),
-    .dcache_ok   (dcache_ok),
-    .dcache_rdata_bus(dcache_rdata_bus),
-    .dcache_wdata_bus(dcache_wdata_bus)
 );
 
 BranchCond u_branch (
@@ -195,8 +202,6 @@ BranchCond u_branch (
     .imm(imm),
     .pre_fail(pre_fail)
 );
-
-assign final_result = res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
 assign br_bus = reset ? 0 : {pre_fail&&ds_to_es_valid, jump_target};
 assign flush_IF = pre_fail&&ds_to_es_valid;
