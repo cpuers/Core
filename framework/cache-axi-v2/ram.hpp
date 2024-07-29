@@ -2,21 +2,22 @@
 #define RAM_HPP
 
 #include <common.hpp>
+#include <cache.hpp>
 #include <array>
+#include <queue>
 
 #define MEM_SIZE 65536 // bytes
 
 class Ram {
 private:
-    u32 imem[MEM_SIZE/4];
-    u32 dmem[MEM_SIZE/4];
+    using Q = std::queue<u32>;
+    Q m[MEM_SIZE / 4];
 public:
     Ram();
     ~Ram();
-    std::array<u32, 4> iread(u32 addr, bool uncached);
-    u32 dread(u32 addr, bool uncached);
-    void dwrite(u32 addr, u32 data, u8 wstrb);
-    void iflush(u32 addr);
+    bool ircheck(u32 addr, ir_t rdata, set<ir_t> &s);
+    bool drcheck(u32 addr, dr_t rdata, set<dr_t> &s);
+    void dwrite(u32 addr, u8 wstrb, dw_t wdata);
 };
 
 #endif

@@ -194,15 +194,9 @@ public:
                     p_d.push_back(rdtx);
                 } else {
                     wdtx = dynamic_cast<DCacheTxW *>(dtx);
-                    ram->dwrite(wdtx->addr, wdtx->wdata, wdtx->awstrb);
+                    // ram->dwrite(wdtx->addr, wdtx->awstrb, wdtx->wdata);
                 }
             }
-        }
-        for (auto &t: p_i) {
-            t->watch(ram);
-        }
-        for (auto &t: p_d) {
-            t->watch(ram);
         }
         // Then, update the model in the middle
         delay(1);
@@ -231,12 +225,6 @@ public:
             dut->d_valid = false;
         }
         delay(0);
-        for (auto &t: p_i) {
-            t->watch(ram);
-        }
-        for (auto &t: p_d) {
-            t->watch(ram);
-        }
     }
 
     void send(CacheTx *tx) {

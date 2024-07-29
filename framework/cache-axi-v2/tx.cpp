@@ -72,18 +72,16 @@ bool CacheTx::hit() {
 }
 bool ICacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
-  if (!hit()) {
-    ram->iflush(araddr);
-  }
-  if (values.find(rdata) == values.end()) {
+  set<ir_t> s;
+  if (!ram->ircheck(araddr, rdata, s)) {
     printf("ICache Read: %08x, [%lu -- %lu]\n", araddr, st(), ed());
-    r_t &r = rdata;
+    ir_t &r = rdata;
     printf("Result  : [%08x %08x %08x %08x]\n", r[3], r[2], r[1], r[0]);
-    auto it = values.begin();
-    const r_t &e = *it;
+    auto it = s.begin();
+    const ir_t &e = *it;
     printf("Expected: [%08x %08x %08x %08x]\n", e[3], e[2], e[1], e[0]);
-    for (it ++; it != values.end(); it ++) {
-      const r_t &e = *it;
+    for (it ++; it != s.end(); it ++) {
+      const ir_t &e = *it;
       printf("  or    : [%08x %08x %08x %08x]\n", e[3], e[2], e[1], e[0]);
     }
     return false;
@@ -96,12 +94,13 @@ bool ICacheTxR::hit() {
 }
 bool DCacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
-  if (values.find(rdata) == values.end()) {
+  set<dr_t> s;
+  if (!ram->drcheck(addr, rdata, s)) {
     printf("DCache Read: %08x, [%lu -- %lu]\n", addr, st(), ed());
     printf("Result  : %08x\n", rdata);
-    auto it = values.begin();
+    auto it = s.begin();
     printf("Expected: %08x\n", *it);
-    for (it ++; it != values.end(); it ++) {
+    for (it ++; it != s.end(); it ++) {
       printf("  or    : %08x\n", *it);
     }
     return false;
@@ -114,33 +113,42 @@ bool DCacheTxR::hit() {
 }
 bool DCacheTxW::check(Ram *ram) {
   CacheTx::check(ram);
-  ram->dwrite(addr, wdata, awstrb);
+  ram->dwrite(addr, awstrb, wdata);
   return true;
 }
 bool DCacheTxW::hit() { return this->whit; }
 Tx::State Tx::state() { return state_; };
-void CacheTx::watch(Ram *ram) {}
-void DCacheTxR::watch(Ram *ram) {
-  values.insert(ram->dread(addr, false));
-  values.insert(ram->dread(addr, true));
-}
-void ICacheTxR::watch(Ram *ram) {
-  auto a = ram->iread(araddr, false);
-  auto b = ram->iread(araddr, true);
-  u32 addr = araddr / 16 * 16;
-  r_t c = {};
-  for (auto i = 0; i < 4; i++) {
-    c[i] = ram->dread(addr + 4 * i, false);
-  }
-  values.insert(a);
-  values.insert(b);
-  values.insert(c);
-}
 ICacheTxRH::ICacheTxRH(u32 addr) : ICacheTxR(addr) {}
 bool ICacheTxRH::check(Ram *ram) {
-  ICacheTxR::check(ram);
+  if(!ICacheTxR::check(ram)) {
+    return false;
+  }
   if (!hit()) {
     printf("ICache Read: %08x should hit but not.\n", araddr);
+    return false;
+  }
+  return true;
+}
+
+bool DCacheTxRH::check(Ram *ram) {
+  if (!DCacheTxR::check(ram)) {
+    return false;
+  }
+  if (!hit()) {
+    printf("DCache Read: %08x should hit but not.\n", addr);
+    return false;
+  }
+  return true;
+}
+DCacheTxRH::DCacheTxRH(u32 addr) : DCacheTxR(addr) {}
+DCacheTxWH::DCacheTxWH(u32 addr, u8 awstrb, u32 wdata)
+    : DCacheTxW(addr, awstrb, wdata) {}
+bool DCacheTxWH::check(Ram *ram) {
+  if (!DCacheTxW::check(ram)) {
+    return false;
+  }
+  if (!hit()) {
+    printf("DCache Write: %08x should hit but not.\n", addr);
     return false;
   }
   return true;
