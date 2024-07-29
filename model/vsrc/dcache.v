@@ -808,7 +808,8 @@ module dcache_v2(
         end
     endgenerate
     wire lookup_hit = |lookup_way_hit;
-    reg     [31:0]  lookup_hit_data;    // combinational logic
+    reg      [31:0]  lookup_hit_data;    // combinational logic
+    // assign lookup_hit_data = data_douta[0][req_buf_bank];
     always @(*) begin
         lookup_hit_data = 0;
         for (k = 0; k < DCACHE_WAY; k = k + 1) begin
@@ -855,6 +856,13 @@ module dcache_v2(
     always @(posedge clock) begin
         if (reset) begin
             state <= state_idle;
+            recv_buf[0] <= 0;
+            recv_buf[1] <= 0;
+            recv_buf[2] <= 0;
+            req_buf_op <= 0;
+            req_buf_addr <= 0;
+            req_buf_awstrb <= 0;
+            req_buf_wdata <= 0;
         end else case (state)
             state_idle: begin
                 if (valid && !cache_sram_rw_collision) begin
@@ -944,6 +952,11 @@ module dcache_v2(
     always @(posedge clock) begin
         if (reset) begin
             wr_buf_state <= wr_buf_state_idle;
+            wr_buf_way <= 0;
+            wr_buf_tag <= 0;
+            wr_buf_idx <= 0;
+            wr_buf_bank <= 0;
+            wr_buf_wdata <= 0;
         end else case (wr_buf_state)
             wr_buf_state_idle: begin
                 if (wr_buf_accept_req) begin
@@ -1042,6 +1055,36 @@ module dcache_v2(
     endgenerate
 
     `else
+    
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            dcache_tagv_sram u_tagv_sram(
+                .clka           ( clock         ),
+                .ena            ( tagv_ena[i]   ),
+                .wea            ( tagv_wea[i]   ),
+                .addra          ( tagv_addra[i] ),
+                .dina           ( tagv_dina[i]  ),
+                .douta          ( tagv_douta[i] )
+            );
+            
+        end
+    endgenerate
+
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            for (j = 0; j < 4; j = j + 1) begin
+                dcache_data_sram u_data_sram(
+                    .clka           ( clock             ),
+                    .ena            ( data_ena[i][j]    ),
+                    .wea            ( data_wea[i][j]    ),
+                    .addra          ( data_addra[i][j]  ),
+                    .dina           ( data_dina[i][j]   ),
+                    .douta          ( data_douta[i][j]  )
+                );
+            end
+        end
+    endgenerate
+
 
     `endif
 

@@ -417,7 +417,7 @@ icache_v5 icache_dummy(
   assign debug1_wb_rf_wdata      = wb_stage.rf_wdata2;
   `endif
 
-  dcache_dummy_v2 dcache(
+  dcache_v2 dcache(
       .clock(aclk),
       .reset(reset),
   

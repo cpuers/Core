@@ -1,3 +1,4 @@
+#include "ram.hpp"
 #include <cassert>
 #include <tx.hpp>
 
@@ -9,7 +10,7 @@ ICacheTx::ICacheTx() {
   rdata = {0, 0, 0, 0};
   rhit = false;
 }
-ICacheTxR::ICacheTxR(u32 araddr) { this->araddr = araddr; }
+ICacheTxR::ICacheTxR(u32 araddr) { this->araddr = araddr % MEM_SIZE; }
 DCacheTx::DCacheTx() {
   op = false;
   addr = 0;
@@ -20,10 +21,10 @@ DCacheTx::DCacheTx() {
   wdata = 0;
   whit = false;
 }
-DCacheTxR::DCacheTxR(u32 addr) { this->addr = addr; }
+DCacheTxR::DCacheTxR(u32 addr) { this->addr = addr % MEM_SIZE; }
 DCacheTxW::DCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
   this->op = true;
-  this->addr = addr;
+  this->addr = addr % MEM_SIZE;
   this->awstrb = awstrb;
   this->wdata = wdata;
 }
