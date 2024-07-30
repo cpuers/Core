@@ -12,6 +12,10 @@ module regfile (
     input                        wen1,
     input                        wen2,
     output [         `WIDTH-1:0] rs1data,rs2data,rs3data,rs4data
+    `ifdef DIFFTEST_EN
+    ,
+    output  [31:0]  regs [31:0] // difftest
+    `endif
 );
   reg [`WIDTH-1:0] mem[`NR_REG-1:0];
 
@@ -39,4 +43,8 @@ module regfile (
     end
     mem[0] <= `WIDTH'b0;
   end
+
+  `ifdef DIFFTEST_EN
+  assign regs = mem;
+  `endif
 endmodule

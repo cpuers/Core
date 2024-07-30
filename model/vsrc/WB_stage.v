@@ -1,10 +1,8 @@
 `include "define.vh"
 
 module WB_stage(
-    /* verilator lint_off EOFNEWLINE */
     input  wire                     clk,
     input  wire                     reset,
-    /* verilator lint_on EOFNEWLINE */
     //for EXM
     output                          ws_ready,
     input  [                   1:0] es_to_ws_valid1,
