@@ -14,7 +14,7 @@ module div (
     wire [31:0] r;
     wire complete;
     wire div0_err;
-    assign div_result = use_mod? r : s;
+    assign div_result = use_mod ? r : s;
     assign div_ok = complete || !div;
 
     srt_divider my_srt(
@@ -140,22 +140,22 @@ module srt_divider (
                     if(counter == rounds) begin
                         case(S[32:31])
                             2'b11: begin
-                                posQ <= {posQ[30:0], 1'b0};
-                                negQ <= {negQ[30:0], 1'b0};
+                                posQ <= {posQ[31:0], 1'b0};
+                                negQ <= {negQ[31:0], 1'b0};
                             end
                             2'b00: begin
-                                posQ <= {posQ[30:0], 1'b0};
-                                negQ <= {negQ[30:0], 1'b0};
+                                posQ <= {posQ[31:0], 1'b0};
+                                negQ <= {negQ[31:0], 1'b0};
                             end
                             2'b01: begin: q_1_last
                                 S    <= SpmD;
-                                posQ <= {posQ[30:0], 1'b1};
-                                negQ <= {negQ[30:0], 1'b0};
+                                posQ <= {posQ[31:0], 1'b1};
+                                negQ <= {negQ[31:0], 1'b0};
                             end
                             2'b10: begin: q_m1_last
                                 S    <= SpD;
-                                posQ <= {posQ[30:0], 1'b0};
-                                negQ <= {negQ[30:0], 1'b1};
+                                posQ <= {posQ[31:0], 1'b0};
+                                negQ <= {negQ[31:0], 1'b1};
                             end
                         endcase
                         status <= FINISHED;
@@ -163,24 +163,24 @@ module srt_divider (
                         counter <= counter + 6'd1;
                         case(S[32:31])
                             2'b11: begin
-                                S    <= {S[31:0],    1'b0};
-                                posQ <= {posQ[30:0], 1'b0};
-                                negQ <= {negQ[30:0], 1'b0};
+                                S    <= {S[32:0],    1'b0};
+                                posQ <= {posQ[31:0], 1'b0};
+                                negQ <= {negQ[31:0], 1'b0};
                             end
                             2'b00: begin
-                                S    <= {S[31:0],    1'b0};
+                                S    <= {S[32:0],    1'b0};
                                 posQ <= {posQ[31:0], 1'b0};
                                 negQ <= {negQ[31:0], 1'b0};
                             end
                             2'b01: begin: q_1
-                                S    <= {SpmD[31:0], 1'b0};
-                                posQ <= {posQ[30:0], 1'b1};
-                                negQ <= {negQ[30:0], 1'b0};
+                                S    <= {SpmD[32:0], 1'b0};
+                                posQ <= {posQ[31:0], 1'b1};
+                                negQ <= {negQ[31:0], 1'b0};
                             end
                             2'b10: begin: q_m1
-                                S    <= {SpD[31:0] , 1'b0};
-                                posQ <= {posQ[30:0], 1'b0};
-                                negQ <= {negQ[30:0], 1'b1};
+                                S    <= {SpD[32:0] , 1'b0};
+                                posQ <= {posQ[31:0], 1'b0};
+                                negQ <= {negQ[31:0], 1'b1};
                             end
                         endcase
                     end
@@ -343,16 +343,16 @@ module leading0_detector(
         default: begin // 31~16
             case(x[31:24])
                 8'd0: begin // 23~16
-                    case(x[23:16])
+                    case(x[23:20])
                         4'd0: begin // 19~16
-                            case(x[19:16])
+                            case(x[19:18])
                             2'b00: begin // 17~16
-                                if(x[17] == 1'b1) zero_count = 6'd15;
-                                else zero_count = 6'd14;
+                                if(x[17] == 1'b1) zero_count = 6'd14;
+                                else zero_count = 6'd15;
                             end
-                            default:begin // 18~19
-                                if(x[18] == 1'b1) zero_count = 6'd13;
-                                else zero_count = 6'd12;
+                            default: begin // 19~18
+                                if(x[19] == 1'b1) zero_count = 6'd12;
+                                else zero_count = 6'd13;
                             end
                             endcase
                         end
