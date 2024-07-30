@@ -22,10 +22,6 @@ module ID_stage (
     input EXE_ready,
     input flush_ID,
 
-    output [13:0] csr_num1,
-    input [31:0] csr_data1,
-    output [13:0] csr_num2,
-    input [31:0] csr_data2,
     input have_intrpt,
 
     //for regfile
@@ -101,8 +97,7 @@ module ID_stage (
       .dest(instr0_dest),
       .may_jump(instr0_may_jump),
       .is_ls(instr0_is_ls),
-      .csr_num(csr_num1),
-      .csr_data(csr_data1),
+
       .have_intrpt(have_intrpt)
   );
   ID_decoder ID_decoder1 (
@@ -118,8 +113,6 @@ module ID_stage (
       .dest(instr1_dest),
       .may_jump(instr1_may_jump),
       .is_ls(instr1_is_ls),
-      .csr_num(csr_num2),
-      .csr_data(csr_data2),
       .have_intrpt(have_intrpt)
   );
 
@@ -155,9 +148,7 @@ module ID_decoder (
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
     input [31:0] rf_rdata2,
-    input have_intrpt,
-    output [13:0] csr_num,
-    input [31:0] csr_data
+    input have_intrpt
 );
 
   wire        use_rj_value;
@@ -187,6 +178,7 @@ module ID_decoder (
   wire [31:0] rj_value;
   wire [31:0] rkd_value;
   wire [31:0] imm;
+  wire [13:0] csr_num;
 
   wire [ 5:0] op_31_26;
   wire [ 3:0] op_25_22;
@@ -506,6 +498,10 @@ module ID_decoder (
   wire [8:0]ds_excp_subEcode;
   wire need_add_4;
   wire have_excp;
+  wire [1:0] jump_type;
+
+  assign jump_type[0] = inst_bl;
+  assign jump_type[1] = inst_jirl;
   
   assign have_excp =  have_intrpt|inst_syscall | inst_break | have_ine;
   assign use_badv = in_excp;
@@ -540,11 +536,11 @@ module ID_decoder (
     use_csr_data,
     csr_wen,
     csr_num,
-    csr_data,
     csr_use_mark,
     alu_op,  // 12
     bit_width,  // 4
 
+    jump_type,
     may_jump,  // 1 
     use_rj_value,  // 1
     use_less,  // 1

@@ -53,11 +53,11 @@ module core_top (
     `ifdef TEAMPACKAGE_EN
     ,
     output wire [31:0] debug0_wb_pc,
-    output wire [ 3:0] debug0_wb_rf_wen,
+    output wire  debug0_wb_rf_wen,
     output wire [ 4:0] debug0_wb_rf_wnum,
     output wire [31:0] debug0_wb_rf_wdata,
     output wire [31:0] debug1_wb_pc,
-    output wire [ 3:0] debug1_wb_rf_wen,
+    output wire  debug1_wb_rf_wen,
     output wire [ 4:0] debug1_wb_rf_wnum,
     output wire [31:0] debug1_wb_rf_wdata
     `endif
@@ -217,43 +217,50 @@ module core_top (
   wire [           31:0] excp_pc;
   assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 : (csr_bus2[`CSR_BUS_WD-1] || csr_bus2[`CSR_BUS_WD-2]) ? csr_bus2 : `CSR_BUS_WD'b0;
 
+  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus1;
+  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
+
   BPU BPU (
-      .pc(if0_pc),
-      .next_pc(pbu_next_pc),
-      .pc_is_jump(pbu_pc_is_jump),
-      .pc_valid(pbu_pc_valid)
-  );
-icache_v5 icache_dummy(
-    .clock(aclk),
+    .clk(aclk),
     .reset(reset),
-
-    .valid(if0_valid),      // in cpu, valid no dep on ok;
-    .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
-    .araddr(iaddr),
-    .uncached(iuncached),
-
-    .rvalid(icache_data_ok),
-    .rdata(icache_rdata),
-    /* verilator lint_off PINCONNECTEMPTY */
-    .rhit(           ),
-
-    //TODO
-    .cacop_valid(dcache_cacop_en),
-    .cacop_ready(               ),
-    /* verilator lint_on PINCONNECTEMPTY */
-    .cacop_code(dcache_cacop_code), // code[4:3]
-    .cacop_addr(dcache_cacop_addr),
-    /* verilator lint_on UNUSED */
-    
-    // axi bridge
-    .rd_req(inst_rd_req),
-    .rd_type(inst_rd_type),
-    .rd_addr(inst_rd_addr),
-    .rd_rdy(inst_rd_rdy),
-    .ret_valid(inst_ret_valid),
-    .ret_last(inst_ret_last),
-    .ret_data(inst_ret_data)
-);
+    .pc(if0_pc),
+    .next_pc(pbu_next_pc),
+    .pc_is_jump(pbu_pc_is_jump),
+    .pc_valid(pbu_pc_valid),
+    .bpu_es_bus1(bpu_es_bus1),
+    .bpu_es_bus2(bpu_es_bus2)
+  );
+  icache_v5 icache_dummy(
+      .clock(aclk),
+      .reset(reset),
+  
+      .valid(if0_valid),      // in cpu, valid no dep on ok;
+      .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
+      .araddr(iaddr),
+      .uncached(iuncached),
+  
+      .rvalid(icache_data_ok),
+      .rdata(icache_rdata),
+      /* verilator lint_off PINCONNECTEMPTY */
+      .rhit(           ),
+  
+      //TODO
+      .cacop_valid(dcache_cacop_en),
+      .cacop_ready(               ),
+      /* verilator lint_on PINCONNECTEMPTY */
+      .cacop_code(dcache_cacop_code), // code[4:3]
+      .cacop_addr(dcache_cacop_addr),
+      /* verilator lint_on UNUSED */
+      
+      // axi bridge
+      .rd_req(inst_rd_req),
+      .rd_type(inst_rd_type),
+      .rd_addr(inst_rd_addr),
+      .rd_rdy(inst_rd_rdy),
+      .ret_valid(inst_ret_valid),
+      .ret_last(inst_ret_last),
+      .ret_data(inst_ret_data)
+  );
   IF_stage0 IF_stage0 (
       .clk      (aclk),
       .flush_IF (flush_IF1 | flush_IF2),
@@ -324,7 +331,7 @@ icache_v5 icache_dummy(
       .rs4data(read_data3)
   );
   csr my_csr (
-    .clk(~aclk),
+    .clk(aclk),
     .rst(reset),
 
     //for ID
@@ -374,10 +381,6 @@ icache_v5 icache_dummy(
       .read_data1      (read_data1),
       .read_data2      (read_data2),
       .read_data3      (read_data3),
-      .csr_num1(csr_addr1),
-      .csr_num2(csr_addr2),
-      .csr_data1(csr_data1),
-      .csr_data2(csr_data2),
       .have_intrpt(have_intrpt)
 
   );
@@ -400,7 +403,6 @@ icache_v5 icache_dummy(
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
-      .exm_forward_bus(exm_forward_data1),
 
       .br_bus        (br_bus1),
       .flush_IF      (flush_IF1),
@@ -409,7 +411,10 @@ icache_v5 icache_dummy(
       .csr_bus       (csr_bus1),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc)
+      .excp_pc(excp_pc),
+      .csr_addr(csr_addr1),
+      .csr_rdata_t(csr_data1),
+      .bpu_es_bus(bpu_es_bus1)
 
   );
   EXM_stage EXM_stage2 (
@@ -430,7 +435,6 @@ icache_v5 icache_dummy(
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
-      .exm_forward_bus(exm_forward_data2),
 
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
@@ -439,8 +443,10 @@ icache_v5 icache_dummy(
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
-      .excp_pc(excp_pc)
-
+      .excp_pc(excp_pc),
+      .csr_addr(csr_addr2),
+      .csr_rdata_t(csr_data2),
+      .bpu_es_bus(bpu_es_bus2)
   );
 
   MEM_stage MEM_stage (
@@ -464,10 +470,13 @@ icache_v5 icache_dummy(
       .nblock1        (es_nblock1),
       .nblock2        (es_nblock2),
       .ws_to_rf_bus   (ws_to_rf_bus),
+      .forward_data1  (exm_forward_data1),
+      .forward_data2  (exm_forward_data2),
 
       .csr_we         (csr_wen),
       .csr_addr       (csr_waddr),
       .csr_wdata      (csr_wdata)
+
   );
   
   `ifdef TEAMPACKAGE_EN

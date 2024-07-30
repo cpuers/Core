@@ -12,7 +12,7 @@ module mul (
 );
     //assign avoidCompileErr = clock ^ reset;
     wire [63:0] result;
-    WallaceTree mywt(
+    WallaceTree32 mywt(
         .x(x),
         .y(y),
         .mul_signed(mul_signed),
@@ -86,40 +86,6 @@ module rad4Booth(
     end endgenerate
 endmodule
 
-module compressor_42 (
-    input [63:0] a,
-    input [63:0] b,
-    input [63:0] c,
-    input [63:0] d,
-    output [63:0] sum,
-    output [63:0] carry,
-    input Em1,
-    output overflow
-    //,output [63:0]debugE
-);
-    wire [63:0] E, xor_abcd;
-    //assign debugE = E;
-    
-    assign overflow    = E[63];
-    
-    assign xor_abcd[0]  = d[0] ^ c[0] ^ b[0] ^ a[0];
-    assign sum[0]       = xor_abcd[0] ^ Em1;
-    assign carry[0]     = xor_abcd[0] ? Em1 : a[0];
-    //assign E[0]        = ((d[0] ^ c[0]) & b[0]) | ((~(d[0] ^ c[0])) & b[0]);
-    assign E[0]         = (d[0] & c[0]) || (c[0] & b[0]) || (d[0] & b[0]);
-    
-    genvar i;
-    generate 
-        for (i = 1; i < 64; i = i+1) begin
-            //assign E[i]        = ((d[i] ^ c[i]) & b[i]) | ((~(d[i] ^ c[i])) & b[i]);
-            assign E[i]        = (d[i] & c[i]) || (c[i] & b[i]) || (d[i] & b[i]);
-            assign xor_abcd[i] = (d[i] ^ c[i]) ^ (b[i] ^ a[i]);
-            assign sum[i]      = xor_abcd[i] ^ E[i-1];
-            assign carry[i]    = xor_abcd[i] ? E[i-1] : a[i];
-        end
-    endgenerate
-endmodule
-
 module csa_adder(
     input [63:0] a,
     input [63:0] b,
@@ -138,12 +104,11 @@ module csa_adder(
 
 endmodule
 
-module WallaceTree(
+module WallaceTree32(
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
-    output [63:0] result,
-    output overflow
+    output [63:0] result
 );
     
     wire [63:0] pp [16:0];
@@ -155,68 +120,118 @@ module WallaceTree(
     pp[7], pp[6], pp[5], pp[4], pp[3], pp[2], pp[1], pp[0]})
     );
     
+    wire [63:0] l1 [9:0];
+    assign l1[1][0] = 1'b0;
+    assign l1[3][0] = 1'b0;
+    assign l1[5][0] = 1'b0;
+    assign l1[7][0] = 1'b0;
+    assign l1[9][0] = 1'b0;
     
-    wire [63:0] l1res00, l1res01, l1res10, l1res11, l1res20, l1res21, l1res30, l1res31;
-    wire cout1_0, cout1_1, cout1_2, cout1_3;
-    assign l1res00[0] = 1'b0;
-    assign l1res10[0] = 1'b0;
-    assign l1res20[0] = 1'b0;
-    assign l1res30[0] = 1'b0;
-    
-    compressor_42 l1c1(
-        .a(pp[0]),  .b(pp[1]),  .c(pp[2]),  .d(pp[3]),  .carry(l1res00[63:1]), .sum(l1res01), 
-        .Em1(0),       .overflow(cout1_0)
+    csa_adder l1a1(
+        .a(pp[0]), .b(pp[1]), .c(pp[2]),
+        .sum(l1[0]),
+        .carry(l1[1][63:1])
     );
-    compressor_42 l1c2(
-        .a(pp[4]),  .b(pp[5]),  .c(pp[6]),  .d(pp[7]),  .carry(l1res10[63:1]), .sum(l1res11), 
-        .Em1(0), .overflow(cout1_1)
+    csa_adder l1a2(
+        .a(pp[3]), .b(pp[4]), .c(pp[5]),
+        .sum(l1[2]),
+        .carry(l1[3][63:1])
     );
-    compressor_42 l1c3(
-        .a(pp[8]),  .b(pp[9]),  .c(pp[10]), .d(pp[11]), .carry(l1res20[63:1]), .sum(l1res21), 
-        .Em1(0), .overflow(cout1_2)
+    csa_adder l1a3(
+        .a(pp[6]), .b(pp[7]), .c(pp[8]),
+        .sum(l1[4]),
+        .carry(l1[5][63:1])
     );
-    compressor_42 l1c4(
-        .a(pp[12]), .b(pp[13]), .c(pp[14]), .d(pp[15]), .carry(l1res30[63:1]), .sum(l1res31), 
-        .Em1(0), .overflow(cout1_3)
+    csa_adder l1a4(
+        .a(pp[9]), .b(pp[10]), .c(pp[11]),
+        .sum(l1[6]),
+        .carry(l1[7][63:1])
     );
-    
-    
-    wire [63:0] l2res00, l2res01, l2res10, l2res11;
-    wire cout2_0, cout2_1;
-    assign l2res00[0] = 0;
-    assign l2res10[0] = 0;
-    
-    compressor_42 l2c1(
-        .a(l1res00), .b(l1res01), .c(l1res10), .d(l1res11), .carry(l2res00[63:1]), .sum(l2res01), 
-        .Em1(0), .overflow(cout2_0)
-    );
-    compressor_42 l2c2(
-        .a(l1res20), .b(l1res21), .c(l1res30), .d(l1res31), .carry(l2res10[63:1]), .sum(l2res11), 
-        .Em1(0), .overflow(cout2_1)
+    csa_adder l1a5(
+        .a(pp[12]), .b(pp[13]), .c(pp[14]),
+        .sum(l1[8]),
+        .carry(l1[9][63:1])
     );
     
     
-    wire [63:0] l3res00, l3res01;
-    wire cout3_0;
-    assign l3res00[0] = 0;
+    wire [63:0] l2 [7:0];
+    assign l2[1][0] = 1'b0;
+    assign l2[3][0] = 1'b0;
+    assign l2[5][0] = 1'b0;
+    assign l2[7][0] = 1'b0;
     
-    compressor_42 l3c(
-        .a(l2res00), .b(l2res01), .c(l2res10), .d(l2res11), .carry(l3res00[63:1]), .sum(l3res01), 
-        .Em1(0), .overflow(cout3_0)
+    csa_adder l2a1(
+        .a(l1[0]), .b(l1[1]), .c(l1[2]),
+        .sum(l2[0]),
+        .carry(l2[1][63:1])
+    );
+    csa_adder l2a2(
+        .a(l1[3]), .b(l1[4]), .c(l1[5]),
+        .sum(l2[2]),
+        .carry(l2[3][63:1])
+    );
+    csa_adder l2a3(
+        .a(l1[6]), .b(l1[7]), .c(l1[8]),
+        .sum(l2[4]),
+        .carry(l2[5][63:1])
+    );
+    csa_adder l2a4(
+        .a(l1[9]), .b(pp[15]), .c(pp[16]),
+        .sum(l2[6]),
+        .carry(l2[7][63:1])
     );
     
-    wire [63:0] l4res0, l4res1;
-    assign l4res0[0] = 0;
     
-    csa_adder l4(
-        .a(l3res00),
-        .b(l3res01),
-        .c(pp[16]),
-        .carry(l4res0[63:1]),
-        .sum(l4res1)
+    wire [63:0] l3 [3:0];
+    assign l3[1][0] = 1'b0;
+    assign l3[3][0] = 1'b0;
+    
+    csa_adder l3a1(
+        .a(l2[0]), .b(l2[1]), .c(l2[2]),
+        .sum(l3[0]),
+        .carry(l3[1][63:1])
     );
-    assign result   = l4res0 + l4res1;
-    assign overflow = cout3_0;
+    csa_adder l3a2(
+        .a(l2[3]), .b(l2[4]), .c(l2[5]),
+        .sum(l3[2]),
+        .carry(l3[3][63:1])
+    );
     
+    
+    wire [63:0] l4 [3:0];
+    assign l4[1][0] = 1'b0;
+    assign l4[3][0] = 1'b0;
+    
+    csa_adder l4a1(
+        .a(l3[0]), .b(l3[1]), .c(l3[2]),
+        .sum(l4[0]),
+        .carry(l4[1][63:1])
+    );
+    csa_adder l4a2(
+        .a(l3[3]), .b(l2[6]), .c(l2[7]),
+        .sum(l4[2]),
+        .carry(l4[3][63:1])
+    );
+    
+    wire [63:0]l5, l5c, l6, l6c;
+    assign l5c[0] = 1'b0;
+    assign l6c[0] = 1'b0;
+    
+    csa_adder l5a(
+        .a(l4[0]), .b(l4[1]), .c(l4[2]),
+        .sum(l5),
+        .carry(l5c[63:1])
+    );
+    
+    csa_adder l6a(
+        .a(l4[3]), .b(l5), .c(l5c),
+        .sum(l6),
+        .carry(l6c[63:1])
+    );
+    
+    assign result = l6 + l6c;
+
 endmodule
+
+
 

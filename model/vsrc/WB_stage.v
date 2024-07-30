@@ -13,6 +13,8 @@ module WB_stage(
     input  [`ES_TO_WS_BUS_WD - 1:0] es_to_ws_bus2,
     input                           nblock1,
     input                           nblock2,
+    output [ `FORWAED_BUS_WD - 1:0] forward_data1,
+    output [ `FORWAED_BUS_WD - 1:0] forward_data2,
     //for regfile
     output [`WS_TO_RF_BUS_WD - 1:0] ws_to_rf_bus,
     //for  csr
@@ -78,11 +80,13 @@ assign {//csr_rd2,
 
 //assign ws_ready_go = 1'b1;
 //assign ws_ready  = !ws_valid || ws_ready_go;
+assign forward_data1 = {es_to_ws_valid1[0], es_to_ws_bus1[`ES_TO_WS_BUS_WD - 1:32]};
+assign forward_data2 = {es_to_ws_valid2[0], es_to_ws_bus2[`ES_TO_WS_BUS_WD - 1:32]};
 
 assign ws_ready = nblock1 && nblock2; // es_to_ws_valid1[1] & es_to_ws_valid2[1]; //nblock1 && nblock2; //1'b1;//(es_to_ws_valid1 && es_to_ws_valid2);
 
-assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0];
-assign rf_we1    = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && ~(ws_dest1 == ws_dest2 && es_to_ws_valid2[1] && es_to_ws_valid2[0]);
+assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1];
+assign rf_we1    = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && ~(~|(ws_dest1 ^ ws_dest2) && es_to_ws_valid2[1] && es_to_ws_valid2[0]);
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
