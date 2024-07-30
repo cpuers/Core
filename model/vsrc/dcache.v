@@ -1180,16 +1180,19 @@ module dcache_v3(
     output      [ 2:0]  wr_type,
     output      [31:0]  wr_addr,
     output      [ 3:0]  wr_wstrb,
-    output reg [127:0]  wr_data,
+    // output reg [127:0]  wr_data,
+    output     [127:0]  wr_data,
     input               wr_rdy
     );
 
     parameter DCACHE_WAY = 2;
 
+    /* verilator lint_off UNUSED */
     genvar i; // way
     genvar j;
     integer k; // way
     integer t; // bank
+    /* verilator lint_on UNUSED */
 
     // cache ports
 
@@ -1302,15 +1305,20 @@ module dcache_v3(
     endgenerate
     wire lookup_hit = |lookup_way_hit;
     // assume 2 ways
-    reg      [31:0]  lookup_hit_data;    // combinational logic
+    // reg      [31:0]  lookup_hit_data;    // combinational logic
     // assign lookup_hit_data = data_douta[0][req_buf_bank];
-    always @(*) begin
-        lookup_hit_data = 0;
-        for (k = 0; k < DCACHE_WAY; k = k + 1) begin
-            lookup_hit_data = lookup_hit_data |
-                ({32{lookup_way_hit[k]}} & lookup_way_data[k]);
-        end        
-    end
+    // always @(*) begin
+    //     lookup_hit_data = 0;
+    //     for (k = 0; k < DCACHE_WAY; k = k + 1) begin
+    //         lookup_hit_data = lookup_hit_data |
+    //             ({32{lookup_way_hit[k]}} & lookup_way_data[k]);
+    //     end        
+    // end
+    wire        [31:0]  lookup_hit_data;
+    assign lookup_hit_data = 
+        ({32{lookup_way_hit[0]}} & lookup_way_data[0]) |
+        ({32{lookup_way_hit[1]}} & lookup_way_data[1]);
+
     wire [DCACHE_WAY-1:0]   lookup_miss_way_replace_en_w;
     reg  [DCACHE_WAY-1:0]   lookup_miss_way_replace_en;
     wire                    lookup_miss_need_send;
@@ -1324,14 +1332,18 @@ module dcache_v3(
         .need_send      ( lookup_miss_need_send )
     );
     /// send
-    reg     [19:0]  send_tag; // combinational logic
-    always @(*) begin
-        send_tag = 0;
-        for (k = 0; k < DCACHE_WAY; k = k + 1) begin
-            send_tag = send_tag | 
-                ({20{lookup_miss_way_replace_en[k]}} & lookup_way_tag[k]);
-        end
-    end
+    // reg     [19:0]  send_tag; // combinational logic
+    // always @(*) begin
+    //     send_tag = 0;
+    //     for (k = 0; k < DCACHE_WAY; k = k + 1) begin
+    //         send_tag = send_tag | 
+    //             ({20{lookup_miss_way_replace_en[k]}} & lookup_way_tag[k]);
+    //     end
+    // end
+    wire        [19:0]  send_tag;
+    assign send_tag = 
+        ({20{lookup_miss_way_replace_en[0]}} & lookup_way_tag[0]) |
+        ({20{lookup_miss_way_replace_en[1]}} & lookup_way_tag[1]);
     /// recv
     wire recv_fin = ret_valid && (ret_last || recv_cnt == 2'd3);
     wire    [31:0]  recv_res    [ 0:3];
@@ -1506,15 +1518,24 @@ module dcache_v3(
     assign wr_type = 3'b100;
     assign wr_addr = {send_tag, req_buf_idx, 4'b0};
     assign wr_wstrb = 4'hf;
-    always @(*) begin
-        wr_data = 128'b0;
-        for (k = 0; k < DCACHE_WAY; k = k + 1) begin
-            for (t = 0; t < 4; t = t + 1) begin
-                wr_data[t*32 +: 32] = wr_data[t*32 +: 32] | 
-                    ({32{lookup_miss_way_replace_en[k]}} & data_douta[k][t]);
-            end
+    // always @(*) begin
+    //     wr_data = 128'b0;
+    //     for (k = 0; k < DCACHE_WAY; k = k + 1) begin
+    //         for (t = 0; t < 4; t = t + 1) begin
+    //             wr_data[t*32 +: 32] = wr_data[t*32 +: 32] | 
+    //                 ({32{lookup_miss_way_replace_en[k]}} & data_douta[k][t]);
+    //         end
+    //     end
+    // end
+    generate
+        for (j = 0; j < 4; j = j + 1) begin
+            assign wr_data[j*32 +: 32] = 
+                ({32{lookup_miss_way_replace_en[0]}} & data_douta[0][j]) |
+                ({32{lookup_miss_way_replace_en[1]}} & data_douta[1][j]);                        
         end
-    end
+    endgenerate
+
+
 
     // cache sram
 
