@@ -70,21 +70,27 @@ bool Ram::ircheck(u32 addr, ir_t rdata, set<ir_t>& s) {
     return true;
 }
 
-bool Ram::drcheck(u32 addr, dr_t rdata, set<dr_t> &s) {
+bool Ram::drcheck(u32 addr, u8 strb, dr_t rdata, set<dr_t> &s) {
     u32 a = (addr / 4) % (MEM_SIZE / 4);
-    if (m[a].back() != rdata) {
+    dr_t mask = 0;
+    for (int i = 0; i < 4; i ++) {
+        if (strb & (1U << i)) {
+            mask |= (0xffUL << (i*8));
+        }
+    }
+    if ((m[a].back() & mask) != (rdata & mask)) {
         s.insert(m[a].back());
         return false;
     }
     return true;
 }
 
-void Ram::dwrite(u32 addr, u8 wstrb, dw_t wdata) {
+void Ram::dwrite(u32 addr, u8 strb, dw_t wdata) {
     u32 a = (addr / 4) % (MEM_SIZE / 4);
     u32 o = m[a].back();
     u32 t = 0;
     for (int i = 0; i < 4; i ++) {
-        if (wstrb & (1U << i)) {
+        if (strb & (1U << i)) {
             t |= (wdata & (0xffUL << (i * 8)));
         } else {
             t |= (o & (0xffUL << (i * 8)));

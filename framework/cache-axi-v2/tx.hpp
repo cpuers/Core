@@ -84,11 +84,11 @@ public:
     bool    uncached;
     dr_t    rdata;
     bool    rhit;
-    u8      awstrb;
+    u8      strb;
     dw_t    wdata;
     bool    whit;
 
-    DCacheTx();
+    DCacheTx(u32 addr, u8 strb);
 
     virtual void push(VTOP *dut) override;
     virtual void pull(VTOP *dut) override;
@@ -96,7 +96,7 @@ public:
 
 class DCacheTxR : public DCacheTx {
 public:
-    DCacheTxR(u32 addr);
+    DCacheTxR(u32 addr, u8 strb=0xf);
 
     virtual bool check(Ram *ram) override;
     virtual bool hit() override;
@@ -105,7 +105,7 @@ public:
 
 class DCacheTxW: public DCacheTx {
 public:
-    DCacheTxW(u32 addr, u8 awstrb, dw_t wdata);
+    DCacheTxW(u32 addr, u8 strb, dw_t wdata);
 
     virtual bool check(Ram *ram) override;
     virtual bool hit() override;
@@ -113,13 +113,13 @@ public:
 
 class DCacheTxRH: public DCacheTxR {
 public:
-  DCacheTxRH(u32 addr);
+  DCacheTxRH(u32 addr, u8 strb=0xf);
   virtual bool check(Ram *ram) override;
 };
 
 class DCacheTxWH: public DCacheTxW {
 public:
-  DCacheTxWH(u32 addr, u8 awstrb, u32 wdata);
+  DCacheTxWH(u32 addr, u8 strb, u32 wdata);
   virtual bool check(Ram *ram) override;
 };
 

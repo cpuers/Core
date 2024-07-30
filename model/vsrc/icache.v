@@ -1,5 +1,7 @@
 /* verilator lint_off DECLFILENAME */
 
+`default_nettype wire
+
 /* verilator lint_off UNUSED */
 module icache_dummy(
     input  wire          clock,

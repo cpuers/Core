@@ -15,25 +15,9 @@ static u8 rand_strb() {
 
 std::vector<Tx *> Testbench::tests() {
     std::vector<Tx *> v;
-    v.push_back(new DCacheTxR(0x10));
-    for (int i = 0; i < 4; i ++) {
-        v.push_back(new DCacheTxRH(0x10));
-        v.push_back(new DCacheTxWH(0x10, 0xf, rand()));
-    }
-    v.push_back(new DCacheTxR(0x1010));
-    for (int i = 0; i < 4; i ++) {
-        v.push_back(new DCacheTxWH(0x1010, 0xf, rand()));
-        v.push_back(new DCacheTxRH(0x1010));
-    }
-    v.push_back(new DCacheTxRH(0x10));
-    v.push_back(new DCacheTxRH(0x1010));
-    v.push_back(new DCacheTxR(0x2010));
-    v.push_back(new DCacheTxR(0x3010));
-    v.push_back(new DCacheTxR(0x10));
-    // v.push_back(new TxClear);
     for (int i = 0; i < 512; i ++) {
         if (rand() & 1) {
-            v.push_back(new DCacheTxR(i * 4));
+            v.push_back(new DCacheTxR(i * 4, rand_strb()));
         } else {
             v.push_back(new DCacheTxW(i * 4 + (rand() % 32 - 8), 0xf, rand()));
         }
@@ -45,7 +29,7 @@ std::vector<Tx *> Testbench::tests() {
             v.push_back(new ICacheTxR(rand() % 4096 + i * 4));
         } break;
         case 1: {
-            v.push_back(new DCacheTxR(rand() % 8192 + i * 4));
+            v.push_back(new DCacheTxR(rand() % 8192 + i * 4, rand_strb()));
         } break;
         case 2: {
             v.push_back(new DCacheTxW(rand() % 8192 + i * 4, 0xf, rand()));
@@ -60,7 +44,7 @@ std::vector<Tx *> Testbench::tests() {
             v.push_back(new ICacheTxR(rand() % 4096 + i * 4));
         } break;
         case 1: {
-            v.push_back(new DCacheTxR(rand() % 8192 + i * 4));
+            v.push_back(new DCacheTxR(rand() % 8192 + i * 4, rand_strb()));
         } break;
         case 2: {
             v.push_back(new DCacheTxW(rand() % 8192 + i * 4, rand_strb(), rand()));

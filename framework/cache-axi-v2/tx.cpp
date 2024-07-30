@@ -10,22 +10,39 @@ ICacheTx::ICacheTx() {
   rdata = {0, 0, 0, 0};
   rhit = false;
 }
-ICacheTxR::ICacheTxR(u32 araddr) { this->araddr = araddr % MEM_SIZE; }
-DCacheTx::DCacheTx() {
+
+ICacheTxR::ICacheTxR(u32 araddr) { 
+  this->araddr = araddr % MEM_SIZE; 
+}
+
+DCacheTx::DCacheTx(u32 addr, u8 strb) 
+  : addr(addr % MEM_SIZE), strb(strb)
+{
+  switch (strb) {
+    case 0x1: {
+    } break;
+    case 0x3: {
+      addr ^= (addr & 0x1);
+    } break;
+    case 0xf: {
+      addr ^= (addr & 0x3);
+    } break;
+    default: assert(false);
+  }
   op = false;
-  addr = 0;
   uncached = false;
   rdata = 0;
   rhit = false;
-  awstrb = 0;
   wdata = 0;
   whit = false;
 }
-DCacheTxR::DCacheTxR(u32 addr) { this->addr = addr % MEM_SIZE; }
-DCacheTxW::DCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
+DCacheTxR::DCacheTxR(u32 addr, u8 strb)
+  : DCacheTx(addr, strb) {
+  this->op = false;
+}
+DCacheTxW::DCacheTxW(u32 addr, u8 strb, u32 wdata) 
+  : DCacheTx(addr, strb){
   this->op = true;
-  this->addr = addr % MEM_SIZE;
-  this->awstrb = awstrb;
   this->wdata = wdata;
 }
 Tx::~Tx() {}
@@ -44,7 +61,7 @@ void DCacheTx::push(VTOP *dut) {
   dut->d_addr = this->addr;
   dut->d_uncached = this->uncached;
   dut->d_wdata = this->wdata;
-  dut->d_awstrb = this->awstrb;
+  dut->d_strb = this->strb;
 }
 void DCacheTx::pull(VTOP *dut) {
   this->rdata = dut->d_rdata;
@@ -96,7 +113,7 @@ bool ICacheTxR::hit() {
 bool DCacheTxR::check(Ram *ram) {
   CacheTx::check(ram);
   set<dr_t> s;
-  if (!ram->drcheck(addr, rdata, s)) {
+  if (!ram->drcheck(addr, strb, rdata, s)) {
     printf("DCache Read: %08x, [%lu -- %lu]\n", addr, st(), ed());
     printf("Result  : %08x\n", rdata);
     auto it = s.begin();
@@ -114,7 +131,7 @@ bool DCacheTxR::hit() {
 }
 bool DCacheTxW::check(Ram *ram) {
   CacheTx::check(ram);
-  ram->dwrite(addr, awstrb, wdata);
+  ram->dwrite(addr, strb, wdata);
   return true;
 }
 bool DCacheTxW::hit() { return this->whit; }
@@ -141,9 +158,9 @@ bool DCacheTxRH::check(Ram *ram) {
   }
   return true;
 }
-DCacheTxRH::DCacheTxRH(u32 addr) : DCacheTxR(addr) {}
-DCacheTxWH::DCacheTxWH(u32 addr, u8 awstrb, u32 wdata)
-    : DCacheTxW(addr, awstrb, wdata) {}
+DCacheTxRH::DCacheTxRH(u32 addr, u8 strb) : DCacheTxR(addr, strb) {}
+DCacheTxWH::DCacheTxWH(u32 addr, u8 strb, u32 wdata)
+    : DCacheTxW(addr, strb, wdata) {}
 bool DCacheTxWH::check(Ram *ram) {
   if (!DCacheTxW::check(ram)) {
     return false;

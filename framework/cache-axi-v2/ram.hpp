@@ -17,8 +17,8 @@ public:
     Ram();
     ~Ram();
     bool ircheck(u32 addr, ir_t rdata, set<ir_t> &s);
-    bool drcheck(u32 addr, dr_t rdata, set<dr_t> &s);
-    void dwrite(u32 addr, u8 wstrb, dw_t wdata);
+    bool drcheck(u32 addr, u8 strb, dr_t rdata, set<dr_t> &s);
+    void dwrite(u32 addr, u8 strb, dw_t wdata);
 };
 
 #endif

@@ -102,7 +102,7 @@ public:
     bool    uncached;
     u32     rdata;
     bool    rhit;
-    u8      awstrb;
+    u8      strb;
     u32     wdata;
     bool    whit;
 

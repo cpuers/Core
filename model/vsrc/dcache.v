@@ -1,5 +1,7 @@
 /* verilator lint_off DECLFILENAME */
 
+`default_nettype wire
+
 module dcache_dummy (
     input           clock,
     input           reset,
@@ -10,6 +12,7 @@ module dcache_dummy (
     output          ready,
     input           op,         // 0: read, 1: write
     input   [31:0]  addr,
+    input   [ 3:0]  strb,
     /* verilator lint_off UNUSED */
     input           uncached,
     /* verilator lint_on UNUSED */
@@ -17,8 +20,6 @@ module dcache_dummy (
     output          rvalid,
     output  [31:0]  rdata,
     output          rhit,
-    /// write address (aw) channel
-    input   [ 3:0]  awstrb,
     /// write data (w) channel
     input   [31:0]  wdata,
     output          whit,
@@ -55,7 +56,7 @@ module dcache_dummy (
 
     reg             req_op;
     reg     [31:0]  req_addr;
-    reg     [ 3:0]  req_awstrb;
+    reg     [ 3:0]  req_strb;
     reg     [31:0]  req_wdata;
     
     assign ready = state_is_idle;
@@ -70,7 +71,7 @@ module dcache_dummy (
     assign wr_req = request_is_write;
     assign wr_type = 3'b010;
     assign wr_addr = {{30{request_is_write}}, 2'b0} & req_addr;
-    assign wr_wstrb = req_awstrb;
+    assign wr_wstrb = req_strb;
     assign wr_data = {96'b0, req_wdata};
 
     assign rhit = 1'b0;
@@ -81,7 +82,7 @@ module dcache_dummy (
             state <= state_reset;
             req_op <= 0;
             req_addr <= 0;
-            req_awstrb <= 0;
+            req_strb <= 0;
             req_wdata <= 0;
         end else case (state)
             state_idle: begin
@@ -89,7 +90,7 @@ module dcache_dummy (
                     req_op <= op;
                     req_addr <= addr;
                     if (op) begin
-                        req_awstrb <= awstrb;
+                        req_strb <= strb;
                         req_wdata <= wdata;
                     end
                     state <= state_request;
@@ -128,6 +129,7 @@ module dcache_dummy_v2 (
     output          ready,
     input           op,         // 0: read, 1: write
     input   [31:0]  addr,
+    input   [ 3:0]  strb,
     /* verilator lint_off UNUSED */
     input           uncached,
     /* verilator lint_on UNUSED */
@@ -135,8 +137,6 @@ module dcache_dummy_v2 (
     output          rvalid,
     output  [31:0]  rdata,
     output          rhit,
-    /// write address (aw) channel
-    input   [ 3:0]  awstrb,
     /// write data (w) channel
     input   [31:0]  wdata,
     output          whit,
@@ -205,7 +205,7 @@ module dcache_dummy_v2 (
         state_can_accept_request && valid && op;
     assign wr_type = 3'b010;
     assign wr_addr = {{30{1'b1}}, 2'b0} & addr;
-    assign wr_wstrb = awstrb;
+    assign wr_wstrb = strb;
     assign wr_data = {96'b0, wdata};
 
     assign rhit = 1'b0;
@@ -263,6 +263,125 @@ module dcache_dummy_v2 (
     end
 endmodule
 
+module dcache_dummy_v3 (
+    input           clock,
+    input           reset,
+
+    // cpu load / store
+    /// common control (c) channel
+    input           valid,
+    output          ready,
+    input           op,         // 0: read, 1: write
+    input   [31:0]  addr,
+    input   [ 3:0]  strb,
+    /* verilator lint_off UNUSED */
+    input           uncached,
+    /* verilator lint_on UNUSED */
+    /// read data (r) channel
+    output          rvalid,
+    output  [31:0]  rdata,
+    output          rhit,
+    /// write data (w) channel
+    input   [31:0]  wdata,
+    output          whit,
+    /* verilator lint_off UNUSED */
+    input           cacop_valid,
+    output          cacop_ready,
+    input   [ 1:0]  cacop_code, // code[4:3]
+    input   [31:0]  cacop_addr,
+    /* verilator lint_on UNUSED */
+
+    // axi bridge
+    output          rd_req,
+    output  [ 2:0]  rd_type,
+    output  [31:0]  rd_addr,
+    input           rd_rdy,
+    input           ret_valid,
+    input           ret_last,
+    input   [31:0]  ret_data,
+    output          wr_req,
+    output  [ 2:0]  wr_type,
+    output  [31:0]  wr_addr,
+    output  [ 3:0]  wr_wstrb,
+    output [127:0]  wr_data,
+    input           wr_rdy
+);
+    localparam  state_idle = 0;
+    localparam  state_receive = 1;
+    localparam  state_reset = 2;
+    reg     [ 3:0]  state;
+    wire state_is_idle = state == state_idle;
+    wire state_is_receive = state == state_receive;
+    wire state_can_accept_request;
+
+    wire receive_finish;
+    assign receive_finish = state_is_receive && ret_valid && ret_last;
+    assign state_can_accept_request = (state_is_idle || receive_finish);
+
+    wire    [ 2:0]  size;
+    strb2size u_strb2size(
+        .strb   ( strb          ),
+        .off    ( addr[ 1:0]    ),
+        .size   ( size          )
+    );
+
+    assign ready = 
+        state_can_accept_request && 
+        ((op && wr_rdy) || (!op && rd_rdy));
+    assign rvalid = receive_finish;
+    assign rdata = ret_data;
+    assign rd_req = 
+        state_can_accept_request && valid && !op;
+    assign rd_type = size;
+    assign rd_addr = addr;
+    assign wr_req = 
+        state_can_accept_request && valid && op;
+    assign wr_type = size;
+    assign wr_addr = addr;
+    assign wr_wstrb = strb;
+    assign wr_data = {96'b0, wdata};
+
+    assign rhit = 1'b0;
+    assign whit = 1'b0;
+
+    assign cacop_ready = 1'b1;
+
+    always @(posedge clock) begin
+        if (reset) begin
+            state <= state_reset;
+        end else case (state)
+            state_idle: begin
+                if (valid) begin
+                    if (!op && rd_rdy) begin
+                        state <= state_receive;
+                    end
+                end
+            end
+            state_receive: begin
+                if (ret_valid && ret_last) begin
+                    state <= state_idle;
+                    if (valid) begin
+                        if (op) begin
+                            if (wr_rdy) begin
+                                state <= state_idle;
+                            end
+                        end else begin
+                            if (rd_rdy) begin
+                                state <= state_receive;
+                            end
+                        end                       
+                    end else begin
+                        state <= state_idle;
+                    end
+                end
+            end
+            default: begin
+                state <= state_idle;
+            end
+        endcase
+    end
+endmodule
+
 module dcache_v1(
     input               clock,
     input               reset,
@@ -274,14 +393,13 @@ module dcache_v1(
     input               op,         // 0: read, 1: write
     /* verilator lint_off UNUSED */
     input       [31:0]  addr,
+    input       [ 3:0]  strb,
     input               uncached,
     /* verilator lint_on UNUSED */
     /// read data (r) channel
     output              rvalid,
     output      [31:0]  rdata,
     output              rhit,
-    /// write address (aw) channel
-    input       [ 3:0]  awstrb,
     /// write data (w) channel
     input       [31:0]  wdata,
     output              whit,
@@ -439,7 +557,7 @@ module dcache_v1(
                             {req_buf_op, req_buf_tag, req_buf_idx, req_buf_bank}
                         <=  {op        , addr[31:12], addr[11:4] , addr[3:2]};
                         if (op) begin
-                            req_buf_awstrb <= awstrb;
+                            req_buf_awstrb <= strb;
                             req_buf_wdata <= wdata;
                         end
                     end
@@ -455,7 +573,7 @@ module dcache_v1(
                             {req_buf_op, req_buf_tag, req_buf_idx, req_buf_bank}
                         <=  {op        , addr[31:12], addr[11:4] , addr[3:2]};
                         if (op) begin
-                            req_buf_awstrb <= awstrb;
+                            req_buf_awstrb <= strb;
                             req_buf_wdata <= wdata;
                         end
                     end
@@ -656,6 +774,7 @@ module dcache_v2(
     output              ready,
     input               op,         // 0: read, 1: write
     input       [31:0]  addr,
+    input       [ 3:0]  strb,
     /* verilator lint_off UNUSED */
     input               uncached,
     /* verilator lint_on UNUSED */
@@ -663,8 +782,6 @@ module dcache_v2(
     output              rvalid,
     output      [31:0]  rdata,
     output              rhit,
-    /// write address (aw) channel
-    input       [ 3:0]  awstrb,
     /// write data (w) channel
     input       [31:0]  wdata,
     output              whit,
@@ -871,7 +988,7 @@ module dcache_v2(
                     <=  {op,         addr};
                     if (op) begin
                             {req_buf_awstrb, req_buf_wdata}
-                        <=  {awstrb,         wdata};
+                        <=  {strb,           wdata};
                     end
                 end
             end 
@@ -885,7 +1002,7 @@ module dcache_v2(
                         <=  {op,         addr};
                         if (op) begin
                                 {req_buf_awstrb, req_buf_wdata}
-                            <=  {awstrb,         wdata};
+                            <=  {strb,           wdata};
                         end
                     end
                 end else begin
@@ -1149,6 +1266,7 @@ module dcache_v3(
     output              ready,
     input               op,         // 0: read, 1: write
     input       [31:0]  addr,
+    input       [ 3:0]  strb,
     /* verilator lint_off UNUSED */
     input               uncached,
     /* verilator lint_on UNUSED */
@@ -1156,8 +1274,6 @@ module dcache_v3(
     output              rvalid,
     output      [31:0]  rdata,
     output              rhit,
-    /// write address (aw) channel
-    input       [ 3:0]  awstrb,
     /// write data (w) channel
     input       [31:0]  wdata,
     output              whit,
@@ -1285,7 +1401,7 @@ module dcache_v3(
 
     wire cache_sram_rw_collision;
     assign cache_sram_rw_collision = 
-        (valid && wr_buf_state_is_write && wr_buf_bank == req_bank);
+        (valid && wr_buf_state_is_write && (wr_buf_bank == req_bank));
 
     /// idle
     /// lookup
@@ -1383,7 +1499,7 @@ module dcache_v3(
                     <=  {op,         addr};
                     if (op) begin
                             {req_buf_awstrb, req_buf_wdata}
-                        <=  {awstrb,         wdata};
+                        <=  {strb,           wdata};
                     end
                 end
             end 
@@ -1397,7 +1513,7 @@ module dcache_v3(
                         <=  {op,         addr};
                         if (op) begin
                                 {req_buf_awstrb, req_buf_wdata}
-                            <=  {awstrb,         wdata};
+                            <=  {strb,           wdata};
                         end
                     end
                 end else begin
@@ -1673,6 +1789,7 @@ module dcache_v4(
     output              ready,
     input               op,         // 0: read, 1: write
     input       [31:0]  addr,
+    input       [ 3:0]  strb,
     /* verilator lint_off UNUSED */
     input               uncached,
     /* verilator lint_on UNUSED */
@@ -1680,8 +1797,6 @@ module dcache_v4(
     output              rvalid,
     output      [31:0]  rdata,
     output              rhit,
-    /// write address (aw) channel
-    input       [ 3:0]  awstrb,
     /// write data (w) channel
     input       [31:0]  wdata,
     output              whit,
@@ -1895,7 +2010,7 @@ module dcache_v4(
                     <=  {op,         addr};
                     if (op) begin
                             {req_buf_awstrb, req_buf_wdata}
-                        <=  {awstrb,         wdata};
+                        <=  {strb,           wdata};
                     end
                 end
             end 
@@ -1909,7 +2024,7 @@ module dcache_v4(
                         <=  {op,         addr};
                         if (op) begin
                                 {req_buf_awstrb, req_buf_wdata}
-                            <=  {awstrb,         wdata};
+                            <=  {strb,           wdata};
                         end
                     end
                 end else begin

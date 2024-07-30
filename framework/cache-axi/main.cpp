@@ -194,7 +194,7 @@ public:
                     p_d.push_back(rdtx);
                 } else {
                     wdtx = dynamic_cast<DCacheTxW *>(dtx);
-                    ram->dwrite(wdtx->addr, wdtx->wdata, wdtx->awstrb);
+                    ram->dwrite(wdtx->addr, wdtx->wdata, wdtx->strb);
                 }
             }
         }
