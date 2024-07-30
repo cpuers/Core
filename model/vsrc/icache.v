@@ -855,8 +855,12 @@ module icache_v3(
         .clock      (clock),
         .reset      (reset),
         .en         (state_is_receive && receive_finish),
-        .valid_way  (lookup_way_v_result),
-        .replace_en (replace_way_en)
+        .way_v      (lookup_way_v_result),
+        .way_d      (2'b0),
+        .way_replace_en (replace_way_en),
+        /* verilator lint_off PINCONNECTEMPTY */
+        .need_send  ()
+        /* verilator lint_on PINCONNECTEMPTY */
     );
 
     wire    tagv_ena_i = 
@@ -1135,9 +1139,13 @@ module icache_v4(
         .clock      (clock),
         .reset      (reset),
         .en         (state_is_receive && receive_finish),
-        .valid_way  (lookup_way_v_result),
-        .lru_in     (lru[cache_idx]),
-        .replace_en (replace_way_en)
+        .way_v      (lookup_way_v_result),
+        .way_d      (2'b0),
+        .lru        (lru[cache_idx]),
+        .way_replace_en (replace_way_en),
+        /* verilator lint_off PINCONNECTEMPTY */
+        .need_send  ()
+        /* verilator lint_on PINCONNECTEMPTY */
     );
 
     wire    tagv_ena_i = 
@@ -1487,11 +1495,15 @@ module icache_v5(
     wire [ICACHE_WAY-1:0]   replace_way_en;
     // assume ICACHE_WAY == 2
     replace_rand_2 u_replace(
-        .clock      (clock),
-        .reset      (reset),
-        .en         (state_is_receive && receive_finish && !request_buffer_uncached),
-        .valid_way  (lookup_way_v_r),
-        .replace_en (replace_way_en)
+        .clock      ( clock         ),
+        .reset      ( reset         ),
+        .en         ( state_is_receive && receive_finish && !request_buffer_uncached),
+        .way_v      ( lookup_way_v_r),
+        .way_d      ( 2'b0          ),
+        .way_replace_en (replace_way_en),
+        /* verilator lint_off PINCONNECTEMPTY */
+        .need_send  ()
+        /* verilator lint_on PINCONNECTEMPTY */
     );
 
     wire    [20:0]          tagv_dina_i =

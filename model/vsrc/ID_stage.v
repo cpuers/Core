@@ -123,7 +123,7 @@ module ID_stage (
                           instr0_gr_we 
                         &((instr0_dest==read_addr2 & instr1_use_rj) |
                          (instr0_dest==read_addr3 & instr1_use_rkd))) |
-                         instr0_is_ls |instr1_is_ls
+                         instr0_is_ls |instr1_is_ls 
                          ;
   assign IF_pop_op[0] = EXE_instr0_valid_w & EXE_ready;
   assign IF_pop_op[1] = EXE_instr1_valid_w & EXE_ready;
@@ -516,7 +516,7 @@ module ID_decoder (
   assign use_csr_data = op_31_26_d[6'h01] | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w;
   assign csr_wen = inst_csrwr | inst_csrxchg;
   assign csr_use_mark = inst_csrxchg;
-  assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data;
+  assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data |use_div | use_mod;
  
   assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;
 
