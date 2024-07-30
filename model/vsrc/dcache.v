@@ -1324,7 +1324,7 @@ module dcache_v3(
         .need_send      ( lookup_miss_need_send )
     );
     /// send
-    reg     [19:0]  send_tag = tagv_douta[0][19:0]; // combinational logic
+    reg     [19:0]  send_tag; // combinational logic
     always @(*) begin
         send_tag = 0;
         for (k = 0; k < DCACHE_WAY; k = k + 1) begin
@@ -1827,7 +1827,7 @@ module dcache_v4(
         .need_send      ( lookup_miss_need_send )
     );
     /// send
-    reg     [19:0]  send_tag = tagv_douta[0][19:0]; // combinational logic
+    reg     [19:0]  send_tag; // combinational logic
     always @(*) begin
         send_tag = 0;
         for (k = 0; k < DCACHE_WAY; k = k + 1) begin
