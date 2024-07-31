@@ -94,11 +94,12 @@ public:
 
     virtual void push(VTOP *dut) override;
     virtual void pull(VTOP *dut) override;
+    static u8 rand_strb(u32 addr);
 };
 
 class DCacheTxR : public DCacheTx {
 public:
-    DCacheTxR(u32 addr, u8 strb=0xf);
+    DCacheTxR(u32 addr, u8 strb);
 
     virtual bool check(Ram *ram) override;
     virtual bool hit() override;
@@ -115,7 +116,7 @@ public:
 
 class DCacheTxRH: public DCacheTxR {
 public:
-  DCacheTxRH(u32 addr, u8 strb=0xf);
+  DCacheTxRH(u32 addr, u8 strb);
   virtual bool check(Ram *ram) override;
 };
 

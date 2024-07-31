@@ -194,7 +194,9 @@ public:
                     p_d.push_back(rdtx);
                 } else {
                     wdtx = dynamic_cast<DCacheTxW *>(dtx);
-                    // ram->dwrite(wdtx->addr, wdtx->awstrb, wdtx->wdata);
+                    // if (wdtx->uncached) { // hack
+                    //     ram->dwrite(wdtx->addr, wdtx->strb, wdtx->wdata);
+                    // }
                 }
             }
         }

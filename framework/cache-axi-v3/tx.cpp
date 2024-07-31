@@ -14,6 +14,9 @@ ICacheTx::ICacheTx() {
 
 ICacheTxR::ICacheTxR(u32 araddr) { 
   araddr %= MEM_SIZE;
+  if (araddr < UNCACHED_SIZE && araddr + 15 >= UNCACHED_SIZE) {
+    araddr += 16;
+  }
   this->araddr = araddr; 
   this->uncached = araddr < UNCACHED_SIZE;
 }
@@ -29,16 +32,19 @@ DCacheTx::DCacheTx() {
 }
 void DCacheTx::set_addr_strb(u32 addr, u8 strb) {
   addr %= MEM_SIZE;
-  switch (strb) {
-    case 0x1: {
+  switch (addr & 0x3) {
+    case 0: {
+      assert(strb == 0x1 || strb == 0x3 || strb == 0xf);
     } break;
-    case 0x3: {
-      addr ^= (addr & 0x1);
+    case 1: {
+      assert(strb == 0x2);
     } break;
-    case 0xf: {
-      addr ^= (addr & 0x3);
+    case 2: {
+      assert(strb == 0x4 || strb == 0xc);
     } break;
-    default: assert(false);
+    case 3: {
+      assert(strb == 0x8);
+    }
   }
   this->addr = addr;
   this->strb = strb;
@@ -202,4 +208,28 @@ bool DCacheTxWH::check(Ram *ram) {
     return false;
   }
   return true;
+}
+u8 DCacheTx::rand_strb(u32 addr) {
+  switch (addr & 0x3) {
+  case 0: {
+    switch (rand() % 3) {
+    case 0:
+      return 0xf;
+    case 1:
+      return 0x3;
+    case 2:
+      return 0x1;
+    }
+  }
+  case 1: {
+    return 0x2;
+  }
+  case 2: {
+    return (rand() & 1) ? 0x4 : 0xc;
+  }
+  case 3: {
+    return 0x8;
+  }
+  }
+  assert(false);
 }
