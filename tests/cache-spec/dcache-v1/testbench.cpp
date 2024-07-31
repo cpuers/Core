@@ -9,18 +9,18 @@ std::vector<Tx *> Testbench::tests() {
     v.push_back(new DCacheTxR(0x10));
     for (int i = 0; i < 4; i ++) {
         v.push_back(new DCacheTxRH(0x10));
-        v.push_back(new DCacheTxWH(0x10, 0xff, rand()));
+        v.push_back(new DCacheTxWH(0x10, 0xf, rand()));
     }
-    v.push_back(new DCacheTxW(0x10010, 0xff, rand()));
+    v.push_back(new DCacheTxW(0x10010, 0xf, rand()));
     for (int i = 0; i < 4; i ++) {
-        v.push_back(new DCacheTxWH(0x10010, 0xff, rand()));
+        v.push_back(new DCacheTxWH(0x10010, 0xf, rand()));
         v.push_back(new DCacheTxRH(0x10010));
     }
     for (int i = 0; i < 512; i ++) {
         if (rand() & 1) {
             v.push_back(new DCacheTxR(i * 4));
         } else {
-            v.push_back(new DCacheTxW(i * 4 + (rand() % 32 - 8), 0xff, rand()));
+            v.push_back(new DCacheTxW(i * 4 + (rand() % 32 - 8), 0xf, rand()));
         }
     }
     // v.push_back(new DCacheTxRH(0x10));
@@ -38,7 +38,7 @@ std::vector<Tx *> Testbench::tests() {
             v.push_back(new DCacheTxR(rand() % 8192 + i * 4));
         } break;
         case 2: {
-            v.push_back(new DCacheTxW(rand() % 8192 + i * 4, 0xff, rand()));
+            v.push_back(new DCacheTxW(rand() % 8192 + i * 4, 0xf, rand()));
         } break;
         }
     }

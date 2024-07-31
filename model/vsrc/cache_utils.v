@@ -136,3 +136,39 @@ module wstrb_mixer(
 
     assign f = (en) ? ((mask & x) | (~mask & y)) : y;
 endmodule
+
+module strb2size(
+    /* verilator lint_off UNUSED */
+    input       [ 3:0]  strb,
+    /* verilator lint_on UNUSED */
+    input       [ 1:0]  off,
+    output reg  [ 2:0]  size // 2^size
+    );
+
+    always @(*) begin
+        case (off)
+            2'd0: begin
+                if (strb[3]) begin
+                    size = 3'd2;
+                end else if (strb[1]) begin
+                    size = 3'd1;
+                end else begin
+                    size = 3'd0;
+                end
+            end 
+            2'd1: begin
+                size = 3'd0;
+            end
+            2'd2: begin
+                if (strb[3]) begin
+                    size = 3'd1;
+                end else begin
+                    size = 3'd0;
+                end
+            end
+            2'd3: begin
+                size = 3'd0;
+            end
+        endcase    
+    end
+endmodule

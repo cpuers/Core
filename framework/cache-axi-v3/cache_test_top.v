@@ -31,11 +31,11 @@ module cache_test_top (
     output wire          d_ready,
     input  wire          d_op,
     input  wire  [31:0]  d_addr,
+    input  wire  [ 3:0]  d_strb,
     input  wire          d_uncached,
     output wire          d_rvalid,
     output wire  [31:0]  d_rdata,
     output wire          d_rhit,
-    input  wire  [ 3:0]  d_strb,
     input  wire  [31:0]  d_wdata,
     output wire          d_whit,
     input  wire          d_cacop_valid,
@@ -65,12 +65,24 @@ module cache_test_top (
     wire [127:0]  d_wr_data  ;
     wire          d_wr_rdy   ;
 
+    wire          i_valid_i;
+    wire          d_valid_i;
+    wire          i_ready_i;
+    wire          d_ready_i;
+    wire          wr_buf_empty;
+    wire          stall_uncached_requests;
+    assign stall_uncached_requests = !wr_buf_empty;
+    assign i_valid_i = (i_uncached && stall_uncached_requests) ? 1'b0 : i_valid;
+    assign i_ready = (i_uncached && stall_uncached_requests) ? 1'b0 : i_ready_i;
+    assign d_valid_i = (d_uncached && stall_uncached_requests) ? 1'b0 : d_valid;
+    assign d_ready = (d_uncached && stall_uncached_requests) ? 1'b0: d_ready_i;
+
     `ICACHE_MODULE u_icache(
         .clock      ( clock        ),
         .reset      ( reset        ),
 
-        .valid      ( i_valid      ),
-        .ready      ( i_ready      ),
+        .valid      ( i_valid_i    ),
+        .ready      ( i_ready_i    ),
         .araddr     ( i_araddr     ),
         .uncached   ( i_uncached   ),
         .rvalid     ( i_rvalid     ),
@@ -94,15 +106,15 @@ module cache_test_top (
         .clock      ( clock        ),
         .reset      ( reset        ),
 
-        .valid      ( d_valid      ),
-        .ready      ( d_ready      ),
+        .valid      ( d_valid_i    ),
+        .ready      ( d_ready_i    ),
         .op         ( d_op         ),
         .addr       ( d_addr       ),
+        .strb       ( d_strb       ),
         .uncached   ( d_uncached   ),
         .rvalid     ( d_rvalid     ),
         .rdata      ( d_rdata      ),
         .rhit       ( d_rhit       ),
-        .strb       ( d_strb       ),
         .wdata      ( d_wdata      ),
         .whit       ( d_whit       ),
         .cacop_valid( d_cacop_valid),
@@ -244,9 +256,7 @@ module cache_test_top (
         .data_wr_data    ( d_wr_data   ),
         .data_wr_rdy     ( d_wr_rdy    ),
 
-        /* verilator lint_off PINCONNECTEMPTY */
-        .write_buffer_empty (          )
-        /* verilator lint_on PINCONNECTEMPTY */
+        .write_buffer_empty (wr_buf_empty)
     );
 
     // https://github.com/alexforencich/verilog-axi

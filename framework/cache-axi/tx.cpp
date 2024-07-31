@@ -16,7 +16,7 @@ DCacheTx::DCacheTx() {
   uncached = false;
   rdata = 0;
   rhit = false;
-  awstrb = 0;
+  strb = 0;
   wdata = 0;
   whit = false;
 }
@@ -24,7 +24,7 @@ DCacheTxR::DCacheTxR(u32 addr) { this->addr = addr; }
 DCacheTxW::DCacheTxW(u32 addr, u8 awstrb, u32 wdata) {
   this->op = true;
   this->addr = addr;
-  this->awstrb = awstrb;
+  this->strb = awstrb;
   this->wdata = wdata;
 }
 Tx::~Tx() {}
@@ -43,7 +43,7 @@ void DCacheTx::push(VTOP *dut) {
   dut->d_addr = this->addr;
   dut->d_uncached = this->uncached;
   dut->d_wdata = this->wdata;
-  dut->d_awstrb = this->awstrb;
+  dut->d_strb = this->strb;
 }
 void DCacheTx::pull(VTOP *dut) {
   this->rdata = dut->d_rdata;
@@ -114,7 +114,7 @@ bool DCacheTxR::hit() {
 }
 bool DCacheTxW::check(Ram *ram) {
   CacheTx::check(ram);
-  ram->dwrite(addr, wdata, awstrb);
+  ram->dwrite(addr, wdata, strb);
   return true;
 }
 bool DCacheTxW::hit() { return this->whit; }
