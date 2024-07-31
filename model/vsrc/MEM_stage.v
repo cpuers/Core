@@ -9,7 +9,8 @@ module MEM_stage(
     output [`MS_TO_ES_BUS_WD -1:0] ms_to_es_bus,
     
     input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
-    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus
+    output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
+    input csr_datm
 );
 reg [31:0] mem_addr;
 reg        is_unsigned;
@@ -95,7 +96,8 @@ Agu u_agu(
     .dcache_ok          (dcache_ok),
     .dcache_rdata_bus   (dcache_rdata_bus),
     .dcache_wdata_bus   (dcache_wdata_bus),
-    .excp_ale           (excp_ale)
+    .excp_ale           (excp_ale),
+    .csr_datm           (csr_datm)
 );
 
 endmodule

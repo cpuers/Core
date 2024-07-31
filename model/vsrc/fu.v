@@ -118,7 +118,8 @@ module Agu(
     output dcache_ok,
     input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
-    output excp_ale
+    output excp_ale,
+    input csr_datm
 );
 
 // reg         wait_rready;
@@ -133,7 +134,7 @@ reg [2:0]   waits; // 2=wready, 1=rvalid, 0=rready
 wire        dcache_valid = ~excp_ale&((mem_we && (waits==3'b000 || waits==3'b100)) || (mem_rd && (waits==3'b000 || waits==3'b001)));
 wire        dcache_op = (mem_rd) ? 1'b0 :1'b1;       // 0: read, 1: write
 wire [31:0] dcache_addr = mem_addr;
-wire        dcache_uncached = 1'b0;
+wire        dcache_uncached = ~csr_datm;
 wire [ 3:0] dcache_awstrb = we;
 wire [31:0] dcache_wdata = write_data;
 wire        dcache_cacop_en = 1'b0;

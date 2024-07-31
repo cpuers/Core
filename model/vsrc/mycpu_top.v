@@ -182,7 +182,8 @@ module core_top (
   wire [    `IB_DATA_BUS_WD-1:0] IF_instr1;
   wire                           IF_instr0_valid;
   wire                           IF_instr1_valid;
-
+  wire                           csr_datm;
+  wire                           csr_datf;
   wire [                    4:0] read_addr0;
   wire [                    4:0] read_addr1;
   wire [                    4:0] read_addr2;
@@ -275,7 +276,8 @@ icache_v5 icache_dummy(
       .pc_to_PBU  (if0_pc),
       .pc_is_jump (pbu_pc_is_jump),
       .pc_valid   (pbu_pc_valid),
-      .pre_nextpc (pbu_next_pc)
+      .pre_nextpc (pbu_next_pc),
+      .csr_datf(csr_datf)
   );
   IF_stage1 IF_stage1 (
       .clk(aclk),
@@ -345,7 +347,9 @@ icache_v5 icache_dummy(
     .excp_jump(excp_jump),
     .excp_pc(excp_pc),
     .intrpt(intrpt),
-    .have_intrpt(have_intrpt)
+    .have_intrpt(have_intrpt),
+    .csr_datm(csr_datm),
+    .csr_datf(csr_datf)
 
 
 );
@@ -448,7 +452,8 @@ icache_v5 icache_dummy(
       .es_to_ms_bus2    (es_to_ms_bus2),
       .ms_to_es_bus     (ms_to_es_bus),
       .dcache_rdata_bus (dcache_rdata_bus),
-      .dcache_wdata_bus (dcache_wdata_bus)
+      .dcache_wdata_bus (dcache_wdata_bus),
+      .csr_datm(csr_datm)
   );
 
   WB_stage wb_stage (

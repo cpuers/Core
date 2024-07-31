@@ -6,6 +6,7 @@ module IF_stage0 (
     input rst,
     // jump_signal
 
+    input csr_datf,
     input need_jump,
     input [31:0] jump_pc,
 
@@ -28,7 +29,7 @@ module IF_stage0 (
 
 
 );
-    assign uncached = 1'b0;
+    assign uncached = ~csr_datf;
     wire IF0_valid_w;
     assign IF0_valid_w = addr_ok;
   reg  [31:0] pc_r;

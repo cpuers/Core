@@ -4,6 +4,8 @@ module csr (
     input clk,
     input rst,
 
+    output csr_datf,
+    output csr_datm, 
     //for ID
     input [13:0] csr_addr1,
     output  reg [31:0] csr_data1,
@@ -56,6 +58,8 @@ module csr (
 
     
     assign jump_excp_fail = csr_wen& in_excp;
+    assign csr_datf = csr_wen && (csr_waddr == `CRMD) ? wdata[5] : csr_crmd[5];
+    assign csr_datm = csr_wen && (csr_waddr == `CRMD) ? wdata[7] : csr_crmd[7];
     assign excp_jump = (in_excp | is_etrn) & ~jump_excp_fail;
     assign excp_pc = in_excp ? csr_eentry :
                      csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
