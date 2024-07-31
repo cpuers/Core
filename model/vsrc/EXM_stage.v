@@ -15,6 +15,9 @@ module EXM_stage(
     //for MEM
     output [`ES_TO_MS_BUS_WD - 1:0] es_to_ms_bus,
     input  [`MS_TO_ES_BUS_WD - 1:0] ms_to_es_bus,
+    //for div
+    output [`ES_TO_DIV_BUS_MD -1:0] es_to_div_bus,
+    input  [`DIV_TO_ES_BUS_MD -1:0] div_to_es_bus,
 
     input  [ `FORWAED_BUS_WD - 1:0] forward_data1,
     input  [ `FORWAED_BUS_WD - 1:0] forward_data2,
@@ -245,6 +248,10 @@ assign use_badv = (in_excp_t) ? use_badv_t : excp_ale;
 assign bad_addr = (in_excp_t) ? bad_addr_t : alu_result;
 assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc,use_badv, bad_addr};
 
+//for div
+assign es_to_div_bus = {use_div && ds_to_es_valid && !in_excp_t, use_mod, is_unsigned, src1, src2};
+assign {div_result, div_ok} = div_to_es_bus;
+
 Alu u_alu (
     .alu_op    (alu_op),
     .alu_src1  (src1),
@@ -260,36 +267,6 @@ mul u_mul(
     .mul_signed (~is_unsigned),
     .use_high   (use_high),
     .mul_result (mul_result)
-);
-
-// MulCon mul_temp(
-//     .valid        (use_mul),
-//     .is_unsigned  (is_unsigned),
-//     .use_high     (use_high),
-//     .src1 (src1),
-//     .src2   (src2),
-//     .result       (mul_result0)
-// );
-
-div u_div(
-    .div_clk(clk),
-    .reset(reset),
-    .div(use_div && ds_to_es_valid && !in_excp_t),
-    .div_signed(!is_unsigned),
-    .x(src1),
-    .y(src2),
-    .use_mod(use_mod),
-    .div_result(div_result),
-    .div_ok(div_ok)
-);
-
-DivCon t_div(
-    .valid        (use_div),
-    .is_unsigned  (is_unsigned),
-    .use_mod      (use_mod),
-    .src1     (src1),
-    .src2      (src2),
-    .result       (div_result0)
 );
 
 BranchCond u_branch (

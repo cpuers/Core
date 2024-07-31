@@ -1,4 +1,71 @@
 // Radix-2 SRT divisor
+`include "define.vh"
+module DIV_top(
+    input clk,
+    input reset,
+    input [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus1,
+    input [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus2,
+    output [`DIV_TO_ES_BUS_MD-1:0] div_to_es_bus
+);
+
+    wire use_div1;
+    wire use_mod1;
+    wire is_unsigned1;
+    wire [31:0] x1;
+    wire [31:0] y1;
+
+    wire use_div2;
+    wire use_mod2;
+    wire is_unsigned2;
+    wire [31:0] x2;
+    wire [31:0] y2;
+
+    reg use_div;
+    reg use_mod;
+    reg is_unsigned;
+    reg [31:0] x;
+    reg [31:0] y;
+    wire [31:0] div_result;
+    wire div_ok;
+
+    assign {use_div1, use_mod1, is_unsigned1, x1, y1} = es_to_div_bus1;
+    assign {use_div2, use_mod2, is_unsigned2, x2, y2} = es_to_div_bus2;
+
+    always @(*) begin
+        if(use_div1) begin
+            use_div = use_div1;
+            use_mod = use_mod1;
+            is_unsigned = is_unsigned1;
+            x = x1;
+            y = y1;
+        end
+        else if(use_div2) begin
+            use_div = use_div2;
+            use_mod = use_mod2;
+            is_unsigned = is_unsigned2;
+            x = x2;
+            y = y2;
+        end 
+        else begin
+           {use_div, use_mod, is_unsigned, x, y} = 0;
+        end 
+    end
+
+    assign div_to_es_bus = {div_result,div_ok};
+
+    div u_div(
+        .div_clk(clk),
+        .reset(reset),
+        .div(use_div),
+        .div_signed(!is_unsigned),
+        .x(x),
+        .y(y),
+        .use_mod(use_mod),
+        .div_result(div_result),
+        .div_ok(div_ok)
+    );
+
+endmodule
 
 module div (
     input div_clk, reset,

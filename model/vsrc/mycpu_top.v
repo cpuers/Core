@@ -217,6 +217,10 @@ module core_top (
   wire                   excp_jump;
   wire [           31:0] excp_pc;
   assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 : (csr_bus2[`CSR_BUS_WD-1] || csr_bus2[`CSR_BUS_WD-2]) ? csr_bus2 : `CSR_BUS_WD'b0;
+  
+  wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus1;
+  wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus2;
+  wire [`DIV_TO_ES_BUS_MD-1:0] div_to_es_bus;
 
   BPU BPU (
       .pc(if0_pc),
@@ -398,6 +402,9 @@ icache_v5 icache_dummy(
       .es_to_ms_bus   (es_to_ms_bus1),
       .ms_to_es_bus   (ms_to_es_bus),
 
+      .es_to_div_bus  (es_to_div_bus1),
+      .div_to_es_bus  (div_to_es_bus),
+
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
 
@@ -429,6 +436,9 @@ icache_v5 icache_dummy(
       .es_to_ms_bus   (es_to_ms_bus2),
       .ms_to_es_bus   (ms_to_es_bus),
 
+      .es_to_div_bus  (es_to_div_bus2),
+      .div_to_es_bus  (div_to_es_bus),
+
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
 
@@ -454,6 +464,14 @@ icache_v5 icache_dummy(
       .dcache_rdata_bus (dcache_rdata_bus),
       .dcache_wdata_bus (dcache_wdata_bus),
       .csr_datm(csr_datm)
+  );
+
+  DIV_top DIV_top (
+    .clk(aclk),
+    .reset(reset),
+    .es_to_div_bus1(es_to_div_bus1),
+    .es_to_div_bus2(es_to_div_bus2),
+    .div_to_es_bus(div_to_es_bus)
   );
 
   WB_stage wb_stage (
