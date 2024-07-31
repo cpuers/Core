@@ -1,0 +1,342 @@
+[*]
+[*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
+[*] Wed Jul 31 03:39:15 2024
+[*]
+[dumpfile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-spec/dcache-v4/build/dcache-v4.fst"
+[dumpfile_mtime] "Wed Jul 31 03:30:21 2024"
+[dumpfile_size] 952923
+[savefile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-spec/dcache-v4/dcache-v4.gtkw"
+[timestart] 35667
+[size] 1920 1016
+[pos] -1 -1
+*-3.720637 35706 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[treeopen] TOP.
+[treeopen] TOP.cache_test_top.
+[treeopen] TOP.cache_test_top.u_dcache.
+[treeopen] TOP.cache_test_top.u_dcache.genblk4[0].
+[treeopen] TOP.cache_test_top.u_dcache.genblk4[1].
+[treeopen] TOP.cache_test_top.u_dcache.genblk4[2].
+[treeopen] TOP.cache_test_top.u_dcache.genblk4[3].
+[treeopen] TOP.cache_test_top.u_dcache.genblk5[0].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[0].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[1].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[2].
+[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[3].
+[sst_width] 305
+[signals_width] 270
+[sst_expanded] 1
+[sst_vpaned_height] 338
+@c00200
+-icache
+@28
+TOP.cache_test_top.u_icache.clock
+TOP.cache_test_top.u_icache.reset
+@22
+TOP.cache_test_top.u_icache.state[3:0]
+@800200
+-cpu
+@28
+TOP.cache_test_top.u_icache.valid
+TOP.cache_test_top.u_icache.ready
+TOP.cache_test_top.u_icache.uncached
+@22
+TOP.cache_test_top.u_icache.araddr[31:0]
+@28
+TOP.cache_test_top.u_icache.rvalid
+@22
+TOP.cache_test_top.u_icache.rdata[127:0]
+@28
+TOP.cache_test_top.u_icache.rhit
+@1000200
+-cpu
+@c00200
+-req_buffer
+@22
+TOP.cache_test_top.u_icache.request_buffer_idx[7:0]
+TOP.cache_test_top.u_icache.request_buffer_tag[19:0]
+@28
+TOP.cache_test_top.u_icache.request_buffer_uncached
+@1401200
+-req_buffer
+@c00200
+-lookup
+@28
+TOP.cache_test_top.u_icache.lookup_hit
+TOP.cache_test_top.u_icache.lookup_ret
+@1401200
+-lookup
+@800200
+-axi_rd
+@28
+[color] 3
+TOP.cache_test_top.u_icache.rd_req
+[color] 3
+TOP.cache_test_top.u_icache.rd_rdy
+@22
+[color] 3
+TOP.cache_test_top.u_icache.rd_addr[31:0]
+@1000200
+-axi_rd
+@800200
+-axi_ret
+@28
+[color] 1
+TOP.cache_test_top.u_icache.ret_valid
+[color] 1
+TOP.cache_test_top.u_icache.ret_last
+@22
+[color] 1
+TOP.cache_test_top.u_icache.ret_data[31:0]
+@1000200
+-axi_ret
+@800200
+-recv_buffer
+@22
+TOP.cache_test_top.u_icache.receive_buffer[0][31:0]
+TOP.cache_test_top.u_icache.receive_buffer[1][31:0]
+TOP.cache_test_top.u_icache.receive_buffer[2][31:0]
+@28
+TOP.cache_test_top.u_icache.receive_buffer_cnt[1:0]
+TOP.cache_test_top.u_icache.receive_finish
+@1000200
+-recv_buffer
+@22
+TOP.cache_test_top.u_icache.receive_result[127:0]
+@28
+TOP.cache_test_top.u_icache.receive_ret
+@22
+TOP.cache_test_top.u_icache.cache_idx[7:0]
+@c00200
+-tagv_sram
+@28
+[color] 2
+TOP.cache_test_top.u_icache.tagv_ena[0]
+[color] 2
+TOP.cache_test_top.u_icache.tagv_wea[0]
+@1401200
+-tagv_sram
+@c00200
+-data_sram
+@28
+[color] 5
+TOP.cache_test_top.u_icache.data_ena[0]
+[color] 5
+TOP.cache_test_top.u_icache.data_wea[0]
+@1401200
+-data_sram
+-icache
+@800200
+-dcache
+@28
+TOP.cache_test_top.u_dcache.clock
+TOP.cache_test_top.u_dcache.reset
+TOP.cache_test_top.u_dcache.state[2:0]
+TOP.cache_test_top.u_dcache.wr_buf_state
+[color] 3
+TOP.cache_test_top.u_dcache.rhit
+[color] 3
+TOP.cache_test_top.u_dcache.whit
+[color] 3
+TOP.cache_test_top.u_dcache.cache_sram_rw_collision
+@22
+TOP.cache_test_top.u_dcache.wr_buf_idx[7:0]
+@28
+TOP.cache_test_top.u_dcache.wr_buf_bank[1:0]
+@22
+TOP.cache_test_top.u_dcache.wr_buf_wdata[31:0]
+@800200
+-cpu
+@28
+TOP.cache_test_top.u_dcache.valid
+TOP.cache_test_top.u_dcache.ready
+[color] 7
+TOP.cache_test_top.u_dcache.op
+@29
+[color] 2
+TOP.cache_test_top.u_dcache.uncached
+@22
+[color] 1
+TOP.cache_test_top.u_dcache.addr[31:0]
+TOP.cache_test_top.u_dcache.strb[3:0]
+[color] 2
+TOP.cache_test_top.u_dcache.wdata[31:0]
+@28
+TOP.cache_test_top.u_dcache.rvalid
+@22
+[color] 5
+TOP.cache_test_top.u_dcache.rdata[31:0]
+@1000200
+-cpu
+@28
+[color] 1
+TOP.cache_test_top.u_dcache.lookup_hit
+@c00200
+-data_sram
+@800200
+-addr
+@22
+[color] 1
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.addra[7:0]
+[color] 1
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.addra[7:0]
+[color] 1
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.addra[7:0]
+[color] 1
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.addra[7:0]
+@1000200
+-addr
+@800200
+-wea
+@28
+[color] 2
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.wea
+[color] 2
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.wea
+[color] 2
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.wea
+[color] 2
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.wea
+@1000200
+-wea
+@800200
+-din
+@22
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.dina[31:0]
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.dina[31:0]
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.dina[31:0]
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.dina[31:0]
+@1000200
+-din
+@800200
+-dout
+@22
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.douta[31:0]
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.douta[31:0]
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.douta[31:0]
+[color] 5
+TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.douta[31:0]
+@1000200
+-dout
+@1401200
+-data_sram
+@800200
+-tagv_sram
+@28
+[color] 2
+#{TOP.cache_test_top.u_dcache.tagv_ena[0:1]} TOP.cache_test_top.u_dcache.tagv_ena[0] TOP.cache_test_top.u_dcache.tagv_ena[1]
+@22
+[color] 1
+TOP.cache_test_top.u_dcache.tagv_addra[0][7:0]
+[color] 1
+TOP.cache_test_top.u_dcache.tagv_addra[1][7:0]
+[color] 5
+TOP.cache_test_top.u_dcache.tagv_dina[0][20:0]
+[color] 5
+TOP.cache_test_top.u_dcache.tagv_dina[1][20:0]
+@28
+[color] 2
+#{TOP.cache_test_top.u_dcache.tagv_wea[0:1]} TOP.cache_test_top.u_dcache.tagv_wea[0] TOP.cache_test_top.u_dcache.tagv_wea[1]
+@22
+[color] 5
+TOP.cache_test_top.u_dcache.tagv_douta[0][20:0]
+[color] 5
+TOP.cache_test_top.u_dcache.tagv_douta[1][20:0]
+@1000200
+-tagv_sram
+@800200
+-dirt
+@28
+[color] 2
+TOP.cache_test_top.u_dcache.dirt_wea[0]
+@c00022
+[color] 1
+TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+@28
+(0)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(1)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(2)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(3)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(4)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(5)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(6)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+(7)TOP.cache_test_top.u_dcache.dirt_addra[0][7:0]
+@1401200
+-group_end
+@28
+[color] 5
+TOP.cache_test_top.u_dcache.dirt_dina[0]
+@1000200
+-dirt
+@800200
+-axi_rd
+@28
+[color] 2
+TOP.cache_test_top.u_dcache.rd_req
+[color] 2
+TOP.cache_test_top.u_dcache.rd_rdy
+@22
+[color] 2
+TOP.cache_test_top.u_dcache.rd_addr[31:0]
+@28
+[color] 2
+TOP.cache_test_top.u_dcache.rd_type[2:0]
+@1000200
+-axi_rd
+@800200
+-axi_ret
+@28
+[color] 5
+TOP.cache_test_top.u_dcache.ret_valid
+[color] 5
+TOP.cache_test_top.u_dcache.ret_last
+@22
+[color] 5
+TOP.cache_test_top.u_dcache.ret_data[31:0]
+@1000200
+-axi_ret
+@800200
+-axi_wr
+@28
+[color] 2
+TOP.cache_test_top.u_dcache.wr_req
+[color] 2
+TOP.cache_test_top.u_dcache.wr_rdy
+@22
+[color] 2
+TOP.cache_test_top.u_dcache.wr_addr[31:0]
+[color] 2
+TOP.cache_test_top.u_dcache.wr_data[127:0]
+@28
+[color] 2
+TOP.cache_test_top.u_dcache.wr_type[2:0]
+@22
+[color] 2
+TOP.cache_test_top.u_dcache.wr_wstrb[3:0]
+@1000200
+-axi_wr
+-dcache
+@c00200
+-axi_ram
+@22
+TOP.cache_test_top.u_axi_ram.mem_rd_result[31:0]
+TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
+TOP.cache_test_top.u_axi_ram.s_axi_wdata[31:0]
+TOP.cache_test_top.u_axi_ram.write_addr_valid[13:0]
+TOP.cache_test_top.u_axi_ram.read_addr_valid[13:0]
+@1401200
+-axi_ram
+[pattern_trace] 1
+[pattern_trace] 0
