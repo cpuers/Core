@@ -1344,10 +1344,10 @@ module dcache_v3(
 
     // request
     /* verilator lint_off UNUSED */
-    wire    [19:0]  req_tag = addr[31:12];
-    wire    [ 7:0]  req_idx = addr[11:4];
-    wire    [ 1:0]  req_bank = addr[3:2];
-    wire    [ 1:0]  req_off = addr[1:0];
+    wire    [19:0]  req_tag;
+    wire    [ 7:0]  req_idx;
+    wire    [ 1:0]  req_bank;
+    wire    [ 1:0]  req_off;
     /* verilator lint_on UNUSED */
     assign {req_tag, req_idx, req_bank, req_off} = addr;
     // wire req_is_r = !op;
@@ -1864,14 +1864,20 @@ module dcache_v4(
 
     // request
     /* verilator lint_off UNUSED */
-    wire    [19:0]  req_tag = addr[31:12];
-    wire    [ 7:0]  req_idx = addr[11:4];
-    wire    [ 1:0]  req_bank = addr[3:2];
-    wire    [ 1:0]  req_off = addr[1:0];
+    wire    [19:0]  req_tag;
+    wire    [ 7:0]  req_idx; 
+    wire    [ 1:0]  req_bank;
+    wire    [ 1:0]  req_off; 
     /* verilator lint_on UNUSED */
     assign {req_tag, req_idx, req_bank, req_off} = addr;
-    // wire req_is_r = !op;
-    // wire req_is_w =  op;
+    wire req_is_r_uc = !op && uncached;
+    wire req_is_w_uc =  op && uncached;
+    wire    [ 2:0]  req_size;
+    strb2size u_strb2size(
+        .strb   ( strb          ),
+        .off    ( req_off       ),
+        .size   ( req_size      )
+    );
 
 
     // buffers
@@ -1911,6 +1917,7 @@ module dcache_v4(
     localparam      state_send = 3;
     localparam      state_reqr = 4;
     localparam      state_recv = 5;
+    localparam      state_uncached = 6;
     reg     [ 2:0]  state;
     wire state_is_idle = state == state_idle;
     wire state_is_lookup = state == state_lookup;
@@ -1918,6 +1925,7 @@ module dcache_v4(
     wire state_is_send = state == state_send;
     wire state_is_reqr = state == state_reqr;
     wire state_is_recv = state == state_recv;
+    wire state_is_uncached = state == state_uncached;
 
     wire cache_sram_rw_collision;
     assign cache_sram_rw_collision = 
@@ -2004,19 +2012,27 @@ module dcache_v4(
             req_buf_wdata <= 0;
         end else case (state)
             state_idle: begin
-                if (valid && !cache_sram_rw_collision) begin
-                    state <= state_lookup;
-                        {req_buf_op, req_buf_addr}
-                    <=  {op,         addr};
-                    if (op) begin
-                            {req_buf_awstrb, req_buf_wdata}
-                        <=  {strb,           wdata};
+                if (valid) begin
+                    if (uncached) begin
+                        if (op && wr_rdy) begin
+                            state <= state_idle;                            
+                        end else if (!op && rd_rdy) begin
+                            state <= state_uncached;                            
+                        end
+                    end else if (!cache_sram_rw_collision) begin
+                        state <= state_lookup;
+                            {req_buf_op, req_buf_addr}
+                        <=  {op,         addr};
+                        if (op) begin
+                                {req_buf_awstrb, req_buf_wdata}
+                            <=  {strb,           wdata};
+                        end
                     end
                 end
             end 
             state_lookup: begin
                 if (lookup_hit) begin
-                    if (!valid || cache_sram_rw_collision) begin
+                    if (!valid || cache_sram_rw_collision || (valid && uncached)) begin
                         state <= state_idle;
                     end else begin
                         state <= state_lookup;
@@ -2063,6 +2079,11 @@ module dcache_v4(
                         recv_buf[recv_cnt] <= ret_data;                        
                         recv_cnt <= recv_cnt + 1;
                     end
+                end
+            end
+            state_uncached: begin
+                if (ret_valid) begin
+                    state <= state_idle;
                 end
             end
             default: begin
@@ -2121,14 +2142,19 @@ module dcache_v4(
 
     // i/o
     assign ready = !cache_sram_rw_collision && (
-        (state_is_idle) ||
-        (state_is_lookup && lookup_hit)
+        (state_is_idle && (
+            (!uncached) ||
+            ( uncached && ((!op && rd_rdy) || (op && wr_rdy)))
+         )
+        ) ||
+        (state_is_lookup && lookup_hit && !uncached)
     );
-    assign rvalid = !req_buf_op && (
+    assign rvalid = (!req_buf_op && (
         (state_is_lookup && lookup_hit) ||
         (state_is_recv && ret_valid && recv_cnt == req_buf_bank)
-    );
+    )) || (state_is_uncached && ret_valid);
     assign rdata = 
+        (state_is_uncached) ? ret_data :
         ({req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank}) ?
             wr_buf_wdata : (
                 ({32{state_is_lookup}} & lookup_hit_data) |
@@ -2138,13 +2164,13 @@ module dcache_v4(
     assign whit = state_is_lookup &&  req_buf_op && lookup_hit;
     assign cacop_ready = 1'b0;
 
-    assign rd_req = state_is_send || state_is_reqr;
-    assign rd_type = 3'b100;
-    assign rd_addr = {req_buf_tag, req_buf_idx, 4'b0};
-    assign wr_req = state_is_send;
-    assign wr_type = 3'b100;
-    assign wr_addr = {send_tag, req_buf_idx, 4'b0};
-    assign wr_wstrb = 4'hf;
+    assign rd_req = (state_is_send || state_is_reqr) || (state_is_idle && valid && req_is_r_uc);
+    assign rd_type = (state_is_idle) ? req_size : 3'b100;
+    assign rd_addr = (state_is_idle) ? addr : {req_buf_tag, req_buf_idx, 4'b0};
+    assign wr_req = (state_is_send) || (state_is_idle && valid && req_is_w_uc);
+    assign wr_type = (state_is_idle) ? req_size : 3'b100;
+    assign wr_addr = (state_is_idle) ? addr : {send_tag, req_buf_idx, 4'b0};
+    assign wr_wstrb = (state_is_idle) ? strb : 4'hf;
     always @(*) begin
         wr_data = 128'b0;
         for (k = 0; k < DCACHE_WAY; k = k + 1) begin
@@ -2152,6 +2178,9 @@ module dcache_v4(
                 wr_data[t*32 +: 32] = wr_data[t*32 +: 32] | 
                     ({32{lookup_miss_way_replace_en[k]}} & data_douta[k][t]);
             end
+        end
+        if (state_is_idle && valid && uncached) begin
+            wr_data[31:0] = wdata;
         end
     end
 
