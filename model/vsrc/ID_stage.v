@@ -33,6 +33,12 @@ module ID_stage (
     input  [31:0] read_data1,
     input  [31:0] read_data2,
     input  [31:0] read_data3
+    `ifdef DIFFTEST_EN
+    ,
+
+    output [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus1,
+    output [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus2
+    `endif 
 
 );
   
@@ -68,6 +74,30 @@ module ID_stage (
   assign EXE_instr0_valid = EXE_instr0_r[`DS_TO_ES_BUS_WD];
   assign EXE_instr1_valid = EXE_instr1_r[`DS_TO_ES_BUS_WD];
 
+  `ifdef DIFFTEST_EN
+
+    wire [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus1_w;
+    wire [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus2_w;
+
+    reg [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_r1;
+    reg [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_r2;
+  always @(posedge clk ) 
+  begin
+    if (rst|flush_ID) begin
+        ds_to_es_debug_r1 <= `DS_ES_DEBUG_BUS_WD'h0;
+        ds_to_es_debug_r2 <= `DS_ES_DEBUG_BUS_WD'h0;
+    
+    end
+    else
+    begin
+        ds_to_es_debug_r1 <= ds_to_es_debug_bus1_w;
+        ds_to_es_debug_r2 <= ds_to_es_debug_bus1_w;
+    end  
+  end
+  assign ds_to_es_debug_bus1 = ds_to_es_debug_r1;
+  assign ds_to_es_debug_bus2 = ds_to_es_debug_r2;
+  `endif 
+
 /* verilator lint_off UNUSED */
 
   wire [4:0] instr0_dest;
@@ -99,6 +129,10 @@ module ID_stage (
       .is_ls(instr0_is_ls),
 
       .have_intrpt(have_intrpt)
+      `ifdef DIFFTEST_EN
+      ,
+      .ds_to_es_debug_bus(ds_to_es_debug_bus1)
+      `endif 
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -114,6 +148,10 @@ module ID_stage (
       .may_jump(instr1_may_jump),
       .is_ls(instr1_is_ls),
       .have_intrpt(have_intrpt)
+      `ifdef DIFFTEST_EN
+      ,
+      .ds_to_es_debug_bus(ds_to_es_debug_bus2)
+      `endif 
   );
 
   // 判断发射逻辑
@@ -149,6 +187,10 @@ module ID_decoder (
     output [4:0] rf_raddr2,
     input [31:0] rf_rdata2,
     input have_intrpt
+    `ifdef DIFFTEST_EN
+    ,
+    output [`DS_ES_DEBUG_BUS_WD:0] ds_to_es_debug_bus
+    `endif 
 );
 
   wire        use_rj_value;
@@ -570,6 +612,23 @@ module ID_decoder (
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm);
   assign use_rj = use_rj_value | ~src1_is_pc;
+
+ `ifdef DIFFTEST_EN
+  wire cmt_is_cnt_inst;
+  wire cmt_csr_rstat_en;
+  
+  wire cmt_eret;
+  wire [7:0]cmt_st_valid;
+  wire [7:0]cmt_ld_valid;
+
+
+  assign cmt_st_valid = {4'b0, 1'b0, inst_st_w, inst_st_h, inst_st_b};
+  assign cmt_ld_valid = {2'b0, 1'b0, inst_ld_w, inst_ld_hu, inst_ld_h, inst_ld_bu, inst_ld_b};
+  assign cmt_eret = inst_ertn;
+  assign cmt_is_cnt_inst = inst_rdcntid | inst_rdcntvh_w |inst_rdcntvl_w;
+  assign cmt_csr_rstat_en = (inst_csrrd |inst_csrwr |inst_csrxchg) & csr_num == `ESTAT; 
+  assign ds_to_es_debug_bus = {ds_inst,cmt_is_cnt_inst,rg_en,dest,cmt_csr_rstat_en,cmt_eret,cmt_st_valid,cmt_ld_valid};
+  `endif 
 endmodule
 module decoder_2_4(
     input  wire [ 1:0] in,

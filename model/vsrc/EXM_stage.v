@@ -30,7 +30,15 @@ module EXM_stage(
     input  [                  31:0] excp_pc,
     output [                  13:0] csr_addr,
     input  [                  31:0] csr_rdata_t
-    
+
+    `ifdef DIFFTEST_EN
+    ,
+
+    input  [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus,
+    output [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus,
+    input [63:0] csr_timer_64_diff,
+    input [10:0] intrNo_diff 
+    `endif 
 
 );
 
@@ -185,24 +193,51 @@ begin
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus_w;
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
     end
-
-    // if(reset) begin
-    //     exm_forward_bus_r <= 0;
-    // end
-    // if(!nblock && (forw_rj[0] || forw_rj[1] || forw_rkd[0] || forw_rkd[1])) begin
-    //     exm_forward_bus_r <= exm_forward_bus_r;
-    // end
-    // else begin
-    //     exm_forward_bus_r <= exm_forward_bus_w;
-    //     //exm_forward_bus_r[`FORWAED_BUS_WD-2:0] <= es_to_ws_bus_w[`ES_TO_WS_BUS_WD-1:32];
-    //     //exm_forward_bus_r[`FORWAED_BUS_WD-1] <= es_to_ws_valid_w[0];  //ds_to_es_valid
-    // end
-
 end
 
 assign es_to_ws_valid  = es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD];
 assign es_to_ws_bus    = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
 //assign exm_forward_bus = exm_forward_bus_r; //es_to_ws_bus_r[`ES_TO_WS_BUS_WD:32]; //exm_forward_bus_r;
+ `ifdef DIFFTEST_EN
+
+  wire [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus_w;
+  reg  [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus_r;
+
+  wire [31:0] cmt_wdata;
+  wire [31:0] cmt_csr_rdata;
+  wire cmt_excp_valid;
+  wire [5:0] cmt_estat_ecode;
+  wire [31:0] cmt_st_vaddr;
+  wire [31:0] cmt_st_paddr;
+  wire [31:0] cmt_st_data ;
+  wire [31:0] cmt_ld_vaddr;
+  wire [31:0] cmt_ld_paddr;
+
+  assign cmt_wdata = final_result;
+  assign cmt_csr_rdata = csr_rdata; 
+  assign cmt_excp_valid = in_excp;
+  assign cmt_estat_ecode = excp_Ecode;
+  assign cmt_st_vaddr = alu_result;
+  assign cmt_st_paddr = alu_result;
+  assign cmt_st_data = rkd_value;
+  assign cmt_ld_vaddr = alu_result;
+  assign cmt_ld_paddr = alu_result; 
+  assign es_to_ws_debug_bus_w = {cmt_st_vaddr, cmt_st_paddr, cmt_st_data, cmt_ld_vaddr, cmt_st_paddr,
+                                csr_timer_64_diff, intrNo_diff, cmt_excp_valid, cmt_estat_ecode, cmt_wdata,cmt_csr_rdata, 
+                                ds_to_es_debug_bus};
+
+  always @(posedge clk ) 
+  begin
+    if (reset) begin
+        es_to_ws_debug_bus_r <= `ES_WS_DEBUG_BUS_WD'h0; 
+    end
+    else
+    begin
+        es_to_ws_debug_bus_r <= es_to_ws_debug_bus_w;
+    end  
+  end
+  assign es_to_ws_debug_bus = es_to_ws_debug_bus_r;
+  `endif 
 
 //csr forward
 assign forw_csr[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[84] && use_csr_data && forward_data1[83:70]==csr_addr;

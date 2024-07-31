@@ -28,4 +28,10 @@
 `define WS_TO_RF_BUS_WD 140
 
 
+`ifdef DIFFTEST_EN
+`define DS_ES_DEBUG_BUS_WD 57
+`define ES_WS_DEBUG_BUS_WD 288
+`define WS_DEBUG_BUS_WD 352
+`endif 
+
 `endif

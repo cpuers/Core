@@ -1,6 +1,6 @@
 `include "define.vh"
 
-module core_top (
+ module core_top (
     input  wire        aclk,
     input  wire        aresetn,
     /* verilator lint_off UNUSED */
@@ -369,7 +369,7 @@ icache_v5 icache_dummy(
     .csr_prmd_diff    ( csr_prmd_diff   ),
     .csr_estat_diff   ( csr_estat_diff  ),
     .csr_era_diff     ( csr_era_diff    ),
-    .csr_eentry_diff  ( csr_eentry_dif  ),
+    .csr_eentry_diff  ( csr_eentry_diff  ),
     .csr_save0_diff   ( csr_save0_diff  ),
     .csr_save1_diff   ( csr_save1_diff  ),
     .csr_save2_diff   ( csr_save2_diff  ),
@@ -378,7 +378,9 @@ icache_v5 icache_dummy(
     .csr_tid_diff     ( csr_tid_diff    ),
     .csr_tcfg_diff    ( csr_tcfg_diff   ),
     .csr_tval_diff    ( csr_tval_diff   ),
-    .csr_badv_diff    ( csr_badv_diff   )
+    .csr_badv_diff    ( csr_badv_diff   ),
+    .csr_timer_64_diff(csr_timer_64_diff),
+    .intrNo_diff    (intrNo_diff)
     `endif
 );
   ID_stage ID_stage (
@@ -407,6 +409,12 @@ icache_v5 icache_dummy(
       .read_data2      (read_data2),
       .read_data3      (read_data3),
       .have_intrpt(have_intrpt)
+    `ifdef DIFFTEST_EN
+    ,
+
+    .ds_to_es_debug_bus1(ds_to_es_debug_bus1),
+    .ds_to_es_debug_bus2(ds_to_es_debug_bus2)
+    `endif 
 
   );
 
@@ -439,6 +447,14 @@ icache_v5 icache_dummy(
       .excp_pc(excp_pc),
       .csr_addr(csr_addr1),
       .csr_rdata_t(csr_data1)
+    `ifdef DIFFTEST_EN
+    ,
+
+    .ds_to_es_debug_bus(ds_to_es_debug_bus1),
+    .es_to_ws_debug_bus(es_to_ws_debug_bus1),
+    .csr_timer_64_diff(csr_timer_64_diff),
+    .intrNo_diff(intrNo_diff) 
+    `endif 
 
   );
   EXM_stage EXM_stage2 (
@@ -471,6 +487,15 @@ icache_v5 icache_dummy(
       .csr_addr(csr_addr2),
       .csr_rdata_t(csr_data2)
 
+      `ifdef DIFFTEST_EN
+    ,
+
+    .ds_to_es_debug_bus(ds_to_es_debug_bus2),
+    .es_to_ws_debug_bus(es_to_ws_debug_bus2),
+    .csr_timer_64_diff(csr_timer_64_diff),
+    .intrNo_diff(intrNo_diff) 
+    `endif
+
   );
 
   MEM_stage MEM_stage (
@@ -500,6 +525,15 @@ icache_v5 icache_dummy(
       .csr_we         (csr_wen),
       .csr_addr       (csr_waddr),
       .csr_wdata      (csr_wdata)
+
+      `ifdef DIFFTEST_EN
+    ,
+
+    .es_to_ws_debug_bus1(es_to_ws_debug_bus1),
+    .ws_debug_bus1(ws_debug_bus1),
+    .es_to_ws_debug_bus2(es_to_ws_debug_bus2),
+    .ws_debug_bus2(ws_debug_bus2),
+    `endif 
 
   );
   
@@ -646,6 +680,37 @@ wire  [ 4:0]  cmt_wdest           [ 0:1];
 wire  [31:0]  cmt_wdata           [ 0:1];
 wire          cmt_csr_rstat_en    [ 0:1];
 wire  [31:0]  cmt_csr_data        [ 0:1];
+wire [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus1;
+wire [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus2;
+wire [63:0] csr_timer_64_diff;
+wire [10:0] intrNo_diff;
+wire [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus1;
+wire [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus2;
+wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus1;
+wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus2;
+
+wire          t_cmt_excp_valid[0:1];
+wire          t_cmt_eret[0:1];
+wire  [10:0]  t_csr_estat_intrno[0:1];
+wire  [ 5:0]  t_csr_estat_ecode[0:1];
+wire  [31:0]  t_cmt_excp_pc[0:1];
+wire  [31:0]  t_cmt_excp_instr[0:1];
+
+assign {cmt_pc[0],t_cmt_excp_pc[0],cmt_st_vaddr[0], cmt_st_paddr[0], cmt_st_data[0], cmt_ld_vaddr[0], cmt_st_paddr[0],
+        cmt_timer_64_value[0], t_csr_estat_intrno[0], t_cmt_excp_valid[0], t_csr_estat_ecode[0], cmt_wdata[0],cmt_csr_data[0],
+        cmt_instr[0], cmt_is_cnt_inst[0], cmt_wen[0], cmt_wdest[0], cmt_csr_rstat_en[0], t_cmt_eret[0], cmt_st_valid[0], cmt_ld_valid[0]} = ws_debug_bus1;
+assign {cmt_pc[1],t_cmt_excp_pc[1],cmt_st_vaddr[1], cmt_st_paddr[1], cmt_st_data[1], cmt_ld_vaddr[1], cmt_st_paddr[1],
+        cmt_timer_64_value[1], t_csr_estat_intrno[1], t_cmt_excp_valid[1], t_csr_estat_ecode[1], cmt_wdata[1],cmt_csr_data[1],
+        cmt_instr[1], cmt_is_cnt_inst[1], cmt_wen[1], cmt_wdest[1], cmt_csr_rstat_en[1], t_cmt_eret[1], cmt_st_valid[1], cmt_ld_valid[1]} = ws_debug_bus2;
+assign t_cmt_excp_instr[0] = cmt_instr[0];
+assign t_cmt_excp_instr[1] = cmt_instr[1];
+
+assign cmt_excp_valid=(t_cmt_excp_valid[0]) ? t_cmt_excp_valid[0] : t_cmt_excp_valid[1];
+assign cmt_eret=(t_cmt_excp_valid[0]) ? t_cmt_eret[0] : t_cmt_eret[1];
+assign csr_estat_intrno=(t_cmt_excp_valid[0]) ? t_csr_estat_intrno[0] : t_csr_estat_intrno[1];
+assign csr_estat_ecode=(t_cmt_excp_valid[0]) ? t_csr_estat_ecode[0] : t_csr_estat_ecode[1];
+assign cmt_excp_pc=(t_cmt_excp_valid[0]) ? t_cmt_excp_pc[0] : t_cmt_excp_pc[1];
+assign cmt_excp_instr=(t_cmt_excp_valid[0]) ? t_cmt_excp_instr[0] : t_cmt_excp_instr[1];
 
 generate 
     for (i = 0; i < 2; i = i + 1) begin
@@ -671,12 +736,12 @@ generate
 endgenerate
 
 // TODO
-wire          cmt_excp_valid;
+wire          cmt_excp_valid;//in_excp
 wire          cmt_eret;
 wire  [10:0]  csr_estat_intrno;
 wire  [ 5:0]  csr_estat_ecode;
-wire  [31:0]  cmt_excp_pc;
-wire  [31:0]  cmt_excp_instr;
+wire  [31:0]  cmt_excp_pc;    
+wire  [31:0]  cmt_excp_instr; //ds
 
 DifftestExcpEvent DifftestExcpEvent(
     .clock              (aclk           ),
@@ -820,4 +885,5 @@ DifftestGRegState DifftestGRegState(
 `endif
 
 /* verilator lint_on WIDTH */
+
 endmodule

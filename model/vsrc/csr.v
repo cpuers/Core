@@ -41,7 +41,9 @@ module csr (
     output [31:0] csr_tid_diff,
     output [31:0] csr_tcfg_diff,
     output [31:0] csr_tval_diff,
-    output [31:0] csr_badv_diff     
+    output [31:0] csr_badv_diff,
+    output [63:0] csr_timer_64_diff,
+    output [10:0] intrNo_diff    
     `endif
 );
     wire in_excp;
@@ -413,5 +415,7 @@ module csr (
     assign csr_tcfg_diff = csr_tcfg;
     assign csr_tval_diff = csr_tval;
     assign csr_badv_diff = csr_badv;
+    assign csr_timer_64_diff = csr_timer_64;
+    assign intrNo_diff = csr_estat[12:2];
     `endif
 endmodule
