@@ -5,6 +5,7 @@ module BPU (
     input clk,
     input reset,
     //if
+    //input if_valid,
     input  [31:0] pc,
     output reg [31:0] next_pc,
     output reg [ 3:0] pc_is_jump,
@@ -41,8 +42,11 @@ module BPU (
   reg [`BTB_LINE_SIZE-1:0] btb [0:`BPU_SIZE-1];
 
   reg [`RAS_LINE_SIZE-1:0] ras [0:`RAS_SIZE-1];
-  reg [`RAS_IDX_SIZE-1:0] num_ras1;
-  reg [`RAS_IDX_SIZE-1:0] num_ras2;
+  reg [`RAS_IDX_SIZE-1:0] num_ras;
+  reg push1;
+  reg push2;
+  reg pop;
+  reg pop_r;
   //reg [               1:0] group_jump [0:`BPU_SIZE-1];
   wire [`BPU_IDX_SZIE-1:0] ridx;
   wire [`BPU_IDX_SZIE-1:0] ridx1;  
@@ -56,6 +60,11 @@ module BPU (
   wire [`BPU_TAG_SIZE-1:0] wtag1;
   wire [`BPU_IDX_SZIE-1:0] widx2;  
   wire [`BPU_TAG_SIZE-1:0] wtag2;
+
+  reg [31:0] debug_pc1;
+  reg [31:0] debug_pc2;
+  reg f1;
+  reg f2;
 
   assign {es_pc1, may_jump1, need_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
   assign {es_pc2, may_jump2, need_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
@@ -75,82 +84,68 @@ module BPU (
   assign group_valid = (pc[3:2]==2'b00) ? 4'b1111 : (pc[3:2]==2'b01) ? 4'b1110 : (pc[3:2]==2'b10) ? 4'b1100 : 4'b1000;
   //fs read 
   always @(*) begin
-    if(num_ras1==0) num_ras2 = 0;
-    
     if(group_valid[0] && bpu_valid[ridx1] && pht[ridx1] >=2'b10 && btb[ridx1][`BTB_TAG]==rtag) begin
       if(btb[ridx1][`BTB_TYPE]==2'b10) begin
-        next_pc = {ras[num_ras1-num_ras2],2'b0};
-        num_ras2 = num_ras2 + `RAS_IDX_SIZE'b1;
+        next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
+        pop = 1'b1;
+        //num_ras = num_ras - `RAS_IDX_SIZE'b1;
       end
       else begin
         next_pc = {btb[ridx1][`BTB_TARGET],2'b0};
+        pop = 1'b0;
       end
       pc_valid = 4'b0001 & group_valid;
       pc_is_jump = 4'b0001;
     end
     else if(group_valid[1] && bpu_valid[ridx2] && pht[ridx2] >=2'b10 && btb[ridx2][`BTB_TAG]==rtag) begin
       if(btb[ridx2][`BTB_TYPE]==2'b10) begin
-        next_pc = {ras[num_ras1-num_ras2],2'b0};
-        num_ras2 = num_ras2 + `RAS_IDX_SIZE'b1;
+        next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
+        pop = 1'b1;
+        //num_ras = num_ras - `RAS_IDX_SIZE'b1;
       end
       else begin
         next_pc = {btb[ridx2][`BTB_TARGET],2'b0};
+        pop = 1'b0;
       end
       pc_valid = 4'b0011 & group_valid;
       pc_is_jump = 4'b0010;
     end
     else if(group_valid[2] && bpu_valid[ridx3] && pht[ridx3] >=2'b10 && btb[ridx3][`BTB_TAG]==rtag) begin
       if(btb[ridx3][`BTB_TYPE]==2'b10) begin
-        next_pc = {ras[num_ras1-num_ras2],2'b0};
-        num_ras2 = num_ras2 + `RAS_IDX_SIZE'b1;
+        next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
+        pop = 1'b1;
+        //num_ras = num_ras - `RAS_IDX_SIZE'b1;
       end
       else begin
         next_pc = {btb[ridx3][`BTB_TARGET],2'b0};
+        pop = 1'b0;
       end
       pc_valid = 4'b0111 & group_valid;
       pc_is_jump = 4'b0100;
     end
     else if(group_valid[3] && bpu_valid[ridx4] && pht[ridx4] >=2'b10 && btb[ridx4][`BTB_TAG]==rtag) begin
       if(btb[ridx4][`BTB_TYPE]==2'b10) begin
-        next_pc = {ras[num_ras1-num_ras2],2'b0};
-        num_ras2 = num_ras2 + `RAS_IDX_SIZE'b1;
+        next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
+        pop = 1'b1;
+        //num_ras = num_ras - `RAS_IDX_SIZE'b1;
       end
       else begin
         next_pc = {btb[ridx4][`BTB_TARGET],2'b0};
+        pop = 1'b0;
       end
       pc_valid = 4'b1111 & group_valid;
       pc_is_jump = 4'b1000;
+
+      f1 = (btb[ridx4][`BTB_TYPE]==2'b10);
+      debug_pc1 = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
+      debug_pc2 = {btb[ridx4][`BTB_TARGET],2'b0};
     end
     else begin
       next_pc = (pc + 31'd16) & 32'hfffffff0;
       pc_valid = 4'b1111;
       pc_is_jump = 4'b0000;
+      pop = 1'b0;
     end
-
-    // if(bpu_valid[ridx]==1'b1 && group_valid[group_jump[ridx]] && pht[ridx] >= 2'b10 && btb[ridx][`BTB_TAG]==rtag) begin
-    //   next_pc = {btb[ridx][`BTB_TARGET],2'b0};
-    //   if(group_jump[ridx]==2'b00) begin
-    //     pc_valid = 4'b0001 & group_valid;
-    //     pc_is_jump = 4'b0001;
-    //   end
-    //   else if(group_jump[ridx]==2'b01) begin
-    //     pc_valid = 4'b0011 & group_valid;
-    //     pc_is_jump = 4'b0010;
-    //   end
-    //   else if(group_jump[ridx]==2'b10) begin
-    //     pc_valid = 4'b0111 & group_valid;
-    //     pc_is_jump = 4'b0100;
-    //   end
-    //   else begin
-    //     pc_valid = 4'b1111 & group_valid;
-    //     pc_is_jump = 4'b1000;
-    //   end
-    // end
-    // else begin
-    //   next_pc = (pc + 31'd16) & 32'hfffffff0;
-    //   pc_valid = 4'b1111;
-    //   pc_is_jump = 4'b0000;
-    // end
   end
 
   //es write
@@ -164,23 +159,42 @@ module BPU (
       for (i = 0; i < `RAS_SIZE; i = i + 1) begin
           ras_valid[i] = 1'b0;
       end
-      num_ras1 <= 0;
+      num_ras <= 0;
       num_need <= 0;
       num_fail <= 0;
+      pop_r <= 0;
     end
     else 
     begin
+      pop_r <= pop;
+      if(!pop && pop_r) begin
+        num_ras <= num_ras - `RAS_IDX_SIZE'b1;
+      end
+      // if(pop && !pop_r) begin
+      //   num_ras <= num_ras - `RAS_IDX_SIZE'b1;
+      //   pop_r <=1'b1;
+      // end
+      // else if(!pop) begin
+      //   pop_r <= 1'b0;
+      // end 
       if((!bpu_valid[widx1] || (bpu_valid[widx1] && btb[widx1][`BTB_TAG]!=wtag1))&& may_jump1 && need_jump1) begin
         bpu_valid[widx1] <= 1'b1;
         pht[widx1] <= 2'b10;
         btb[widx1] <= {jump_type1, wtag1, right_target1[31:2]};
         //group_jump[widx1] <= es_pc1[3:2];
         if(jump_type1[0]) begin
-          ras[num_ras1-num_ras2] <= right_target1[31:2] + 30'b1;
-          num_ras1 <= num_ras1 + `RAS_IDX_SIZE'b1;
+          ras[num_ras] <= es_pc1[31:2] + 30'b1;
+          num_ras <= num_ras + `RAS_IDX_SIZE'b1;
+          push1 <= 1'b1;
         end
+        else if(jump_type1[1]) begin
+          num_ras <= num_ras - `RAS_IDX_SIZE'b1;
+          push1<=1'b0;
+        end
+        else begin push1<=1'b0; end
       end
       else if(bpu_valid[widx1] && may_jump1) begin
+        push1<=1'b0;
         if(need_jump1) begin
           pht[widx1] <= (pht[widx1]==2'b11) ? 2'b11 : pht[widx1] + 2'b01;
           btb[widx1] <= {jump_type1, wtag1, right_target1[31:2]};
@@ -191,6 +205,7 @@ module BPU (
         end
       end
       else begin
+        push1<=1'b0;
         pht[widx1] <= pht[widx1];
         btb[widx1] <= btb[widx1];
       end
@@ -201,11 +216,18 @@ module BPU (
         btb[widx2] <= {jump_type2, wtag2, right_target2[31:2]};
         //group_jump[widx2] <= es_pc2[3:2];
         if(jump_type2[0]) begin
-          ras[num_ras1-num_ras2] <= right_target2[31:2] + 30'b1;
-          num_ras1 <= num_ras1 + `RAS_IDX_SIZE'b1;
+          ras[num_ras] <= es_pc2[31:2] + 30'b1;
+          num_ras <= num_ras + `RAS_IDX_SIZE'b1;
+          push2 <= 1'b1;
         end
+        else if(jump_type2[1]) begin
+          num_ras <= num_ras - `RAS_IDX_SIZE'b1;
+          push2<=1'b0;
+        end
+        else begin push2<=1'b0; end
       end
       else if(bpu_valid[widx2] && may_jump2) begin
+        push2<=1'b0;
         if(need_jump2) begin
           pht[widx2] <= (pht[widx2]==2'b11) ? 2'b11 : pht[widx2] + 2'b01;
           btb[widx2] <= {jump_type2, wtag2, right_target2[31:2]};
@@ -216,15 +238,16 @@ module BPU (
         end
       end
       else begin
+        push2<=1'b0;
         pht[widx2] <= pht[widx2];
         btb[widx2] <= btb[widx2];
       end 
     end
 
-    if(may_jump1 && need_jump1) begin
+    if(may_jump1) begin
       num_need <= num_need + 16'b1;
     end
-    if(may_jump2 && need_jump2) begin
+    if(may_jump2) begin
       num_need <= num_need + 16'b1;
     end
     if(may_jump1 && pre_fail1) begin
@@ -235,8 +258,6 @@ module BPU (
     end
     
   end
-
-
 
 endmodule
 

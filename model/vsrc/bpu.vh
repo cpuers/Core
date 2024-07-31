@@ -13,7 +13,7 @@
 `define RAS_IDX_SIZE 3
 
 `define PHT_LINE_SIZE 2
-`define BTB_LINE_SIZE 51  //tag19, target30
+`define BTB_LINE_SIZE 51  //type2, tag19, target30
 `define BTB_TYPE 50:49
 `define BTB_TAG 48:30
 `define BTB_TARGET 29:0
