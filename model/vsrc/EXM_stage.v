@@ -32,7 +32,10 @@ module EXM_stage(
     input                           excp_jump,
     input  [                  31:0] excp_pc,
     output [                  13:0] csr_addr,
-    input  [                  31:0] csr_rdata_t
+    input  [                  31:0] csr_rdata_t,
+
+    input another_ok,
+    output my_ok
     
 
 );
@@ -163,13 +166,30 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign nblock = (!jump_excp_fail & dcache_ok & div_ok) || ~ds_to_es_valid;
+assign my_ok = (!jump_excp_fail & dcache_ok & div_ok) || ~ds_to_es_valid;
+assign nblock = ((!jump_excp_fail & dcache_ok & div_ok) || ~ds_to_es_valid) && another_ok;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 assign es_to_ws_valid_w[1] = nblock;
 assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result, es_pc};
 //assign exm_forward_bus_w = {es_to_ws_valid_w[0],csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result};
 
 assign es_ready = ws_ready; 
+
+reg [1:0] state;
+always @(posedge clk) begin
+    if(reset || flush || my_ok && another_ok) begin
+        state <= 2'b11;
+    end
+    else if(my_ok && !another_ok) begin
+        state <= 2'b01;
+    end
+    else if(!my_ok && another_ok) begin
+        state <= 2'b10;
+    end
+    else begin
+        state <= 2'b00;
+    end
+end
 
 always @(posedge clk) 
 begin
@@ -183,7 +203,7 @@ begin
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD:0] <= es_to_ws_bus_r[`ES_TO_WS_BUS_WD:0];
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1] <= es_to_ws_valid_w[1];
     end 
-    else
+    else if(my_ok && )
     begin 
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus_w;
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;

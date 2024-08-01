@@ -82,7 +82,14 @@ module ID_stage (
   wire instr1_may_jump;
   wire instr0_is_ls;
   wire instr1_is_ls;
-
+  wire instr0_must_single;
+  wire instr1_must_single;
+  wire instr0_is_div;
+  wire instr1_is_div;
+  wire instr0_use_csr_data;
+  wire instr1_use_csr_data;
+  wire [13:0] instr0_csr_addr;
+  wire [13:0] instr1_csr_addr;
 
   ID_decoder ID_decoder0 (
       .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-2:0]),
@@ -98,7 +105,11 @@ module ID_stage (
       .may_jump(instr0_may_jump),
       .is_ls(instr0_is_ls),
 
-      .have_intrpt(have_intrpt)
+      .have_intrpt(have_intrpt),
+      .must_single(instr0_must_single),
+      .is_div(instr0_is_div),
+      .use_csr_data(instr0_use_csr_data),
+      .csr_addr(instr0_csr_addr)
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -113,18 +124,51 @@ module ID_stage (
       .dest(instr1_dest),
       .may_jump(instr1_may_jump),
       .is_ls(instr1_is_ls),
-      .have_intrpt(have_intrpt)
+      .have_intrpt(have_intrpt),
+      .must_single(instr1_must_single),
+      .is_div(instr1_is_div),
+      .use_csr_data(instr1_use_csr_data),
+      .csr_addr(instr1_csr_addr)
   );
 
+    reg [31:0] can_doubles ;
+    reg [31:0] need_singles;
+
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            can_doubles <= 32'h0;    
+        end 
+        else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
+        begin
+            can_doubles <= can_doubles + 32'h1;
+        end   
+    end
+
+    always @(posedge clk) 
+    begin
+        if (rst) 
+        begin
+            need_singles <= 32'h0;
+        end
+        else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
+        begin
+            need_singles <= need_singles + 32'h1;
+        end
+    end
   // 判断发射逻辑
   wire need_single;
-  assign need_single =  instr0_may_jump|
+  assign need_single =  instr1_may_jump & (instr0_is_ls | instr0_is_div) |
                         ((|instr0_dest) & 
-                          instr0_gr_we 
-                        &((instr0_dest==read_addr2 & instr1_use_rj) |
+                          instr0_gr_we  &
+                        ((instr0_dest==read_addr2 & instr1_use_rj) |
                          (instr0_dest==read_addr3 & instr1_use_rkd))) |
-                         instr0_is_ls |instr1_is_ls 
-                         ;
+                         (instr0_is_ls &instr1_is_ls)  |
+                         (instr0_is_div & instr1_is_div) |
+                         (instr1_use_csr_data & instr1_use_csr_data & (instr0_csr_addr == instr1_csr_addr)) |
+                         instr0_must_single | instr1_must_single;
+                        
   assign IF_pop_op[0] = EXE_instr0_valid_w & EXE_ready;
   assign IF_pop_op[1] = EXE_instr1_valid_w & EXE_ready;
   assign EXE_instr0_valid_w = IF_instr0_valid;
@@ -139,9 +183,13 @@ module ID_decoder (
 
     // judge RAW 
     output is_ls,
+    output is_div,
+    output must_single,
     output rg_en,
     output use_rj,
     output use_rkd,
+    output use_csr_data,
+    output [13:0] csr_addr,
     output [4:0] dest,
     output may_jump,
     output [4:0] rf_raddr1,
@@ -271,7 +319,6 @@ module ID_decoder (
   wire        inst_rdcntvh_w;
   wire        inst_rdcntid;
 
-  wire use_csr_data;
   wire csr_wen;
   wire csr_use_mark;
   wire is_etrn;
@@ -516,7 +563,9 @@ module ID_decoder (
   assign use_csr_data = op_31_26_d[6'h01] | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w;
   assign csr_wen = inst_csrwr | inst_csrxchg;
   assign csr_use_mark = inst_csrxchg;
-  assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data |use_div | use_mod;
+  assign is_ls = (|bit_width );
+  assign is_div = use_div | use_mod;
+  assign must_single =  in_excp | have_excp | is_etrn;
  
   assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;
 
