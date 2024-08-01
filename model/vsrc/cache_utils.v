@@ -25,11 +25,10 @@ module replace_rand_2 (
     input       [ 1:0]  way_v,
     input       [ 1:0]  way_d,
     output  reg [ 1:0]  way_replace_en,  // combinational logic
-    output  reg         need_send
+    output              need_send
 );
     wire                selector;
     always @(*) begin
-        need_send = 1'b0;
         case (way_v)
             2'b00: begin
                 way_replace_en = 2'b10;
@@ -73,7 +72,6 @@ module replace_rand_4 (
     reg accu;
 
     always @(*) begin
-        need_send = 1'b0;
         way_replace_en = 4'b0;
         accu = 1'b0;
         for (i = 0; i < 4; i = i + 1) begin
@@ -109,7 +107,7 @@ module replace_lru_4(
     input       [ 0:0]  lru_o0,
     input       [ 1:0]  lru_o1,
     output  reg [ 3:0]  way_replace_en,
-    output  reg         need_send
+    output              need_send
     );
     integer i;
     reg accu;
@@ -126,7 +124,6 @@ module replace_lru_4(
     end
 
     always @(*) begin
-        need_send = 1'b0;
         way_replace_en = 4'b0;
         accu = 1'b0;
         for (i = 0; i < 4; i = i + 1) begin
