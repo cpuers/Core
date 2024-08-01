@@ -41,24 +41,11 @@ module replace_rand_2 (
                 way_replace_en = 2'b01;
             end
             2'b11: begin
-                case (way_d)
-                    2'b00: begin 
-                        way_replace_en = selector ? 2'b10: 2'b01;
-                    end 
-                    2'b01: begin
-                        way_replace_en = 2'b10;
-                    end
-                    2'b10: begin
-                        way_replace_en = 2'b01;
-                    end
-                    2'b11: begin
-                        way_replace_en = selector ? 2'b10: 2'b01;
-                        need_send = 1'b1;
-                    end
-                endcase
+                way_replace_en = selector ? 2'b01 : 2'b10;
             end
         endcase
     end
+    assign need_send = |(way_replace_en & way_d);
 
     reg     [ 2:0]      lsfr;
     always @(posedge clock) begin
@@ -71,6 +58,86 @@ module replace_rand_2 (
         end
     end
     assign selector = lsfr[0];
+endmodule
+
+module replace_rand_4 (
+    input               clock,
+    input               reset,
+    input               en,
+    input       [ 3:0]  way_v,
+    input       [ 3:0]  way_d,
+    output  reg [ 3:0]  way_replace_en,
+    output              need_send
+    );
+    integer i;
+    reg accu;
+
+    always @(*) begin
+        need_send = 1'b0;
+        way_replace_en = 4'b0;
+        accu = 1'b0;
+        for (i = 0; i < 4; i = i + 1) begin
+            way_replace_en[i] = ~accu & ~way_v[i];
+            accu = accu | way_replace_en[i];
+        end
+        if (way_replace_en == 4'b0) begin
+            way_replace_en[lsfr[1:0]] = 1'b1;
+        end
+    end
+    assign need_send = |(way_replace_en & way_d);
+
+    reg         [ 2:0]  lsfr;
+    always @(posedge clock) begin
+        if (reset) begin
+            lsfr <= 3'b1;
+        end else if (en) begin
+            lsfr <= {lsfr[0]^lsfr[1], lsfr[2:1]};
+        end else begin
+            lsfr <= lsfr;
+        end
+    end
+endmodule
+
+module replace_lru_4(
+    /* verilator lint_off UNUSED */
+    input               clock,
+    input               reset,
+    input               en,
+    /* verilator lint_on UNUSED */
+    input       [ 3:0]  way_v,
+    input       [ 3:0]  way_d,
+    input       [ 0:0]  lru_o0,
+    input       [ 1:0]  lru_o1,
+    output  reg [ 3:0]  way_replace_en,
+    output  reg         need_send
+    );
+    integer i;
+    reg accu;
+
+    reg         [ 1:0]  selector;
+
+    always @(*) begin
+        if (lru_o0 ^ ^lru_o1 === 1'bx) begin
+            selector = 2'b0;
+        end else begin
+            selector[1] = lru_o0;
+            selector[0] = lru_o1[lru_o0];
+        end
+    end
+
+    always @(*) begin
+        need_send = 1'b0;
+        way_replace_en = 4'b0;
+        accu = 1'b0;
+        for (i = 0; i < 4; i = i + 1) begin
+            way_replace_en[i] = ~accu & ~way_v[i];
+            accu = accu | way_replace_en[i];
+        end
+        if (way_replace_en == 4'b0) begin
+            way_replace_en[selector] = 1'b1;
+        end
+    end
+    assign need_send = |(way_replace_en & way_d);
 endmodule
 
 module replace_lru_2 (

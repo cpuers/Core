@@ -15,7 +15,6 @@ class Ram {
 private:
     using Q = std::queue<u32>;
     Q m[MEM_SIZE / 4];
-    u32 uc[MEM_SIZE / 4];
 public:
     Ram();
     ~Ram();
