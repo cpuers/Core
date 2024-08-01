@@ -2101,10 +2101,14 @@ module dcache_v4(
     wire wr_buf_accept_req = state_is_lookup && lookup_hit && req_buf_op;
     /// wr_buf_idle
     wire    [31:0]  wr_buf_wdata_mixed;
+    wire    [31:0]  wr_buf_wdata_fwd = 
+        (wr_buf_state_is_write && 
+            ({req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank})) ?
+                wr_buf_wdata : lookup_hit_data;
     wstrb_mixer u_wr_buf_mixer(
         .en         ( 1'b1              ),
         .x          ( req_buf_wdata     ),
-        .y          ( lookup_hit_data   ),
+        .y          ( wr_buf_wdata_fwd  ),
         .wstrb      ( req_buf_awstrb    ),
         .f          ( wr_buf_wdata_mixed)
     );
