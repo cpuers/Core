@@ -1,5 +1,7 @@
 `include "define.vh"
 
+/*Verilator lint_off UNUSED*/
+
 module EXM_stage(
     input                           clk,
     input                           reset,

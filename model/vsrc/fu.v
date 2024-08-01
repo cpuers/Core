@@ -1,4 +1,8 @@
+
+/* verilator lint_off UNUSED */
+
 `include "define.vh"
+
 module Alu(
   input  wire [11:0] alu_op,
   input  wire [31:0] alu_src1,
@@ -104,7 +108,7 @@ assign less = alu_result[0];
 assign zero = ~(|alu_result);
 endmodule
 
-
+/* Verilator lint_off UNUSED */
 module Agu(
     input clk,
     input reset,
@@ -118,8 +122,8 @@ module Agu(
     output dcache_ok,
     input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
-    output excp_ale,
-    input csr_datm
+    output excp_ale
+    , input csr_datm
 );
 
 // reg         wait_rready;

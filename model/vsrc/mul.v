@@ -1,4 +1,8 @@
 
+
+/* Verilator lint_off WIDTH */
+
+
 module mul (
     input [31:0] x,
     input [31:0] y,
@@ -224,6 +228,5 @@ module WallaceTree32(
     assign result = l6 + l6c;
 
 endmodule
-
 
 

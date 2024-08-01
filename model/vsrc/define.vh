@@ -1,3 +1,5 @@
+/*Verilator lint_off UNUSED*/
+
 `ifndef DEFINE_VH
 `define DEFINE_VH
 
