@@ -1362,7 +1362,7 @@ module dcache_v3(
     reg     [31:0]  req_buf_wdata;
     wire    [19:0]  req_buf_tag;
     wire    [ 7:0]  req_buf_idx;
-    wire    [ 3:2]  req_buf_bank;
+    wire    [ 1:0]  req_buf_bank;
     /* verilator lint_off UNUSED */
     wire    [ 1:0]  req_buf_off;
     /* verilator lint_on UNUSED */
@@ -1838,11 +1838,11 @@ module dcache_v4(
     wire    [20:0]  tagv_dina   [0:DCACHE_WAY-1];
     wire    [20:0]  tagv_douta  [0:DCACHE_WAY-1];
 
-    wire            data_ena    [0:DCACHE_WAY-1][ 0:3];
-    wire            data_wea    [0:DCACHE_WAY-1][ 0:3];
-    wire    [ 7:0]  data_addra  [0:DCACHE_WAY-1][ 0:3];
-    wire    [31:0]  data_dina   [0:DCACHE_WAY-1][ 0:3];
-    wire    [31:0]  data_douta  [0:DCACHE_WAY-1][ 0:3];
+    wire            data_ena    [0:DCACHE_WAY-1][ 3:0];
+    wire            data_wea    [0:DCACHE_WAY-1][ 3:0];
+    wire    [ 7:0]  data_addra  [0:DCACHE_WAY-1][ 3:0];
+    wire    [31:0]  data_dina   [0:DCACHE_WAY-1][ 3:0];
+    wire    [31:0]  data_douta  [0:DCACHE_WAY-1][ 3:0];
 
     reg             dirt        [0:DCACHE_WAY-1][0:255];
     wire            dirt_wea    [0:DCACHE_WAY-1];
@@ -1888,7 +1888,7 @@ module dcache_v4(
     reg     [31:0]  req_buf_wdata;
     wire    [19:0]  req_buf_tag;
     wire    [ 7:0]  req_buf_idx;
-    wire    [ 3:2]  req_buf_bank;
+    wire    [ 1:0]  req_buf_bank;
     /* verilator lint_off UNUSED */
     wire    [ 1:0]  req_buf_off;
     /* verilator lint_on UNUSED */
@@ -1950,7 +1950,6 @@ module dcache_v4(
     wire lookup_hit = |lookup_way_hit;
     // assume 2 ways
     reg      [31:0]  lookup_hit_data;    // combinational logic
-    // assign lookup_hit_data = data_douta[0][req_buf_bank];
     always @(*) begin
         lookup_hit_data = 0;
         for (k = 0; k < DCACHE_WAY; k = k + 1) begin
@@ -1984,7 +1983,7 @@ module dcache_v4(
     wire    [31:0]  recv_res    [ 0:3];
     generate
         for (j = 0; j < 3; j = j + 1) begin
-            assign recv_res[j] = recv_buf[j];
+            assign recv_res[j] = (recv_cnt == j) ? ret_data : recv_buf[j];
         end
         assign recv_res[3] = ret_data;
     endgenerate
@@ -2102,10 +2101,14 @@ module dcache_v4(
     wire wr_buf_accept_req = state_is_lookup && lookup_hit && req_buf_op;
     /// wr_buf_idle
     wire    [31:0]  wr_buf_wdata_mixed;
+    wire    [31:0]  wr_buf_wdata_fwd = 
+        (wr_buf_state_is_write && 
+            ({req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank})) ?
+                wr_buf_wdata : lookup_hit_data;
     wstrb_mixer u_wr_buf_mixer(
         .en         ( 1'b1              ),
         .x          ( req_buf_wdata     ),
-        .y          ( lookup_hit_data   ),
+        .y          ( wr_buf_wdata_fwd  ),
         .wstrb      ( req_buf_awstrb    ),
         .f          ( wr_buf_wdata_mixed)
     );
