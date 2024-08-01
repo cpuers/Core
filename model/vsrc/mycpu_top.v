@@ -111,12 +111,25 @@ module core_top (
   wire                           icache_addr_ok;
   wire                           icache_data_ok;
   wire [      `FS_ICACHE_WD-1:0] icache_rdata;
+  wire                           icache_rhit;
   
   wire [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus1;
   wire [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus2;
   wire [`MS_TO_ES_BUS_WD-1:0] ms_to_es_bus;
   wire [`EXM_DCACHE_RD -1:0] dcache_rdata_bus;
   wire [`EXM_DCACHE_WD -1:0] dcache_wdata_bus;
+
+  wire        i_valid_i;
+  wire        d_valid_i;
+  wire        i_ready_i;
+  wire        d_ready_i;
+  wire          wr_buf_empty;
+  wire          stall_uncached_requests;
+  assign stall_uncached_requests = !wr_buf_empty;
+  assign i_valid_i = (iuncached && stall_uncached_requests) ? 1'b0 : if0_valid;
+  assign icache_addr_ok = (iuncached && stall_uncached_requests) ? 1'b0 : i_ready_i;
+  assign d_valid_i = (dcache_uncached && stall_uncached_requests) ? 1'b0 : dcache_valid;
+  assign dcache_ready = (dcache_uncached && stall_uncached_requests) ? 1'b0: d_ready_i;
 
   wire        dcache_valid; 
   wire        dcache_ready;
@@ -130,6 +143,8 @@ module core_top (
   wire        dcache_cacop_en;
   wire [ 1:0] dcache_cacop_code; 
   wire [31:0] dcache_cacop_addr;
+  wire        dcache_rhit;
+  wire        dcache_whit;
 
   wire           inst_rd_req     ;
   wire [ 2:0]    inst_rd_type    ;
@@ -232,18 +247,18 @@ icache_v5 icache_dummy(
     .clock(aclk),
     .reset(reset),
 
-    .valid(if0_valid),      // in cpu, valid no dep on ok;
-    .ready(icache_addr_ok),    // in cache, addr_ok can dep on valid
+    .valid(i_valid_i),      // in cpu, valid no dep on ok;
+    .ready(i_ready_i),    // in cache, addr_ok can dep on valid
     .araddr(iaddr),
     .uncached(iuncached),
 
     .rvalid(icache_data_ok),
     .rdata(icache_rdata),
-    /* verilator lint_off PINCONNECTEMPTY */
-    .rhit(           ),
+    .rhit(icache_rhit),
 
     //TODO
     .cacop_valid(dcache_cacop_en),
+    /* verilator lint_off PINCONNECTEMPTY */
     .cacop_ready(               ),
     /* verilator lint_on PINCONNECTEMPTY */
     .cacop_code(dcache_cacop_code), // code[4:3]
@@ -511,21 +526,21 @@ icache_v5 icache_dummy(
   
       // cpu load / store
       /// common control (c) channel
-      .valid(dcache_valid),
-      .ready(dcache_ready),
+      .valid(d_valid_i),
+      .ready(d_ready_i),
       .op(dcache_op),         // 0: read, 1: write
       .addr(dcache_addr),
       .uncached(dcache_uncached),
       /// read data (r) channel
       .rvalid(dcache_rvalid),
       .rdata(dcache_rdata),
-    /* verilator lint_off PINCONNECTEMPTY */
-      .rhit(            ),
+      .rhit(dcache_rhit),
       /// write address (aw) channel
       .strb(dcache_awstrb),
       /// write data (w) channel
       .wdata(dcache_wdata),
-      .whit(            ),
+      .whit(dcache_whit),
+    /* verilator lint_off PINCONNECTEMPTY */
       .cacop_valid(dcache_cacop_en),
       .cacop_ready(                ),
     /* verilator lint_on PINCONNECTEMPTY */
@@ -617,9 +632,22 @@ icache_v5 icache_dummy(
     .data_wr_wstrb   ( data_wr_wstrb  ),
     .data_wr_data    ( data_wr_data   ),
     .data_wr_rdy     ( data_wr_rdy    ),
-    /* verilator lint_off PINCONNECTEMPTY */
-    .write_buffer_empty () // ?
-    /* verilator lint_off PINCONNECTEMPTY */
+    .write_buffer_empty (wr_buf_empty )
+  );
+
+  perf_counter u_perf(
+    .clock      ( aclk         ),
+    .reset      ( reset         ),
+    .ifetch     (i_valid_i && i_ready_i),
+    .ifetch_hit (icache_rhit),
+    .load       (d_valid_i && d_ready_i && !dcache_op),
+    .load_hit   (dcache_rhit),
+    .store      (d_valid_i && d_ready_i &&  dcache_op),
+    .store_hit  (dcache_whit),
+    // TODO
+    .jump       (1'b0       ),
+    .jump_correct (1'b0     ),
+    .jump_correct_target (1'b0)
   );
 
 
