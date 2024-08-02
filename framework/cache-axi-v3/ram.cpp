@@ -1,8 +1,9 @@
 #include <cache.hpp>
 #include <common.hpp>
+#include <cstdlib>
 #include <ram.hpp>
 
-static u32 mem[MEM_SIZE / 4];
+static u32 *mem = nullptr;
 
 extern "C" 
 void pmem_read(const u32 addr, u32 *rdata) {
@@ -24,12 +25,14 @@ void pmem_write(const u32 addr, const u32 data, const u8 wstrb) {
 }
 
 Ram::Ram() {
+    mem = (u32 *)malloc(MEM_SIZE);
     for (u32 i = 0; i < MEM_SIZE / 4; i ++) {
         m[i].push(i);
         mem[i] = i;
     }
 }
-Ram::~Ram() {}
+Ram::~Ram() {
+}
 
 bool Ram::ircheck(u32 addr, ir_t rdata, set<ir_t>& s) {
     u32 a = (addr / 16) * 4 % (MEM_SIZE / 4);

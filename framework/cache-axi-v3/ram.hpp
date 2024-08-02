@@ -6,7 +6,7 @@
 #include <array>
 #include <queue>
 
-#define MEM_SIZE 65536 // bytes
+#define MEM_SIZE 4 * 1024 * 1024 // bytes
 #define UNCACHED_SIZE 32768 // bytes
 static_assert((MEM_SIZE & (MEM_SIZE - 1)) == 0, "MEM_SIZE must be power of 2.");
 static_assert(((UNCACHED_SIZE & (UNCACHED_SIZE - 1)) == 0), "UNCACHED_SIZE must be power of 2.");

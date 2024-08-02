@@ -270,10 +270,10 @@ public:
     }
 };
 
-bool step_and_check(Dut &dut, Ram &ram) {
+bool step_and_check(Dut &dut, Ram *ram) {
     dut.step();
     while (auto t = dut.receive()) {
-        if (!t->check(&ram)) {
+        if (!t->check(ram)) {
             delete t;
             return false;
         }
@@ -283,8 +283,8 @@ bool step_and_check(Dut &dut, Ram &ram) {
 }
 
 int main(int argc, char **argv, char **envp) {
-    Ram ram;
-    Dut dut(argc, argv, &ram);
+    Ram *ram = new Ram();
+    Dut dut(argc, argv, ram);
     dut.reset(10);
     Testbench tb(argc, argv);
     for (auto t : tb.tests()) {
@@ -311,5 +311,6 @@ int main(int argc, char **argv, char **envp) {
             return 1;
         }
     }
+    delete ram;
     return 0;
 }

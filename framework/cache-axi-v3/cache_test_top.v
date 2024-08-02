@@ -262,7 +262,7 @@ module cache_test_top (
     // https://github.com/alexforencich/verilog-axi
     // MIT License
     axi_ram #(
-        .ADDR_WIDTH     ( 16            ),
+        .ADDR_WIDTH     ( 24            ),
         .DATA_WIDTH     ( 32            ),
         .ID_WIDTH       ( 4             )
     ) u_axi_ram(
@@ -270,7 +270,7 @@ module cache_test_top (
         .rst            ( reset       ),
         
         .s_axi_awid     ( axi_awid    ),
-        .s_axi_awaddr   ( axi_awaddr[15:0] ),
+        .s_axi_awaddr   ( axi_awaddr[23:0] ),
         .s_axi_awlen    ( axi_awlen   ),
         .s_axi_awsize   ( axi_awsize  ),
         .s_axi_awburst  ( axi_awburst ),
@@ -289,7 +289,7 @@ module cache_test_top (
         .s_axi_bvalid   ( axi_bvalid  ),
         .s_axi_bready   ( axi_bready  ),
         .s_axi_arid     ( axi_arid    ),
-        .s_axi_araddr   ( axi_araddr[15:0] ),
+        .s_axi_araddr   ( axi_araddr[23:0] ),
         .s_axi_arlen    ( axi_arlen   ),
         .s_axi_arsize   ( axi_arsize  ),
         .s_axi_arburst  ( axi_arburst ),
