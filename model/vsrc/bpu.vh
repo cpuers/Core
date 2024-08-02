@@ -13,10 +13,10 @@
 `define BPU_LINE_TAG2 30:20
 
 
-`define BTB_TYPE 42:41
+`define BTB_TYPE 31:30
 `define BTB_TAG 40:30
 `define BTB_TARGET 29:0
-`define BTB_LINE_SIZE 43  //type2, tag11, target30
+`define BTB_LINE_SIZE 32  //type2, tag11, target30
 
 `define BTB_IDX_SIZE 7
 `define BTB_TAG_SIZE 11
