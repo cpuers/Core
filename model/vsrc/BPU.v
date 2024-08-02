@@ -71,16 +71,14 @@ module BPU (
   wire [`BPU_IDX_SZIE-1:0] widx2;  
   wire [`BPU_TAG_SIZE-1:0] wtag2;
 
-  // reg [31:0] debug_pc1;
-  // reg [31:0] debug_pc2;
-  // reg f1;
-  // reg f2;
   wire jump_valid1;
   wire jump_valid2;
 
   reg [`QUEUE_LINE_SIZE-1:0] jump_history [0:`QUEUE_SZIE-1];
   reg [`QUEUE_IDX_SZIE-1:0] qtop;
   reg [`QUEUE_IDX_SZIE-1:0] qtail;
+
+  reg ghr;
 
   assign {in_excp1, is_etrn1, es_pc1, may_jump1, need_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
   assign {in_excp2, is_etrn2, es_pc2, may_jump2, need_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
@@ -176,7 +174,7 @@ module BPU (
     else begin
       push =1 'b0;
     end
-    if(jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] || jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2]) begin
+    if(jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && !bpu_flush1 || jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && !bpu_flush) begin
       pop = 1'b1;
     end
     else begin
