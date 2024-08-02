@@ -9,6 +9,7 @@ module BPU (
     output reg [31:0] next_pc,
     output reg [ 3:0] pc_is_jump,
     output reg [ 3:0] pc_valid,
+    input install,
     //exe
     input [`BPU_ES_BUS_WD-1:0] bpu_es_bus1,
     input [`BPU_ES_BUS_WD-1:0] bpu_es_bus2,
@@ -39,9 +40,9 @@ module BPU (
   wire pre_fail2;
   wire [31:0] right_target2;
   wire [1:0] jump_type2;
-  // wire flush1;
-  // wire flush2;
-  // wire flush;
+  wire flush1;
+  wire flush2;
+  wire flush;
 
   //reg [`BPU_NUM-1:0] ras_valid;
   reg                      bpu_valid [0:`BPU_SIZE-1];
@@ -80,9 +81,9 @@ module BPU (
 
   reg ghr;
 
-  assign {in_excp1, is_etrn1, es_pc1, may_jump1, need_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
-  assign {in_excp2, is_etrn2, es_pc2, may_jump2, need_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
-  //assign flush = flush1 | flush2;
+  assign {flush1, in_excp1, is_etrn1, es_pc1, may_jump1, need_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
+  assign {flush2, in_excp2, is_etrn2, es_pc2, may_jump2, need_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
+  assign flush = flush1 | flush2;
   assign jump_valid1 = may_jump1 && !is_etrn1 && !in_excp1;
   assign jump_valid2 = may_jump2 && !is_etrn2 && !in_excp2;
   
@@ -172,7 +173,7 @@ module BPU (
       push = 1'b1;
     end
     else begin
-      push =1 'b0;
+      push = 1'b0;
     end
     if(jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && !bpu_flush1 || jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && !bpu_flush) begin
       pop = 1'b1;
@@ -201,20 +202,28 @@ module BPU (
     end
     else 
     begin
-      pop_r <= pop;
-      if(!pop && pop_r) begin
-        if(qtop == 4'b1111) begin
-          qtop <= 0;
-        end else begin
-          qtop <= qtop + `QUEUE_IDX_SZIE'b1;
-        end
+      if(flush || bpu_flush) begin
+        //qtail <= qtop;
+        //qtop <= 0;
+        //qtail <= 0;
       end
-      push_r <= push;
-      if(!push && push_r) begin
-        if(qtail == 4'b1111) begin
-          qtail <= 0;
-        end else begin
-          qtail <= qtail + `QUEUE_IDX_SZIE'b1;
+      else begin
+        pop_r <= pop;
+        if(!pop && pop_r) begin
+          if(qtop == 4'b1111) begin
+            qtop <= 0;
+          end else begin
+            qtop <= qtop + `QUEUE_IDX_SZIE'b1;
+          end
+        end
+      
+        //push_r <= push;
+        if(push && !install) begin
+          if(qtail == 4'b1111) begin
+            qtail <= 0;
+          end else begin
+            qtail <= qtail + `QUEUE_IDX_SZIE'b1;
+          end
         end
       end
 

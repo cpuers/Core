@@ -125,9 +125,9 @@ module srt_divider (
                         rem <= dividend;
                         Q <= 32'd0;
                     end begin
-                        S  <= {1'b0  , S    << s_zero};
-                        D  <= {D[31] , D    << d_zero};
-                        mD <= {~D[31], (-D) << d_zero};
+                        S  <= S    << s_zero;
+                        D  <= D    << d_zero;
+                        mD <= (-D) << d_zero;
                         posQ    <= 32'd0;
                         negQ    <= 32'd0;
                         shifter <= s_zero;
@@ -169,8 +169,8 @@ module srt_divider (
                             end
                             2'b00: begin
                                 S    <= {S[31:0],    1'b0};
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b0};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b01: begin: q_1
                                 S    <= {SpmD[31:0], 1'b0};
@@ -343,16 +343,16 @@ module leading0_detector(
         default: begin // 31~16
             case(x[31:24])
                 8'd0: begin // 23~16
-                    case(x[23:16])
+                    case(x[23:20])
                         4'd0: begin // 19~16
-                            case(x[19:16])
+                            case(x[19:18])
                             2'b00: begin // 17~16
-                                if(x[17] == 1'b1) zero_count = 6'd15;
-                                else zero_count = 6'd14;
+                                if(x[17] == 1'b1) zero_count = 6'd14;
+                                else zero_count = 6'd15;
                             end
-                            default:begin // 18~19
-                                if(x[18] == 1'b1) zero_count = 6'd13;
-                                else zero_count = 6'd12;
+                            default:begin // 19~18
+                                if(x[19] == 1'b1) zero_count = 6'd12;
+                                else zero_count = 6'd13;
                             end
                             endcase
                         end

@@ -219,6 +219,7 @@ module core_top (
   wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
   wire                      bpu_flush;
   wire [              31:0] bpu_jump_pc;
+  wire                      bpu_install;
 
   assign need_jump = br_bus1[32] | br_bus2[32] | bpu_flush;
   assign jump_pc = bpu_flush ? bpu_jump_pc : (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
@@ -233,7 +234,8 @@ module core_top (
     .bpu_es_bus1(bpu_es_bus1),
     .bpu_es_bus2(bpu_es_bus2),
     .bpu_flush(bpu_flush),
-    .bpu_jump_pc(bpu_jump_pc)
+    .bpu_jump_pc(bpu_jump_pc),
+    .install(bpu_install)
   );
   icache_v5 icache_dummy(
       .clock(aclk),
@@ -287,7 +289,8 @@ module core_top (
       .pc_to_PBU  (if0_pc),
       .pc_is_jump (pbu_pc_is_jump),
       .pc_valid   (pbu_pc_valid),
-      .pre_nextpc (pbu_next_pc)
+      .pre_nextpc (pbu_next_pc),
+      .install    (bpu_install)
   );
   IF_stage1 IF_stage1 (
       .clk(aclk),
