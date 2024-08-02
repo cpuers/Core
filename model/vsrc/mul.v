@@ -1,5 +1,6 @@
 
 module mul (
+    input clk,
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
@@ -10,10 +11,18 @@ module mul (
     wire [63:0] result;
     assign mul_result = use_high ? result[63:32] : result[31:0];
 
+    reg [31:0] rx, ry;
+    reg rmul_signed;
+    always @(posedge clk) begin
+        rx <= x;
+        ry <= y;
+        rmul_signed <= mul_signed;
+    end
+    
     WallaceTree32 mywt(
-        .x(x),
-        .y(y),
-        .mul_signed(mul_signed),
+        .x(rx),
+        .y(ry),
+        .mul_signed(rmul_signed),
         .result(result)
     );  
 
