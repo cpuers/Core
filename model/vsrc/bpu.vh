@@ -19,3 +19,7 @@
 `define BTB_TARGET 29:0
 
 `define RAS_LINE_SIZE 30
+
+`define QUEUE_LINE_SIZE 30
+`define QUEUE_SZIE 16
+`define QUEUE_IDX_SZIE 4

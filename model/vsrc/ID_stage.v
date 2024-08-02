@@ -520,7 +520,7 @@ module ID_decoder (
   assign use_csr_data = op_31_26_d[6'h01] | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w;
   assign csr_wen = inst_csrwr | inst_csrxchg;
   assign csr_use_mark = inst_csrxchg;
-  assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data;
+  assign is_ls = (|bit_width )| in_excp | have_excp | is_etrn | use_csr_data|use_mod | use_div;
  
   assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;
 

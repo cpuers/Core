@@ -168,8 +168,6 @@ module core_top (
 
   assign {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
           dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = dcache_wdata_bus;
-  assign need_jump = (br_bus1[32]) ? br_bus1[32] : (br_bus2[32]) ? br_bus2[32] : 1'b0;
-  assign jump_pc = (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
   
   wire [  4*`IB_DATA_BUS_WD-1:0] if1_to_ib;
   wire [       `IB_WIDTH_LOG2:0] can_push_size;
@@ -219,6 +217,11 @@ module core_top (
 
   wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus1;
   wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
+  wire                      bpu_flush;
+  wire [              31:0] bpu_jump_pc;
+
+  assign need_jump = br_bus1[32] | br_bus2[32] | bpu_flush;
+  assign jump_pc = bpu_flush ? bpu_jump_pc : (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
 
   BPU BPU (
     .clk(aclk),
@@ -228,7 +231,9 @@ module core_top (
     .pc_is_jump(pbu_pc_is_jump),
     .pc_valid(pbu_pc_valid),
     .bpu_es_bus1(bpu_es_bus1),
-    .bpu_es_bus2(bpu_es_bus2)
+    .bpu_es_bus2(bpu_es_bus2),
+    .bpu_flush(bpu_flush),
+    .bpu_jump_pc(bpu_jump_pc)
   );
   icache_v5 icache_dummy(
       .clock(aclk),
@@ -263,7 +268,7 @@ module core_top (
   );
   IF_stage0 IF_stage0 (
       .clk      (aclk),
-      .flush_IF (flush_IF1 | flush_IF2),
+      .flush_IF (flush_IF1 | flush_IF2 | bpu_flush),
       .rst      (reset),
       // jump_signal
       .need_jump(need_jump),
@@ -287,7 +292,7 @@ module core_top (
   IF_stage1 IF_stage1 (
       .clk(aclk),
       .rst(reset),
-      .flush_IF(flush_IF1 | flush_IF2),
+      .flush_IF(flush_IF1 | flush_IF2 | bpu_flush),
       .if0_if1_bus(if0_if1_bus),
 
       .if1_to_ib(if1_to_ib),
@@ -301,7 +306,7 @@ module core_top (
   InstrBuffer InstrBuffer (
       .clk(aclk),
       .rst(reset),
-      .flush(flush_IF1 | flush_IF2),
+      .flush(flush_IF1 | flush_IF2 | bpu_flush),
       .if1_to_ib(if1_to_ib),
       .push_num(push_num),
       .pop_op(IB_pop_op),
@@ -371,7 +376,7 @@ module core_top (
       .EXE_instr0_valid(ds_to_es_valid1),
       .EXE_instr1_valid(ds_to_es_valid2),
       .EXE_ready       (es_ready1 & es_ready2),
-      .flush_ID        (flush_ID1 | flush_ID2),
+      .flush_ID        (flush_ID1 | flush_ID2 | bpu_flush),
       //for regfile
       .read_addr0      (read_addr0),
       .read_addr1      (read_addr1),
