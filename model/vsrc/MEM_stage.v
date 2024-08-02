@@ -10,7 +10,9 @@ module MEM_stage(
     
     input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
-    input csr_datm
+    input csr_datm,
+    input flush,
+    output excp_ale
 );
 reg [31:0] mem_addr;
 reg        is_unsigned;
@@ -20,7 +22,7 @@ reg [3:0]  bit_width;
 reg [31:0] wdata;
 wire [31:0] mem_result;
 wire        dcache_ok;
-wire        excp_ale;
+//wire        excp_ale;
 
 reg [31:0] ms_pc;
 
@@ -81,16 +83,16 @@ always @(*) begin
     end 
 end
 
-assign ms_to_es_bus = {excp_ale, dcache_ok, mem_result};
+assign ms_to_es_bus = {dcache_ok, mem_result};
 
 Agu u_agu(
     .clk                (clk),
     .reset              (reset),
     .mem_addr           (mem_addr),
     .is_unsigned        (is_unsigned),
-    .mem_we             (mem_we),
+    .mem_we             (mem_we & ~flush),
     .bit_width          (bit_width),
-    .mem_rd             (mem_rd),
+    .mem_rd             (mem_rd & ~flush),
     .wdata              (wdata),
     .mem_result         (mem_result),
     .dcache_ok          (dcache_ok),

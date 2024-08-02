@@ -15,6 +15,7 @@ module EXM_stage(
     //for MEM
     output [`ES_TO_MS_BUS_WD - 1:0] es_to_ms_bus,
     input  [`MS_TO_ES_BUS_WD - 1:0] ms_to_es_bus,
+    input excp_ale,
     //for div
     output [`ES_TO_DIV_BUS_MD -1:0] es_to_div_bus,
     input  [`DIV_TO_ES_BUS_MD -1:0] div_to_es_bus,
@@ -26,6 +27,7 @@ module EXM_stage(
     output [      `BR_BUS_WD - 1:0] br_bus,
     output                          flush_IF,
     output                          flush_ID,
+    input                           flush_ES,
 
     output [     `CSR_BUS_WD - 1:0] csr_bus,
     input                           jump_excp_fail,
@@ -36,7 +38,6 @@ module EXM_stage(
 
     input another_ok,
     output my_ok
-    
 
 );
 
@@ -118,11 +119,15 @@ wire [                 1:0] es_to_ws_valid_w;
 wire [`ES_TO_WS_BUS_WD-1:0] es_to_ws_bus_w;
 reg  [`ES_TO_WS_BUS_WD+1:0] es_to_ws_bus_r;
 wire                        dcache_ok;
-wire                        excp_ale;
 
 wire [1:0] forw_rj;
 wire [1:0] forw_rkd;
 wire [1:0] forw_csr;
+
+wire cal_valid;
+reg  [31:0] temp_r;
+reg [1:0] state;
+wire wait_another;
 
 assign {
     in_excp_t, //1   例外
@@ -166,47 +171,79 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign my_ok = (!jump_excp_fail & dcache_ok & div_ok) || ~ds_to_es_valid;
-assign nblock = ((!jump_excp_fail & dcache_ok & div_ok) || ~ds_to_es_valid) && another_ok;
+assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) ) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
+assign nblock = my_ok;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
-assign es_to_ws_valid_w[1] = nblock;
+//assign es_to_ws_valid_w[1] =  state==idle || (state==wait_an_state&&another_ok) || (state==wait_me_state&&my_ok&&another_ok);
+assign es_to_ws_valid_w[1] = another_ok && my_ok;
 assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result, es_pc};
 //assign exm_forward_bus_w = {es_to_ws_valid_w[0],csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result};
 
 assign es_ready = ws_ready; 
 
-reg [1:0] state;
+localparam wait_me_state = 2'b01;
+localparam wait_an_state = 2'b10;
+localparam idle = 2'b00;
+
+assign wait_another = (state==wait_an_state);
+assign cal_valid = ds_to_es_valid && !(wait_another);
+
 always @(posedge clk) begin
-    if(reset || flush || my_ok && another_ok) begin
-        state <= 2'b11;
+    if(reset || flush_ES) begin
+        state <= idle;
     end
-    else if(my_ok && !another_ok) begin
-        state <= 2'b01;
+    else if(state== idle) begin
+        if(!my_ok) 
+        begin
+            state <= wait_me_state;
+        end
+        else // my_ok = 1 
+        begin
+            if(!another_ok) 
+            begin
+                state <= wait_an_state;
+                temp_r <= final_result;
+            end
+            else  
+            begin
+                state <= idle;
+            end
+        end
     end
-    else if(!my_ok && another_ok) begin
-        state <= 2'b10;
+    else if(state==wait_an_state && another_ok)
+    begin
+         state <= idle;
     end
-    else begin
-        state <= 2'b00;
+    else if(state==wait_me_state && my_ok) begin
+        if(another_ok)
+        begin
+            state <= idle;
+        end
+        else
+        begin
+            state <= wait_an_state;
+            temp_r <= final_result;
+        end
     end
+
 end
 
 always @(posedge clk) 
 begin
-    if (reset) 
+    if (reset|flush_ES) 
     begin
       es_to_ws_bus_r <= 0;
-      es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1]<=1'b1;
+      //es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1]<=1'b1;
     end 
     else if(!ws_ready)
     begin
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD:0] <= es_to_ws_bus_r[`ES_TO_WS_BUS_WD:0];
       es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1] <= es_to_ws_valid_w[1];
     end 
-    else if(my_ok && )
+    else
     begin 
-      es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus_w;
-      es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
+        es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0] <= es_to_ws_bus_w;
+        es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
     end
 
     // if(reset) begin
@@ -246,11 +283,11 @@ assign rkd_value = forw_rkd[1]? forward_data2[31:0] : forw_rkd[0]? forward_data1
 assign src1 = src1_is_pc ? es_pc : rj_value;
 assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 
-assign final_result = use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
+assign final_result = (state==wait_an_state && another_ok) ? temp_r : use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
 //for mem
-assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid&!in_excp_t, res_from_mem&ds_to_es_valid&!in_excp_t, bit_width, rkd_value, es_pc};
-assign {excp_ale, dcache_ok, mem_result} = ms_to_es_bus;
+assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&&cal_valid&&!in_excp_t, res_from_mem&cal_valid&!in_excp_t, bit_width, rkd_value, es_pc};
+assign {dcache_ok, mem_result} = ms_to_es_bus;
 
 //flush: jump or excp or etrn 
 assign flush = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
@@ -269,7 +306,7 @@ assign bad_addr = (in_excp_t) ? bad_addr_t : alu_result;
 assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc,use_badv, bad_addr};
 
 //for div
-assign es_to_div_bus = {use_div && ds_to_es_valid && !in_excp_t, use_mod, is_unsigned, src1, src2};
+assign es_to_div_bus = {use_div && cal_valid && !in_excp_t , use_mod, is_unsigned, src1, src2};
 assign {div_result, div_ok} = div_to_es_bus;
 
 Alu u_alu (

@@ -20,7 +20,9 @@ module ID_stage (
     output EXE_instr0_valid,
     output EXE_instr1_valid,
     input EXE_ready,
-    input flush_ID,
+    input flush_ID1,
+    input flush_ID2,
+    input instr1_ok,
 
     input have_intrpt,
 
@@ -45,21 +47,34 @@ module ID_stage (
   reg [`DS_TO_ES_BUS_WD:0] EXE_instr1_r;
   always @(posedge clk) 
   begin
-    if (rst | flush_ID) 
+    if (rst | flush_ID1 | (flush_ID2 &instr1_ok) ) 
     begin
-      EXE_instr0_r <= {1'b0,`DS_TO_ES_BUS_WD'h0};
-      EXE_instr1_r <= {1'b0,`DS_TO_ES_BUS_WD'h0};
+      EXE_instr0_r[`DS_TO_ES_BUS_WD]<= 1'b0;
     end 
     else if (!EXE_ready) 
     begin
       EXE_instr0_r <= EXE_instr0_r;
-      EXE_instr1_r <= EXE_instr1_r;  
     end
     else 
     begin
       EXE_instr0_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr0_w;
-      EXE_instr1_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr1_w;
       EXE_instr0_r[`DS_TO_ES_BUS_WD] <= EXE_instr0_valid_w;
+    end
+  end
+
+  always @(posedge clk) 
+  begin
+    if (rst | flush_ID1 | flush_ID2) 
+    begin
+      EXE_instr1_r[`DS_TO_ES_BUS_WD]<= 1'b0;
+    end 
+    else if (!EXE_ready) 
+    begin
+      EXE_instr1_r <= EXE_instr1_r;  
+    end
+    else 
+    begin
+      EXE_instr1_r[`DS_TO_ES_BUS_WD-1:0] <= EXE_instr1_w;
       EXE_instr1_r[`DS_TO_ES_BUS_WD] <= EXE_instr1_valid_w;
     end
   end
@@ -131,42 +146,42 @@ module ID_stage (
       .csr_addr(instr1_csr_addr)
   );
 
-    reg [31:0] can_doubles ;
-    reg [31:0] need_singles;
+    // reg [31:0] can_doubles ;
+    // reg [31:0] need_singles;
 
-    always @(posedge clk ) 
-    begin
-        if (rst) 
-        begin
-            can_doubles <= 32'h0;    
-        end 
-        else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
-        begin
-            can_doubles <= can_doubles + 32'h1;
-        end   
-    end
+    // always @(posedge clk ) 
+    // begin
+    //     if (rst) 
+    //     begin
+    //         can_doubles <= 32'h0;    
+    //     end 
+    //     else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
+    //     begin
+    //         can_doubles <= can_doubles + 32'h1;
+    //     end   
+    // end
 
-    always @(posedge clk) 
-    begin
-        if (rst) 
-        begin
-            need_singles <= 32'h0;
-        end
-        else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
-        begin
-            need_singles <= need_singles + 32'h1;
-        end
-    end
+    // always @(posedge clk) 
+    // begin
+    //     if (rst) 
+    //     begin
+    //         need_singles <= 32'h0;
+    //     end
+    //     else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
+    //     begin
+    //         need_singles <= need_singles + 32'h1;
+    //     end
+    // end
   // 判断发射逻辑
   wire need_single;
-  assign need_single =  instr1_may_jump & (instr0_is_ls | instr0_is_div) |
+  assign need_single =  (instr0_is_ls | instr0_is_div) |
                         ((|instr0_dest) & 
                           instr0_gr_we  &
                         ((instr0_dest==read_addr2 & instr1_use_rj) |
                          (instr0_dest==read_addr3 & instr1_use_rkd))) |
                          (instr0_is_ls &instr1_is_ls)  |
                          (instr0_is_div & instr1_is_div) |
-                         (instr1_use_csr_data & instr1_use_csr_data & (instr0_csr_addr == instr1_csr_addr)) |
+                         (instr0_use_csr_data  | instr1_use_csr_data ) |
                          instr0_must_single | instr1_must_single;
                         
   assign IF_pop_op[0] = EXE_instr0_valid_w & EXE_ready;
@@ -617,8 +632,9 @@ module ID_decoder (
   };
 
   assign rg_en = gr_we;
-  assign use_rkd = ~(src2_is_4 | src2_is_imm);
+  assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;
   assign use_rj = use_rj_value | ~src1_is_pc;
+  assign csr_addr = csr_num;
 endmodule
 module decoder_2_4(
     input  wire [ 1:0] in,

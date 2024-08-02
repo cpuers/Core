@@ -85,13 +85,13 @@ assign forward_data2 = {es_to_ws_valid2[0], es_to_ws_bus2[`ES_TO_WS_BUS_WD - 1:3
 
 assign ws_ready = nblock1 && nblock2; // es_to_ws_valid1[1] & es_to_ws_valid2[1]; //nblock1 && nblock2; //1'b1;//(es_to_ws_valid1 && es_to_ws_valid2);
 
-assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1];
+assign debug1_gr_we = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0];
 assign rf_we1    = ws_gr_we1 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && ~(~|(ws_dest1 ^ ws_dest2) && rf_we2);
 assign rf_waddr1 = ws_dest1;
 assign rf_wdata1 = ws_final_result1;
 
-assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1] && es_to_ws_valid2[0];
-assign rf_we2    = ws_gr_we2 && es_to_ws_valid1[1] && es_to_ws_valid1[0] && es_to_ws_valid2[1] && es_to_ws_valid2[0];
+assign debug2_gr_we = ws_gr_we2 && es_to_ws_valid2[1] && es_to_ws_valid2[0];
+assign rf_we2    = ws_gr_we2 &&  es_to_ws_valid2[1] && es_to_ws_valid2[0];
 assign rf_waddr2 = ws_dest2;
 assign rf_wdata2 = ws_final_result2;
 

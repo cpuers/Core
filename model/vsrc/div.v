@@ -5,7 +5,8 @@ module DIV_top(
     input reset,
     input [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus1,
     input [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus2,
-    output [`DIV_TO_ES_BUS_MD-1:0] div_to_es_bus
+    output [`DIV_TO_ES_BUS_MD-1:0] div_to_es_bus,
+    input flush
 );
 
     wire use_div1;
@@ -56,7 +57,7 @@ module DIV_top(
     div u_div(
         .div_clk(clk),
         .reset(reset),
-        .div(use_div),
+        .div(use_div & ~flush),
         .div_signed(!is_unsigned),
         .x(x),
         .y(y),

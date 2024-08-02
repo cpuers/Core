@@ -116,6 +116,7 @@ module core_top (
   wire [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus1;
   wire [`ES_TO_MS_BUS_WD-1:0] es_to_ms_bus2;
   wire [`MS_TO_ES_BUS_WD-1:0] ms_to_es_bus;
+  wire                        excp_ale;
   wire [`EXM_DCACHE_RD -1:0] dcache_rdata_bus;
   wire [`EXM_DCACHE_WD -1:0] dcache_wdata_bus;
 
@@ -236,6 +237,8 @@ module core_top (
   wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus1;
   wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus2;
   wire [`DIV_TO_ES_BUS_MD-1:0] div_to_es_bus;
+  wire es_ok1;
+  wire es_ok2;
 
   BPU BPU (
       .pc(if0_pc),
@@ -387,7 +390,9 @@ icache_v5 icache_dummy(
       .EXE_instr0_valid(ds_to_es_valid1),
       .EXE_instr1_valid(ds_to_es_valid2),
       .EXE_ready       (es_ready1 & es_ready2),
-      .flush_ID        (flush_ID1 | flush_ID2),
+      .flush_ID1        (flush_ID1),
+      .flush_ID2        (flush_ID2),
+      .instr1_ok        (es_ok1),
       //for regfile
       .read_addr0      (read_addr0),
       .read_addr1      (read_addr1),
@@ -416,6 +421,7 @@ icache_v5 icache_dummy(
 
       .es_to_ms_bus   (es_to_ms_bus1),
       .ms_to_es_bus   (ms_to_es_bus),
+      .excp_ale       (excp_ale),
 
       .es_to_div_bus  (es_to_div_bus1),
       .div_to_es_bus  (div_to_es_bus),
@@ -426,13 +432,17 @@ icache_v5 icache_dummy(
       .br_bus        (br_bus1),
       .flush_IF      (flush_IF1),
       .flush_ID      (flush_ID1),
+      .flush_ES      (1'b0),
 
       .csr_bus       (csr_bus1),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
       .excp_pc(excp_pc),
       .csr_addr(csr_addr1),
-      .csr_rdata_t(csr_data1)
+      .csr_rdata_t(csr_data1),
+
+      .my_ok(es_ok1),
+      .another_ok(es_ok2)
 
   );
   EXM_stage EXM_stage2 (
@@ -450,6 +460,7 @@ icache_v5 icache_dummy(
 
       .es_to_ms_bus   (es_to_ms_bus2),
       .ms_to_es_bus   (ms_to_es_bus),
+      .excp_ale       (excp_ale),
 
       .es_to_div_bus  (es_to_div_bus2),
       .div_to_es_bus  (div_to_es_bus),
@@ -460,13 +471,17 @@ icache_v5 icache_dummy(
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
       .flush_ID      (flush_ID2),
+      .flush_ES      (flush_IF1),
 
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
       .excp_jump(excp_jump),
       .excp_pc(excp_pc),
       .csr_addr(csr_addr2),
-      .csr_rdata_t(csr_data2)
+      .csr_rdata_t(csr_data2),
+
+      .my_ok(es_ok2),
+      .another_ok(es_ok1)
 
   );
 
@@ -478,7 +493,9 @@ icache_v5 icache_dummy(
       .ms_to_es_bus     (ms_to_es_bus),
       .dcache_rdata_bus (dcache_rdata_bus),
       .dcache_wdata_bus (dcache_wdata_bus),
-      .csr_datm(csr_datm)
+      .csr_datm(csr_datm),
+      .flush(flush_IF1),
+      .excp_ale(excp_ale)
   );
 
   DIV_top DIV_top (
@@ -486,7 +503,8 @@ icache_v5 icache_dummy(
     .reset(reset),
     .es_to_div_bus1(es_to_div_bus1),
     .es_to_div_bus2(es_to_div_bus2),
-    .div_to_es_bus(div_to_es_bus)
+    .div_to_es_bus(div_to_es_bus),
+    .flush(flush_IF1)
   );
 
   WB_stage wb_stage (
@@ -635,20 +653,20 @@ icache_v5 icache_dummy(
     .write_buffer_empty (wr_buf_empty )
   );
 
-  perf_counter u_perf(
-    .clock      ( aclk         ),
-    .reset      ( reset         ),
-    .ifetch     (i_valid_i && i_ready_i),
-    .ifetch_hit (icache_rhit),
-    .load       (d_valid_i && d_ready_i && !dcache_op),
-    .load_hit   (dcache_rhit),
-    .store      (d_valid_i && d_ready_i &&  dcache_op),
-    .store_hit  (dcache_whit),
-    // TODO
-    .jump       (1'b0       ),
-    .jump_correct (1'b0     ),
-    .jump_correct_target (1'b0)
-  );
+//   perf_counter u_perf(
+//     .clock      ( aclk         ),
+//     .reset      ( reset         ),
+//     .ifetch     (i_valid_i && i_ready_i),
+//     .ifetch_hit (icache_rhit),
+//     .load       (d_valid_i && d_ready_i && !dcache_op),
+//     .load_hit   (dcache_rhit),
+//     .store      (d_valid_i && d_ready_i &&  dcache_op),
+//     .store_hit  (dcache_whit),
+//     // TODO
+//     .jump       (1'b0       ),
+//     .jump_correct (1'b0     ),
+//     .jump_correct_target (1'b0)
+//   );
 
 
 endmodule
