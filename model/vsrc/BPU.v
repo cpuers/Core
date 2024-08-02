@@ -17,8 +17,8 @@ module BPU (
     output bpu_flush,
     output [31:0] bpu_jump_pc
 );
-  reg [15:0] num_need;
-  reg [15:0] num_succ;
+  reg [31:0] num_need;
+  reg [31:0] num_succ;
   //assign next_pc = (pc + 31'd16) & 32'hfffffff0;
   //assign pc_is_jump = 4'b00;
   //assign pc_valid = 4'b1111;
@@ -45,41 +45,41 @@ module BPU (
   wire flush;
 
   //reg [`BPU_NUM-1:0] ras_valid;
-  reg                      bpu_valid [0:`BPU_SIZE-1];
-  reg [`PHT_LINE_SIZE-1:0] pht [0:`BPU_SIZE-1];
-  reg [`BTB_LINE_SIZE-1:0] btb [0:`BPU_SIZE-1];
+  reg                      bpu_valid [0:`BTB_SIZE-1];
+  reg [`PHT_LINE_SIZE-1:0] pht [0:`PHT_SIZE-1];
+  reg [`BTB_LINE_SIZE-1:0] btb [0:`BTB_SIZE-1];
 
   reg [`RAS_LINE_SIZE-1:0] ras [0:`RAS_SIZE-1];
   reg [`RAS_IDX_SIZE-1:0] num_ras;
   reg pop;
   reg pop_r;
   reg push;
-  reg push_r;
 
   wire bpu_flush1;
   wire bpu_flush2;
 
-  wire [`BPU_IDX_SZIE-1:0] ridx;
-  wire [`BPU_IDX_SZIE-1:0] ridx1;  
-  wire [`BPU_IDX_SZIE-1:0] ridx2;  
-  wire [`BPU_IDX_SZIE-1:0] ridx3;  
-  wire [`BPU_IDX_SZIE-1:0] ridx4;  
-  wire [`BPU_TAG_SIZE-1:0] rtag;
+  wire [`BTB_IDX_SIZE-1:0] ridx;
+  wire [`BTB_IDX_SIZE-1:0] ridx1;  
+  wire [`BTB_IDX_SIZE-1:0] ridx2;  
+  wire [`BTB_IDX_SIZE-1:0] ridx3;  
+  wire [`BTB_IDX_SIZE-1:0] ridx4;  
+  wire [`BTB_TAG_SIZE-1:0] rtag;
   wire [3:0] group_valid;
 
-  wire [`BPU_IDX_SZIE-1:0] widx1;  
-  wire [`BPU_TAG_SIZE-1:0] wtag1;
-  wire [`BPU_IDX_SZIE-1:0] widx2;  
-  wire [`BPU_TAG_SIZE-1:0] wtag2;
+  wire [`BTB_IDX_SIZE-1:0] widx1;  
+  wire [`BTB_TAG_SIZE-1:0] wtag1;
+  wire [`BTB_IDX_SIZE-1:0] widx2;  
+  wire [`BTB_TAG_SIZE-1:0] wtag2;
 
   wire jump_valid1;
   wire jump_valid2;
 
-  reg [`QUEUE_LINE_SIZE-1:0] jump_history [0:`QUEUE_SZIE-1];
-  reg [`QUEUE_IDX_SZIE-1:0] qtop;
-  reg [`QUEUE_IDX_SZIE-1:0] qtail;
+  reg [`QUEUE_LINE_SIZE-1:0] jump_history [0:`QUEUE_SIZE-1];
+  reg [`QUEUE_IDX_SIZE-1:0] qtop;
+  reg [`QUEUE_IDX_SIZE-1:0] qtail;
+  reg [`QUEUE_SIZE-1:0] qvalid;
 
-  reg ghr;
+  reg [`GHR_SIZE-1:0] ghr;
 
   assign {flush1, in_excp1, is_etrn1, es_pc1, may_jump1, need_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
   assign {flush2, in_excp2, is_etrn2, es_pc2, may_jump2, need_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
@@ -87,20 +87,20 @@ module BPU (
   assign jump_valid1 = may_jump1 && !is_etrn1 && !in_excp1;
   assign jump_valid2 = may_jump2 && !is_etrn2 && !in_excp2;
   
-  assign ridx = pc[`BPU_LINE_IDX] & `BPU_IDX_SZIE'h1fc;  //1,1111,1100
+  assign ridx = pc[`BPU_LINE_IDX] & `BTB_IDX_SIZE'h7c;  //1,1111,1100
   assign ridx1 = ridx;
-  assign ridx2 = ridx + `BPU_IDX_SZIE'b01;
-  assign ridx3 = ridx + `BPU_IDX_SZIE'b10;
-  assign ridx4 = ridx + `BPU_IDX_SZIE'b11;
-  assign rtag = pc[`BPU_LINE_TAG]; //same
+  assign ridx2 = ridx + `BTB_IDX_SIZE'b01;
+  assign ridx3 = ridx + `BTB_IDX_SIZE'b10;
+  assign ridx4 = ridx + `BTB_IDX_SIZE'b11;
+  assign rtag = pc[`BPU_LINE_TAG1]^pc[`BPU_LINE_TAG2]; //same
 
   assign widx1 = es_pc1[`BPU_LINE_IDX];
-  assign wtag1 = es_pc1[`BPU_LINE_TAG];
+  assign wtag1 = es_pc1[`BPU_LINE_TAG1]^es_pc1[`BPU_LINE_TAG2];
   assign widx2 = es_pc2[`BPU_LINE_IDX];
-  assign wtag2 = es_pc2[`BPU_LINE_TAG];
+  assign wtag2 = es_pc2[`BPU_LINE_TAG1]^es_pc2[`BPU_LINE_TAG2];
 
-  assign bpu_flush1 = jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && right_target1[31:2]!=jump_history[qtop];  //btb[widx1][`BTB_TYPE]!=2'b10 && btb[widx1][`BTB_TAG]==wtag1 && right_target1[31:2]!=btb[widx1][`BTB_TARGET];
-  assign bpu_flush2 = jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && right_target2[31:2]!=jump_history[qtop];  //btb[widx2][`BTB_TYPE]!=2'b10 && btb[widx2][`BTB_TAG]==wtag2 && right_target2[31:2]!=btb[widx2][`BTB_TARGET];
+  assign bpu_flush1 = jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && qvalid[qtop] && right_target1[31:2]!=jump_history[qtop];  //btb[widx1][`BTB_TYPE]!=2'b10 && btb[widx1][`BTB_TAG]==wtag1 && right_target1[31:2]!=btb[widx1][`BTB_TARGET];
+  assign bpu_flush2 = jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && qvalid[qtop] && right_target2[31:2]!=jump_history[qtop];  //btb[widx2][`BTB_TYPE]!=2'b10 && btb[widx2][`BTB_TAG]==wtag2 && right_target2[31:2]!=btb[widx2][`BTB_TARGET];
   assign bpu_flush = bpu_flush1 | bpu_flush2;
   assign bpu_jump_pc = bpu_flush1 ? right_target1 : right_target2;
 
@@ -165,7 +165,6 @@ module BPU (
       next_pc = (pc + 31'd16) & 32'hfffffff0;
       pc_valid = group_valid;
       pc_is_jump = 4'b0000;
-      push = 1'b0;
     end
 
     if(|pc_is_jump) begin
@@ -175,7 +174,7 @@ module BPU (
     else begin
       push = 1'b0;
     end
-    if(jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && !bpu_flush1 || jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && !bpu_flush) begin
+    if(jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && qvalid[qtop] && !bpu_flush1 || jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && qvalid[qtop] && !bpu_flush) begin
       pop = 1'b1;
     end
     else begin
@@ -188,7 +187,7 @@ module BPU (
   always @(posedge clk) begin
     if(reset) 
     begin
-      for (i = 0; i < `BPU_SIZE; i = i + 1) 
+      for (i = 0; i < `BTB_SIZE; i = i + 1) 
       begin
           bpu_valid[i] = 1'b0;
       end
@@ -196,35 +195,30 @@ module BPU (
       num_need <= 0;
       num_succ <= 0;
       pop_r <= 0;
-      push_r <= 0;
       qtop <= 0;
       qtail <= 0;
+      qvalid <= 0;
     end
     else 
     begin
-      if(flush || bpu_flush) begin
-        //qtail <= qtop;
-        //qtop <= 0;
-        //qtail <= 0;
-      end
-      else begin
+      if(!flush && !bpu_flush) 
+      begin
         pop_r <= pop;
         if(!pop && pop_r) begin
-          if(qtop == 4'b1111) begin
-            qtop <= 0;
-          end else begin
-            qtop <= qtop + `QUEUE_IDX_SZIE'b1;
-          end
+          qvalid[qtop] <= 1'b0;
+          qtop <= qtop + `QUEUE_IDX_SIZE'b1;
+
         end
       
-        //push_r <= push;
         if(push && !install) begin
-          if(qtail == 4'b1111) begin
-            qtail <= 0;
-          end else begin
-            qtail <= qtail + `QUEUE_IDX_SZIE'b1;
-          end
+          qvalid[qtail] <= 1'b1;
+          qtail <= qtail + `QUEUE_IDX_SIZE'b1;
         end
+      end
+      else begin
+        qvalid <= 0;
+        qtop <= 0;
+        qtail <= 0;
       end
 
       if(jump_valid1 && need_jump1 && (!bpu_valid[widx1] || (bpu_valid[widx1] && btb[widx1][`BTB_TAG]!=wtag1))) 
@@ -251,14 +245,14 @@ module BPU (
         btb[widx1] <= btb[widx1];
       end
 
-      if(jump_valid1 && need_jump1 && !bpu_flush1)
+      if(jump_valid1 && need_jump1)
       begin
         if(jump_type1==2'b01) //call(bl) push ras
         begin  
           ras[num_ras] <= es_pc1[31:2] + 30'b1;
           num_ras <= num_ras + `RAS_IDX_SIZE'b1;
         end
-        else if(jump_type1==2'b10) //return(jirl) pop ras
+        else if(jump_type1==2'b10 && !bpu_flush1) //return(jirl) pop ras
         begin  
           num_ras <= num_ras - `RAS_IDX_SIZE'b1;
         end
@@ -288,14 +282,14 @@ module BPU (
         btb[widx2] <= btb[widx2];
       end 
 
-      if(jump_valid2 && need_jump2 && !bpu_flush)
+      if(jump_valid2 && need_jump2)
       begin 
         if(jump_type2==2'b01) 
         begin
           ras[num_ras] <= es_pc2[31:2] + 30'b1;
           num_ras <= num_ras + `RAS_IDX_SIZE'b1;
         end
-        else if(jump_type2==2'b10) 
+        else if(jump_type2==2'b10 && !bpu_flush) 
         begin
           num_ras <= num_ras - `RAS_IDX_SIZE'b1;
         end
@@ -303,19 +297,19 @@ module BPU (
 
       if(jump_valid1) 
       begin
-        num_need <= num_need + 16'b1;
+        num_need <= num_need + 32'b1;
       end
       if(jump_valid2) 
       begin
-        num_need <= num_need + 16'b1;
+        num_need <= num_need + 32'b1;
       end
       if(jump_valid1 && !pre_fail1) 
       begin
-        num_succ <= num_succ +16'b1;
+        num_succ <= num_succ +32'b1;
       end
       if(jump_valid2 && !pre_fail2) 
       begin
-        num_succ <= num_succ +16'b1;
+        num_succ <= num_succ +32'b1;
       end
     
     end
