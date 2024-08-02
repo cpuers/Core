@@ -93,8 +93,8 @@ module ID_stage (
   wire instr1_gr_we;
   wire instr1_use_rj;
   wire instr1_use_rkd;
-  wire instr0_may_jump;
-  wire instr1_may_jump;
+  wire instr0_jmp_and_wr;
+  wire instr1_jmp_and_wr;
   wire instr0_is_ls;
   wire instr1_is_ls;
   wire instr0_must_single;
@@ -117,7 +117,7 @@ module ID_stage (
       .use_rj(instr0_use_rj),
       .use_rkd(instr0_use_rkd),
       .dest(instr0_dest),
-      .may_jump(instr0_may_jump),
+      .jmp_and_wr(instr0_jmp_and_wr),
       .is_ls(instr0_is_ls),
 
       .have_intrpt(have_intrpt),
@@ -137,7 +137,7 @@ module ID_stage (
       .use_rj(instr1_use_rj),
       .use_rkd(instr1_use_rkd),
       .dest(instr1_dest),
-      .may_jump(instr1_may_jump),
+      .jmp_and_wr(instr1_jmp_and_wr),
       .is_ls(instr1_is_ls),
       .have_intrpt(have_intrpt),
       .must_single(instr1_must_single),
@@ -174,7 +174,7 @@ module ID_stage (
     // end
   // 判断发射逻辑
   wire need_single;
-  assign need_single =  (instr0_is_ls | instr0_is_div) |
+  assign need_single =  instr1_jmp_and_wr & (instr0_is_div | instr0_is_ls) |
                         ((|instr0_dest) & 
                           instr0_gr_we  &
                         ((instr0_dest==read_addr2 & instr1_use_rj) |
@@ -206,7 +206,7 @@ module ID_decoder (
     output use_csr_data,
     output [13:0] csr_addr,
     output [4:0] dest,
-    output may_jump,
+    output jmp_and_wr,
     output [4:0] rf_raddr1,
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
@@ -217,7 +217,8 @@ module ID_decoder (
   wire        use_rj_value;
   wire        use_less;
   wire        need_less;
-
+  
+  wire        may_jump;
   wire        use_zero;
   wire        need_zero;
 
@@ -634,6 +635,7 @@ module ID_decoder (
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;
   assign use_rj = use_rj_value | ~src1_is_pc;
+  assign jmp_and_wr = gr_we & may_jump;
   assign csr_addr = csr_num;
 endmodule
 module decoder_2_4(

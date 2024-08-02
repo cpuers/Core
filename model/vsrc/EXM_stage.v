@@ -291,7 +291,7 @@ assign {dcache_ok, mem_result} = ms_to_es_bus;
 
 //flush: jump or excp or etrn 
 assign flush = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
-assign jump_target = (excp_jump) ? excp_pc : branch_target;
+assign jump_target = (excp_jump &(in_excp || is_etrn)) ? excp_pc : branch_target;
 assign flush_IF = flush;
 assign flush_ID = flush;
 assign br_bus = reset ? 0 : {flush, jump_target};
