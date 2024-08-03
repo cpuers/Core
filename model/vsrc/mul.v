@@ -56,8 +56,8 @@ module MUL_top(
 
     mul u_mul(
         .clk        (clk),
-        .x          (src1),
-        .y          (src2),
+        .x          (x),
+        .y          (y),
         .mul_signed (~is_unsigned),
         .use_high   (use_high),
         .en         (use_mul & ~flush),
