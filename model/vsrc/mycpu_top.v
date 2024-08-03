@@ -423,8 +423,7 @@ module core_top (
       .excp_pc(excp_pc),
       .csr_addr(csr_addr1),
       .csr_rdata_t(csr_data1),
-      .bpu_es_bus(bpu_es_bus1),
-      .flush_ES_t(1'b0)
+      .bpu_es_bus(bpu_es_bus1)
 
   );
   EXM_stage EXM_stage2 (
@@ -456,8 +455,7 @@ module core_top (
       .excp_pc(excp_pc),
       .csr_addr(csr_addr2),
       .csr_rdata_t(csr_data2),
-      .bpu_es_bus(bpu_es_bus2),
-      .flush_ES_t(flush_IF1)
+      .bpu_es_bus(bpu_es_bus2)
   );
 
   MEM_stage MEM_stage (

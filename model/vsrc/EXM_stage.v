@@ -31,8 +31,7 @@ module EXM_stage(
     output [                  13:0] csr_addr,
     input  [                  31:0] csr_rdata_t,
 
-    output [    `BPU_ES_BUS_WD-1:0] bpu_es_bus,
-    input flush_ES_t
+    output [    `BPU_ES_BUS_WD-1:0] bpu_es_bus
 
 );
 
@@ -164,11 +163,9 @@ assign {
     use_mod
 } = ds_to_es_bus;
 
-wire flush_ES;
-assign flush_ES = (!may_jump && is_jump) || flush_ES_t;
 //assign es_ready_go = 1'b1;
 assign nblock = (!jump_excp_fail & dcache_ok & div_ok) || ~ds_to_es_valid;
-assign es_to_ws_valid_w[0] = ds_to_es_valid & !flush_ES ;
+assign es_to_ws_valid_w[0] = ds_to_es_valid;
 assign es_to_ws_valid_w[1] = nblock;
 assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result, es_pc};
 //assign exm_forward_bus_w = {es_to_ws_valid_w[0],csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result};
@@ -233,19 +230,19 @@ assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 assign final_result = use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
 //for mem
-assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid&!in_excp_t&!flush_ES, res_from_mem&ds_to_es_valid&!in_excp_t&!flush_ES, bit_width, rkd_value, es_pc};
+assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&ds_to_es_valid&!in_excp_t, res_from_mem&ds_to_es_valid&!in_excp_t, bit_width, rkd_value, es_pc};
 assign {excp_ale, dcache_ok, mem_result} = ms_to_es_bus;
 
 //flush: jump or excp or etrn 
-assign flush = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid&!flush_ES;
+assign flush = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
 assign jump_target = (excp_jump) ? excp_pc : branch_target;
 assign flush_IF = flush;
 assign flush_ID = flush;
 assign br_bus = reset ? 0 : {flush, jump_target};
 
 //csr
-assign is_etrn = is_etrn_t&ds_to_es_valid&!flush_ES;
-assign in_excp = (in_excp_t | (excp_ale & (mem_we | res_from_mem)))&ds_to_es_valid&!flush_ES;
+assign is_etrn = is_etrn_t&ds_to_es_valid;
+assign in_excp = (in_excp_t | (excp_ale & (mem_we | res_from_mem)))&ds_to_es_valid;
 assign excp_Ecode = (in_excp_t) ? excp_Ecode_t : 6'h9;
 assign excp_subEcode = (in_excp_t) ? excp_subEcode_t : 9'h0;
 assign use_badv = (in_excp_t) ? use_badv_t : excp_ale; 
@@ -283,7 +280,7 @@ mul u_mul(
 div u_div(
     .div_clk(clk),
     .reset(reset),
-    .div(use_div && ds_to_es_valid && !in_excp_t &&!flush_ES),
+    .div(use_div && ds_to_es_valid && !in_excp_t),
     .div_signed(!is_unsigned),
     .x(src1),
     .y(src2),
