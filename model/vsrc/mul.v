@@ -5,6 +5,8 @@ module mul (
     input [31:0] y,
     input mul_signed,
     input use_high,
+    input en,
+    output mul_ok,
     output [31:0] mul_result
 );
 
@@ -13,6 +15,22 @@ module mul (
 
     reg [31:0] rx, ry;
     reg rmul_signed;
+    reg status;
+    reg reg_en;
+
+    assign mul_ok = reg_en & (~status);
+
+    always @(posedge clk) begin
+        reg_en <= en;
+    end
+
+    always @(posedge clk) begin
+        if(~en) status <= 1'b0;
+        else begin
+            status <= ~status;
+        end 
+    end    
+
     always @(posedge clk) begin
         rx <= x;
         ry <= y;
