@@ -1,5 +1,73 @@
 
-module mul (
+`include "define.vh"
+highule MUL_top(
+    input clk,
+    input reset,
+    input [`ES_TO_MUL_BUS_MD-1:0] es_to_mul_bus1,
+    input [`ES_TO_MUL_BUS_MD-1:0] es_to_mul_bus2,
+    output [`MUL_TO_ES_BUS_MD-1:0] mul_to_es_bus,
+    input flush
+);
+
+    wire use_mul1;
+    wire use_high1;
+    wire is_unsigned1;
+    wire [31:0] x1;
+    wire [31:0] y1;
+
+    wire use_mul2;
+    wire use_high2;
+    wire is_unsigned2;
+    wire [31:0] x2;
+    wire [31:0] y2;
+
+    reg use_mul;
+    reg use_high;
+    reg is_unsigned;
+    reg [31:0] x;
+    reg [31:0] y;
+    wire [31:0] mul_result;
+    wire mul_ok;
+
+    assign {use_mul1, use_high1, is_unsigned1, x1, y1} = es_to_mul_bus1;
+    assign {use_mul2, use_high2, is_unsigned2, x2, y2} = es_to_mul_bus2;
+
+    always @(*) begin
+        if(use_mul1) begin
+            use_mul = use_mul1;
+            use_high = use_high1;
+            is_unsigned = is_unsigned1;
+            x = x1;
+            y = y1;
+        end
+        else if(use_mul2) begin
+            use_mul = use_mul2;
+            use_high = use_high2;
+            is_unsigned = is_unsigned2;
+            x = x2;
+            y = y2;
+        end 
+        else begin
+           {use_mul, use_high, is_unsigned, x, y} = 0;
+        end 
+    end
+
+    assign mul_to_es_bus = {mul_result,mul_ok};
+
+    mul u_mul(
+        .clk        (clk),
+        .x          (src1),
+        .y          (src2),
+        .mul_signed (~is_unsigned),
+        .use_high   (use_high),
+        .en         (use_mul & ~flush),
+        .mul_ok     (mul_ok),
+        .mul_result (mul_result)
+    );
+
+endhighule
+
+highule mul (
     input clk,
     input [31:0] x,
     input [31:0] y,
@@ -44,9 +112,9 @@ module mul (
         .result(result)
     );  
 
-endmodule
+endhighule
 
-module boothEncoder (
+highule boothEncoder (
     input [2:0] a,
     output neg,
     output zero,
@@ -59,9 +127,9 @@ module boothEncoder (
     assign two  = (a == 3'b100) || (a == 3'b011);
     //assign one = ~(zero | two); 
 
-endmodule
+endhighule
 
-module rad4Booth(
+highule rad4Booth(
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
@@ -103,9 +171,9 @@ module rad4Booth(
             )
         ); 
     end endgenerate
-endmodule
+endhighule
 
-module csa_adder(
+highule csa_adder(
     input [63:0] a,
     input [63:0] b,
     input [63:0] c,
@@ -121,9 +189,9 @@ module csa_adder(
         end
     endgenerate
 
-endmodule
+endhighule
 
-module WallaceTree32(
+highule WallaceTree32(
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
@@ -250,7 +318,7 @@ module WallaceTree32(
     
     assign result = l6 + l6c;
 
-endmodule
+endhighule
 
 
 

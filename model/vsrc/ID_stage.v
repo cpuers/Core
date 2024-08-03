@@ -101,6 +101,8 @@ module ID_stage (
   wire instr1_must_single;
   wire instr0_is_div;
   wire instr1_is_div;
+  wire instr0_is_mul;
+  wire instr1_is_mul;
   wire instr0_use_csr_data;
   wire instr1_use_csr_data;
   wire [13:0] instr0_csr_addr;
@@ -123,6 +125,7 @@ module ID_stage (
       .have_intrpt(have_intrpt),
       .must_single(instr0_must_single),
       .is_div(instr0_is_div),
+      .is_mul(instr0_is_mul),
       .use_csr_data(instr0_use_csr_data),
       .csr_addr(instr0_csr_addr)
   );
@@ -142,6 +145,7 @@ module ID_stage (
       .have_intrpt(have_intrpt),
       .must_single(instr1_must_single),
       .is_div(instr1_is_div),
+      .is_mul(instr1_is_mul),
       .use_csr_data(instr1_use_csr_data),
       .csr_addr(instr1_csr_addr)
   );
@@ -174,13 +178,14 @@ module ID_stage (
     // end
   // 判断发射逻辑
   wire need_single;
-  assign need_single =  instr1_jmp_and_wr & (instr0_is_div | instr0_is_ls) |
+  assign need_single =  instr1_jmp_and_wr & (instr0_is_div | instr0_is_ls| instr0_is_mul) |
                         ((|instr0_dest) & 
                           instr0_gr_we  &
                         ((instr0_dest==read_addr2 & instr1_use_rj) |
                          (instr0_dest==read_addr3 & instr1_use_rkd))) |
                          (instr0_is_ls &instr1_is_ls)  |
                          (instr0_is_div & instr1_is_div) |
+                         (instr0_is_mul & instr1_is_mul) |
                          (instr0_use_csr_data  | instr1_use_csr_data ) |
                          instr0_must_single | instr1_must_single;
                         
@@ -199,6 +204,7 @@ module ID_decoder (
     // judge RAW 
     output is_ls,
     output is_div,
+    output is_mul,
     output must_single,
     output rg_en,
     output use_rj,
@@ -581,6 +587,7 @@ module ID_decoder (
   assign csr_use_mark = inst_csrxchg;
   assign is_ls = (|bit_width );
   assign is_div = use_div | use_mod;
+  assign is_mul = use_mul;
   assign must_single =  in_excp | have_excp | is_etrn;
  
   assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;

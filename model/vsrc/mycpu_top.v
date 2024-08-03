@@ -237,6 +237,9 @@ module core_top (
   wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus1;
   wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus2;
   wire [`DIV_TO_ES_BUS_MD-1:0] div_to_es_bus;
+  wire [`ES_TO_MUL_BUS_MD-1:0] es_to_mul_bus1;
+  wire [`ES_TO_MUL_BUS_MD-1:0] es_to_mul_bus2;
+  wire [`MUL_TO_ES_BUS_MD-1:0] mul_to_es_bus;
   wire es_ok1;
   wire es_ok2;
 
@@ -425,6 +428,8 @@ icache_v5 icache_dummy(
 
       .es_to_div_bus  (es_to_div_bus1),
       .div_to_es_bus  (div_to_es_bus),
+      .es_to_mul_bus  (es_to_mul_bus1),
+      .mul_to_es_bus  (mul_to_es_bus),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
@@ -464,6 +469,8 @@ icache_v5 icache_dummy(
 
       .es_to_div_bus  (es_to_div_bus2),
       .div_to_es_bus  (div_to_es_bus),
+      .es_to_mul_bus  (es_to_mul_bus2),
+      .mul_to_es_bus  (mul_to_es_bus),
 
       .forward_data1  (exm_forward_data1),
       .forward_data2  (exm_forward_data2),
@@ -504,6 +511,15 @@ icache_v5 icache_dummy(
     .es_to_div_bus1(es_to_div_bus1),
     .es_to_div_bus2(es_to_div_bus2),
     .div_to_es_bus(div_to_es_bus),
+    .flush(flush_IF1)
+  );
+
+  MUL_top MUL_top (
+    .clk(aclk),
+    .reset(reset),
+    .es_to_mul_bus1(es_to_mul_bus1),
+    .es_to_mul_bus2(es_to_mul_bus2),
+    .mul_to_es_bus(mul_to_es_bus),
     .flush(flush_IF1)
   );
 

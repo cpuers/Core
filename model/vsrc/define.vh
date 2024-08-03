@@ -29,5 +29,7 @@
 
 `define ES_TO_DIV_BUS_MD 67
 `define DIV_TO_ES_BUS_MD 33
+`define ES_TO_MUL_BUS_MD 67
+`define MUL_TO_ES_BUS_MD 33
 
 `endif

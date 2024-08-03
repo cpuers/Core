@@ -19,6 +19,9 @@ module EXM_stage(
     //for div
     output [`ES_TO_DIV_BUS_MD -1:0] es_to_div_bus,
     input  [`DIV_TO_ES_BUS_MD -1:0] div_to_es_bus,
+    //for mul
+    output [`ES_TO_MUL_BUS_MD -1:0] es_to_mul_bus,
+    input  [`MUL_TO_ES_BUS_MD -1:0] mul_to_es_bus,
 
     input  [ `FORWAED_BUS_WD - 1:0] forward_data1,
     input  [ `FORWAED_BUS_WD - 1:0] forward_data2,
@@ -105,6 +108,7 @@ wire [31:0] div_result0;
 wire [31:0] mem_result;
 wire [31:0] final_result;
 wire        div_ok;
+wire        mul_ok;
 
 wire [31:0] branch_target;
 wire [31:0] jump_target;
@@ -171,7 +175,7 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) ) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
+assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul)) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
 assign nblock = my_ok;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 //assign es_to_ws_valid_w[1] =  state==idle || (state==wait_an_state&&another_ok) || (state==wait_me_state&&my_ok&&another_ok);
@@ -309,6 +313,10 @@ assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc,use_badv, b
 assign es_to_div_bus = {use_div && cal_valid && !in_excp_t , use_mod, is_unsigned, src1, src2};
 assign {div_result, div_ok} = div_to_es_bus;
 
+//for mul
+assign es_to_mul_bus = {use_mul && cal_valid && !in_excp_t , use_high, is_unsigned, src1, src2};
+assign {mul_result, mul_ok} = mul_to_es_bus;
+
 Alu u_alu (
     .alu_op    (alu_op),
     .alu_src1  (src1),
@@ -316,14 +324,6 @@ Alu u_alu (
     .alu_result(alu_result),
     .zero      (zero),
     .less      (less)
-);
-
-mul u_mul(
-    .x          (src1),
-    .y          (src2),
-    .mul_signed (~is_unsigned),
-    .use_high   (use_high),
-    .mul_result (mul_result)
 );
 
 BranchCond u_branch (
