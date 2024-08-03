@@ -252,7 +252,7 @@ assign use_badv = (in_excp_t) ? use_badv_t : excp_ale;
 assign bad_addr = (in_excp_t) ? bad_addr_t : alu_result;
 assign csr_bus = {is_etrn, in_excp, excp_Ecode, excp_subEcode, es_pc,use_badv, bad_addr};
 
-assign bpu_es_bus = {flush, in_excp, is_etrn, es_pc, may_jump&ds_to_es_valid, need_jump&ds_to_es_valid, is_jump&ds_to_es_valid, pre_fail&ds_to_es_valid, jump_target, jump_type};
+assign bpu_es_bus = {flush, in_excp, is_etrn, es_pc, may_jump&ds_to_es_valid, need_jump&ds_to_es_valid, pre_fail&ds_to_es_valid, jump_target, jump_type};
 
 Alu u_alu (
     .alu_op    (alu_op),
