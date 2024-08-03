@@ -40,9 +40,6 @@ module BPU (
   wire pre_fail2;
   wire [31:0] right_target2;
   wire [1:0] jump_type2;
-  wire pre_jump1;
-  wire pre_jump2;
-
   wire flush1;
   wire flush2;
   wire flush;
@@ -84,8 +81,8 @@ module BPU (
 
   reg [`GHR_SIZE-1:0] ghr;
 
-  assign {flush1, in_excp1, is_etrn1, es_pc1, may_jump1, need_jump1, pre_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
-  assign {flush2, in_excp2, is_etrn2, es_pc2, may_jump2, need_jump2, pre_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
+  assign {flush1, in_excp1, is_etrn1, es_pc1, may_jump1, need_jump1, pre_fail1, right_target1, jump_type1} = bpu_es_bus1;
+  assign {flush2, in_excp2, is_etrn2, es_pc2, may_jump2, need_jump2, pre_fail2, right_target2, jump_type2} = bpu_es_bus2;
   assign flush = flush1 | flush2;
   assign jump_valid1 = may_jump1 && !is_etrn1 && !in_excp1;
   assign jump_valid2 = may_jump2 && !is_etrn2 && !in_excp2;
@@ -102,8 +99,8 @@ module BPU (
   assign widx2 = es_pc2[`BPU_LINE_IDX];
   assign wtag2 = es_pc2[`BPU_LINE_TAG1]^es_pc2[`BPU_LINE_TAG2];
 
-  assign bpu_flush1 = !may_jump1&&pre_fail1 || jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && qvalid[qtop] && right_target1[31:2]!=jump_history[qtop];  //btb[widx1][`BTB_TYPE]!=2'b10 && btb[widx1][`BTB_TAG]==wtag1 && right_target1[31:2]!=btb[widx1][`BTB_TARGET];
-  assign bpu_flush2 = !may_jump2&&pre_fail2 || jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && qvalid[qtop] && right_target2[31:2]!=jump_history[qtop];  //btb[widx2][`BTB_TYPE]!=2'b10 && btb[widx2][`BTB_TAG]==wtag2 && right_target2[31:2]!=btb[widx2][`BTB_TARGET];
+  assign bpu_flush1 = jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && qvalid[qtop] && right_target1[31:2]!=jump_history[qtop];  //btb[widx1][`BTB_TYPE]!=2'b10 && btb[widx1][`BTB_TAG]==wtag1 && right_target1[31:2]!=btb[widx1][`BTB_TARGET];
+  assign bpu_flush2 = jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && qvalid[qtop] && right_target2[31:2]!=jump_history[qtop];  //btb[widx2][`BTB_TYPE]!=2'b10 && btb[widx2][`BTB_TAG]==wtag2 && right_target2[31:2]!=btb[widx2][`BTB_TARGET];
   assign bpu_flush = bpu_flush1 | bpu_flush2;
   assign bpu_jump_pc = bpu_flush1 ? right_target1 : right_target2;
 
@@ -111,7 +108,7 @@ module BPU (
   
   //fs read 
   always @(*) begin
-    if(group_valid[0] && bpu_valid[ridx1] && pht[ridx1] >=2'b10) 
+    if(group_valid[0] && bpu_valid[ridx1] && pht[ridx1] >=2'b10 && btb[ridx1][`BTB_TAG]==rtag) 
     begin
       if(btb[ridx1][`BTB_TYPE]==2'b10) 
       begin
@@ -124,7 +121,7 @@ module BPU (
       pc_valid = 4'b0001 & group_valid;
       pc_is_jump = 4'b0001;
     end
-    else if(group_valid[1] && bpu_valid[ridx2] && pht[ridx2] >=2'b10) 
+    else if(group_valid[1] && bpu_valid[ridx2] && pht[ridx2] >=2'b10 && btb[ridx2][`BTB_TAG]==rtag) 
     begin
       if(btb[ridx2][`BTB_TYPE]==2'b10) 
       begin
@@ -137,7 +134,7 @@ module BPU (
       pc_valid = 4'b0011 & group_valid;
       pc_is_jump = 4'b0010;
     end
-    else if(group_valid[2] && bpu_valid[ridx3] && pht[ridx3] >=2'b10) 
+    else if(group_valid[2] && bpu_valid[ridx3] && pht[ridx3] >=2'b10 && btb[ridx3][`BTB_TAG]==rtag) 
     begin
       if(btb[ridx3][`BTB_TYPE]==2'b10) 
       begin
@@ -150,7 +147,7 @@ module BPU (
       pc_valid = 4'b0111 & group_valid;
       pc_is_jump = 4'b0100;
     end
-    else if(group_valid[3] && bpu_valid[ridx4] && pht[ridx4] >=2'b10) 
+    else if(group_valid[3] && bpu_valid[ridx4] && pht[ridx4] >=2'b10 && btb[ridx4][`BTB_TAG]==rtag) 
     begin
       if(btb[ridx4][`BTB_TYPE]==2'b10) 
       begin
@@ -224,18 +221,18 @@ module BPU (
         qtail <= 0;
       end
 
-      if(jump_valid1 && need_jump1 && !bpu_valid[widx1]) 
+      if(jump_valid1 && need_jump1 && (!bpu_valid[widx1] || (bpu_valid[widx1] && btb[widx1][`BTB_TAG]!=wtag1))) 
       begin
         bpu_valid[widx1] <= 1'b1;
         pht[widx1] <= 2'b10;
-        btb[widx1] <= {jump_type1, right_target1[31:2]};
+        btb[widx1] <= {jump_type1, wtag1, right_target1[31:2]};
       end
       else if(jump_valid1 && bpu_valid[widx1]) 
       begin
         if(need_jump1) 
         begin
           pht[widx1] <= (pht[widx1]==2'b11) ? 2'b11 : pht[widx1] + 2'b01;
-          btb[widx1] <= {jump_type1, right_target1[31:2]};
+          btb[widx1] <= {jump_type1, wtag1, right_target1[31:2]};
         end
         else if (!need_jump1)
         begin
@@ -261,18 +258,18 @@ module BPU (
         end
       end
 
-      if(jump_valid2 && need_jump2 && !bpu_valid[widx2])
+      if(jump_valid2 && need_jump2 && (!bpu_valid[widx2] || (bpu_valid[widx2] && btb[widx2][`BTB_TAG]!=wtag2))) 
       begin
         bpu_valid[widx2] <= 1'b1;
         pht[widx2] <= 2'b10;
-        btb[widx2] <= {jump_type2, right_target2[31:2]};
+        btb[widx2] <= {jump_type2, wtag2, right_target2[31:2]};
       end
       else if(jump_valid2 && bpu_valid[widx2]) 
       begin
         if(need_jump2) 
         begin
           pht[widx2] <= (pht[widx2]==2'b11) ? 2'b11 : pht[widx2] + 2'b01;
-          btb[widx2] <= {jump_type2, right_target2[31:2]};
+          btb[widx2] <= {jump_type2, wtag2, right_target2[31:2]};
         end
         else if(!need_jump2)
         begin
