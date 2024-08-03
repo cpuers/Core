@@ -109,7 +109,7 @@ wire [31:0] alu_result;
 wire [31:0] mul_result;
 wire [31:0] div_result;
 wire [31:0] div_result0;
-wire [31:0] div_result0;
+
 wire [31:0] mem_result;
 wire [31:0] final_result;
 wire        div_ok;
