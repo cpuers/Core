@@ -1,6 +1,6 @@
 
 `include "define.vh"
-highule MUL_top(
+module MUL_top(
     input clk,
     input reset,
     input [`ES_TO_MUL_BUS_MD-1:0] es_to_mul_bus1,
@@ -65,9 +65,9 @@ highule MUL_top(
         .mul_result (mul_result)
     );
 
-endhighule
+endmodule
 
-highule mul (
+module mul (
     input clk,
     input [31:0] x,
     input [31:0] y,
@@ -112,9 +112,9 @@ highule mul (
         .result(result)
     );  
 
-endhighule
+endmodule
 
-highule boothEncoder (
+module boothEncoder (
     input [2:0] a,
     output neg,
     output zero,
@@ -127,9 +127,9 @@ highule boothEncoder (
     assign two  = (a == 3'b100) || (a == 3'b011);
     //assign one = ~(zero | two); 
 
-endhighule
+endmodule
 
-highule rad4Booth(
+module rad4Booth(
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
@@ -171,9 +171,9 @@ highule rad4Booth(
             )
         ); 
     end endgenerate
-endhighule
+endmodule
 
-highule csa_adder(
+module csa_adder(
     input [63:0] a,
     input [63:0] b,
     input [63:0] c,
@@ -189,9 +189,9 @@ highule csa_adder(
         end
     endgenerate
 
-endhighule
+endmodule
 
-highule WallaceTree32(
+module WallaceTree32(
     input [31:0] x,
     input [31:0] y,
     input mul_signed,
@@ -318,7 +318,7 @@ highule WallaceTree32(
     
     assign result = l6 + l6c;
 
-endhighule
+endmodule
 
 
 
