@@ -92,12 +92,12 @@ module BPU (
   assign ridx2 = ridx + `BTB_IDX_SIZE'b01;
   assign ridx3 = ridx + `BTB_IDX_SIZE'b10;
   assign ridx4 = ridx + `BTB_IDX_SIZE'b11;
-  assign rtag = pc[`BPU_LINE_TAG1]^pc[`BPU_LINE_TAG2]; //same
+  assign rtag = pc[`BPU_LINE_TAG1]; //same
 
   assign widx1 = es_pc1[`BPU_LINE_IDX];
-  assign wtag1 = es_pc1[`BPU_LINE_TAG1]^es_pc1[`BPU_LINE_TAG2];
+  assign wtag1 = es_pc1[`BPU_LINE_TAG1];
   assign widx2 = es_pc2[`BPU_LINE_IDX];
-  assign wtag2 = es_pc2[`BPU_LINE_TAG1]^es_pc2[`BPU_LINE_TAG2];
+  assign wtag2 = es_pc2[`BPU_LINE_TAG1];
 
   assign bpu_flush1 = jump_valid1 && need_jump1 && !pre_fail1 && bpu_valid[widx1] && qvalid[qtop] && right_target1[31:2]!=jump_history[qtop];  //btb[widx1][`BTB_TYPE]!=2'b10 && btb[widx1][`BTB_TAG]==wtag1 && right_target1[31:2]!=btb[widx1][`BTB_TARGET];
   assign bpu_flush2 = jump_valid2 && need_jump2 && !pre_fail2 && bpu_valid[widx2] && qvalid[qtop] && right_target2[31:2]!=jump_history[qtop];  //btb[widx2][`BTB_TYPE]!=2'b10 && btb[widx2][`BTB_TAG]==wtag2 && right_target2[31:2]!=btb[widx2][`BTB_TARGET];
@@ -303,11 +303,11 @@ module BPU (
       begin
         num_need <= num_need + 32'b1;
       end
-      if(jump_valid1 && !pre_fail1) 
+      if(jump_valid1 && !pre_fail1 && !bpu_flush) 
       begin
         num_succ <= num_succ +32'b1;
       end
-      if(jump_valid2 && !pre_fail2) 
+      if(jump_valid2 && !pre_fail2 && !bpu_flush) 
       begin
         num_succ <= num_succ +32'b1;
       end
