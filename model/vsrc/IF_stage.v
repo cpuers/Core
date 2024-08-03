@@ -25,7 +25,8 @@ module IF_stage0 (
     output [31:0] pc_to_PBU,
     input [3:0] pc_is_jump,
     input [3:0] pc_valid,
-    input [31:0] pre_nextpc
+    input [31:0] pre_nextpc,
+    output install
 
 
 );
@@ -51,6 +52,7 @@ module IF_stage0 (
   assign in_excp = is_ADEF;
   assign excp_Ecode = 6'h8;
   assign excp_subEcode = 9'b0;
+  assign install =!IF1_ready||!addr_ok;
 
   assign if0_to_if1_w = {in_excp,excp_Ecode,excp_subEcode, pc_valid, pc_is_jump, fs_pc};
   assign valid = ~rst& IF1_ready & ~is_ADEF;
@@ -59,7 +61,7 @@ module IF_stage0 (
       pc_r <= 32'h1c000000;
     end else if (need_jump) begin
       pc_r <= jump_pc;
-    end else if (!IF1_ready||!addr_ok) begin
+    end else if (install) begin
       pc_r <= pc_r;
     end else begin
       pc_r <= pre_nextpc;

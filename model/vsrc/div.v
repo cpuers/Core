@@ -145,13 +145,7 @@ module srt_divider (
     wire [31:0] ulp = {31'd0, S[32]};
     reg [31:0] posQ, negQ; // on the fly (not used)
     
-    initial begin
-        status <= WAITING;
-        complete <= 1'b0;
-        div_zero_err <= 1'b0;
-        posQ <= 32'd0;
-        negQ <= 32'd0;
-    end
+
     
     always @(posedge srt_clk) begin
         if(reset | complete) begin
@@ -193,9 +187,9 @@ module srt_divider (
                         rem <= dividend;
                         Q <= 32'd0;
                     end begin
-                        S  <= {1'b0  , S    << s_zero};
-                        D  <= {D[31] , D    << d_zero};
-                        mD <= {~D[31], (-D) << d_zero};
+                        S  <=  S   << s_zero;
+                        D  <=  D   << d_zero;
+                        mD <= (-D) << d_zero;
                         posQ    <= 32'd0;
                         negQ    <= 32'd0;
                         shifter <= s_zero;
@@ -208,22 +202,22 @@ module srt_divider (
                     if(counter == rounds) begin
                         case(S[32:31])
                             2'b11: begin
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b0};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b00: begin
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b0};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b01: begin: q_1_last
                                 S    <= SpmD;
-                                posQ <= {posQ[31:0], 1'b1};
-                                negQ <= {negQ[31:0], 1'b0};
+                                posQ <= {posQ[30:0], 1'b1};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b10: begin: q_m1_last
                                 S    <= SpD;
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b1};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30:0], 1'b1};
                             end
                         endcase
                         status <= FINISHED;
@@ -231,24 +225,26 @@ module srt_divider (
                         counter <= counter + 6'd1;
                         case(S[32:31])
                             2'b11: begin
-                                S    <= {S[32:0],    1'b0};
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b0};
+                                S    <= {S[31:0],    1'b0};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b00: begin
-                                S    <= {S[32:0],    1'b0};
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b0};
+                                S    <= {S[31:0],    1'b0};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b01: begin: q_1
-                                S    <= {SpmD[32:0], 1'b0};
-                                posQ <= {posQ[31:0], 1'b1};
-                                negQ <= {negQ[31:0], 1'b0};
+                                S    <= {SpmD[31:0], 1'b0};
+                                posQ <= {posQ[30:0], 1'b1};
+                                negQ <= {negQ[30:0], 1'b0};
                             end
                             2'b10: begin: q_m1
-                                S    <= {SpD[32:0] , 1'b0};
-                                posQ <= {posQ[31:0], 1'b0};
-                                negQ <= {negQ[31:0], 1'b1};
+                                S    <= {SpD[31:0] , 1'b0};
+                                posQ <= {posQ[30:0], 1'b0};
+                                negQ <= {negQ[30
+                                
+                                :0], 1'b1};
                             end
                         endcase
                     end

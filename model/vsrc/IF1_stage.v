@@ -34,8 +34,8 @@ module IF_stage1 (
   wire can_push;
   /* verilator lint_off UNUSED */
   wire  [`IB_WIDTH_LOG2:0]total_size;
-  
-  assign total_size = {can_push_size + (buf_empty ? {2'b0, instr_num} : {2'b0, buf_num})};
+  wire [2:0] real_inst_rum = in_excp ?  3'b1 : ({2'b0,pc_valid[0]}+ {2'b0,pc_valid[1]}+{2'b0,pc_valid[2]}+{2'b0,pc_valid[3]}) ;
+  assign total_size = {can_push_size + (buf_empty ? {2'b0, real_inst_rum} : {2'b0, buf_num})};
   assign can_push   = ~total_size[`IB_WIDTH_LOG2];
   /* verilator lint_on  UNUSED */
   wire data_valid;
@@ -102,7 +102,7 @@ module IF_stage1 (
         if (can_push) 
         begin
           buf_empty <= ~data_valid;
-            buf_num <= data_valid ? instr_num: 3'b0;
+            buf_num <= data_valid ? real_inst_rum: 3'b0;
             store_buf[0] <= instrs[0];
             store_buf[1] <= instrs[1];
             store_buf[2] <= instrs[2];
@@ -119,7 +119,7 @@ module IF_stage1 (
         if (!can_push & data_valid) 
         begin
           buf_empty <= 1'b0;
-          buf_num   <= instr_num;
+          buf_num   <= real_inst_rum;
           store_buf[0] <= instrs[0];
           store_buf[1] <= instrs[1];
           store_buf[2] <= instrs[2];
@@ -155,7 +155,7 @@ module IF_stage1 (
     end
   end
   assign push_num = rst ? 3'd0:  
-         can_push ? (buf_empty ? instr_num &{3{data_valid|in_excp}}: buf_num) : 3'd0;
+         can_push ? (buf_empty ? real_inst_rum &{3{data_valid|in_excp}}: buf_num) : 3'd0;
 
   assign if1_to_ib[`IB_DATA_BUS_WD-1:0] = buf_empty? instrs[0]: store_buf[0];
   assign if1_to_ib[2*`IB_DATA_BUS_WD-1:`IB_DATA_BUS_WD] =buf_empty?instrs[1]:  store_buf[1];

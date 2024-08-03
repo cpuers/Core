@@ -40,7 +40,8 @@ module EXM_stage(
     input  [                  31:0] csr_rdata_t,
 
     input another_ok,
-    output my_ok
+    output my_ok,
+    output [`BPU_ES_BUS_WD-1:0]     bpu_es_bus
 
 );
 
@@ -61,6 +62,8 @@ wire        use_csr_data;
 wire        csr_wen;
 //wire [13:0] csr_addr;
 //wire [31:0] csr_rdata_t;
+//wire [13:0] csr_addr;
+//wire [31:0] csr_rdata_t;
 wire [31:0] csr_rdata;
 wire [31:0] csr_wdata_t;
 wire [31:0] csr_wdata;
@@ -68,6 +71,7 @@ wire        use_mark;
 
 wire [11:0] alu_op;
 wire [ 3:0] bit_width;
+wire [ 1:0] jump_type;
 wire        may_jump;  // 1 
 wire        use_rj_value;  // 1
 wire        use_less;  // 1
@@ -105,17 +109,21 @@ wire [31:0] alu_result;
 wire [31:0] mul_result;
 wire [31:0] div_result;
 wire [31:0] div_result0;
+wire [31:0] div_result0;
 wire [31:0] mem_result;
 wire [31:0] final_result;
 wire        div_ok;
 wire        mul_ok;
 
+wire        need_jump;
 wire [31:0] branch_target;
 wire [31:0] jump_target;
 
 wire        zero;
 wire        less;
 
+//reg  [ `FORWAED_BUS_WD-1:0] exm_forward_bus_r;
+//wire [ `FORWAED_BUS_WD-1:0] exm_forward_bus_w;
 //reg  [ `FORWAED_BUS_WD-1:0] exm_forward_bus_r;
 //wire [ `FORWAED_BUS_WD-1:0] exm_forward_bus_w;
 
@@ -147,6 +155,7 @@ assign {
 
     alu_op,  // 12  操作类型
     bit_width,  // 4  访存宽度 ls
+    jump_type,
     may_jump,  // 1   跳转 分支处理 ---
     use_rj_value,  // 1  绝对跳转
     use_less,  // 1    跳转需要   0无意义
@@ -250,22 +259,12 @@ begin
         es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD] <= es_to_ws_valid_w;
     end
 
-    // if(reset) begin
-    //     exm_forward_bus_r <= 0;
-    // end
-    // if(!nblock && (forw_rj[0] || forw_rj[1] || forw_rkd[0] || forw_rkd[1])) begin
-    //     exm_forward_bus_r <= exm_forward_bus_r;
-    // end
-    // else begin
-    //     exm_forward_bus_r <= exm_forward_bus_w;
-    //     //exm_forward_bus_r[`FORWAED_BUS_WD-2:0] <= es_to_ws_bus_w[`ES_TO_WS_BUS_WD-1:32];
-    //     //exm_forward_bus_r[`FORWAED_BUS_WD-1] <= es_to_ws_valid_w[0];  //ds_to_es_valid
-    // end
 
 end
 
 assign es_to_ws_valid  = es_to_ws_bus_r[`ES_TO_WS_BUS_WD+1:`ES_TO_WS_BUS_WD];
 assign es_to_ws_bus    = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
+//assign exm_forward_bus = exm_forward_bus_r; //es_to_ws_bus_r[`ES_TO_WS_BUS_WD:32]; //exm_forward_bus_r;
 //assign exm_forward_bus = exm_forward_bus_r; //es_to_ws_bus_r[`ES_TO_WS_BUS_WD:32]; //exm_forward_bus_r;
 
 //csr forward
@@ -275,6 +274,13 @@ assign csr_rdata = forw_csr[0] ? forward_data1[69:38] : forw_csr[1] ? forward_da
 assign csr_wdata_t = (rj_value & rkd_value) | (~rj_value & csr_rdata);
 assign csr_wdata = use_mark ?  csr_wdata_t : rkd_value;
 
+//regfile forward|
+assign forw_rj[0]  = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && (|forward_data1[36:32]) && ~|(forward_data1[36:32]^rf_raddr1);
+assign forw_rj[1]  = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && (|forward_data2[36:32]) && ~|(forward_data2[36:32]^rf_raddr1);
+assign forw_rkd[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && (|forward_data1[36:32]) && ~|(forward_data1[36:32]^rf_raddr2);
+assign forw_rkd[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && (|forward_data2[36:32]) && ~|(forward_data2[36:32]^rf_raddr2);
+assign rj_value  = forw_rj[1] ? forward_data2[31:0] : forw_rj[0] ? forward_data1[31:0] : rj_value_t;
+assign rkd_value = forw_rkd[1]? forward_data2[31:0] : forw_rkd[0]? forward_data1[31:0] : rkd_value_t;
 //regfile forward|
 assign forw_rj[0]  = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[37] && (|forward_data1[36:32]) && ~|(forward_data1[36:32]^rf_raddr1);
 assign forw_rj[1]  = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[37] && (|forward_data2[36:32]) && ~|(forward_data2[36:32]^rf_raddr1);
@@ -317,6 +323,8 @@ assign {div_result, div_ok} = div_to_es_bus;
 assign es_to_mul_bus = {use_mul && cal_valid && !in_excp_t , use_high, is_unsigned, src1, src2};
 assign {mul_result, mul_ok} = mul_to_es_bus;
 
+assign bpu_es_bus = {flush, in_excp, is_etrn, es_pc, may_jump&cal_valid, need_jump&cal_valid, pre_fail&cal_valid, jump_target, jump_type};
+
 Alu u_alu (
     .alu_op    (alu_op),
     .alu_src1  (src1),
@@ -338,6 +346,7 @@ BranchCond u_branch (
     .zero(zero),
     .pc(es_pc),
     .rj_value(rj_value),
+    .need_jump(need_jump),
     .jump_target(branch_target),
     .imm(imm),
     .pre_fail(pre_fail)

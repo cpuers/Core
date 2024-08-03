@@ -63,6 +63,8 @@ module csr (
     assign excp_jump = (in_excp | is_etrn) & ~jump_excp_fail;
     assign excp_pc = in_excp ? csr_eentry :
                      csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
+    assign excp_pc = in_excp ? csr_eentry :
+                     csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
     assign have_intrpt = csr_crmd[`IE] &|(csr_ecfg[12:0]&csr_estat[12:0]);
     always @(*) 
     begin
@@ -130,6 +132,23 @@ module csr (
             timer_en <= csr_tcfg[`Periodic];
         end
     end
+    
+        
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            timer_en <= 1'b0; 
+        end    
+        else if (csr_wen && (csr_waddr==`TCFG))
+        begin
+            timer_en <= wdata[`En];
+        end
+        else if(timer_en && ~tval_is_nzero)
+        begin
+            timer_en <= csr_tcfg[`Periodic];
+        end
+    end
     always @(posedge clk) 
     begin
         if (rst) 
@@ -141,6 +160,7 @@ module csr (
             csr_crmd[`DATF] <= 2'b0;
             csr_crmd[`DATM] <= 2'b0;
             csr_crmd[`CRMD_REV] <= 23'b0;     
+                     
                      
         end
         else if(csr_wen && (csr_waddr == `CRMD))
@@ -328,6 +348,7 @@ module csr (
         begin
             csr_tcfg[`En] <= wdata[`En];
             
+            
             csr_tcfg[`Periodic] <= wdata[`Periodic];
             csr_tcfg[`InitVal] <= wdata[`InitVal];
         end    
@@ -355,6 +376,7 @@ module csr (
             else
             begin
                 csr_tval <= csr_tcfg[`Periodic] ? {csr_tcfg[`InitVal],2'b0} : 32'h0;
+                
                 
             end
         end     

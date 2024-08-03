@@ -184,8 +184,6 @@ module core_top (
 
   assign {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
           dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = dcache_wdata_bus;
-  assign need_jump = (br_bus1[32]) ? br_bus1[32] : (br_bus2[32]) ? br_bus2[32] : 1'b0;
-  assign jump_pc = (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
   
   wire [  4*`IB_DATA_BUS_WD-1:0] if1_to_ib;
   wire [       `IB_WIDTH_LOG2:0] can_push_size;
@@ -243,11 +241,33 @@ module core_top (
   wire es_ok1;
   wire es_ok2;
 
+  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus1;
+  wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
+  wire                      bpu_flush;
+  wire                      bpu_flush1;
+  wire [              31:0] bpu_jump_pc;
+  wire                      bpu_install;
+  wire                      ID_flush;
+  wire [              31:0] ID_jump_pc;
+
+  assign need_jump = br_bus1[32] | br_bus2[32] | bpu_flush | ID_flush;
+  assign jump_pc = br_bus1[32] | br_bus2[32] | bpu_flush ? bpu_jump_pc :
+                   ID_flush ? ID_jump_pc : 32'b0;
+
   BPU BPU (
-      .pc(if0_pc),
-      .next_pc(pbu_next_pc),
-      .pc_is_jump(pbu_pc_is_jump),
-      .pc_valid(pbu_pc_valid)
+    .clk(aclk),
+    .reset(reset),
+    .pc(if0_pc),
+    .next_pc(pbu_next_pc),
+    .pc_is_jump(pbu_pc_is_jump),
+    .pc_valid(pbu_pc_valid),
+    .bpu_es_bus1(bpu_es_bus1),
+    .bpu_es_bus2(bpu_es_bus2),
+    .bpu_flush(bpu_flush),
+    .bpu_flush1(bpu_flush1),
+    .bpu_jump_pc(bpu_jump_pc),
+    .install(bpu_install),
+    .ID_flush(ID_flush)
   );
 icache_v5 icache_dummy(
     .clock(aclk),
@@ -282,7 +302,7 @@ icache_v5 icache_dummy(
 );
   IF_stage0 IF_stage0 (
       .clk      (aclk),
-      .flush_IF (flush_IF1 | flush_IF2),
+      .flush_IF (flush_IF1 | flush_IF2 | bpu_flush | ID_flush),
       .rst      (reset),
       // jump_signal
       .need_jump(need_jump),
@@ -302,12 +322,13 @@ icache_v5 icache_dummy(
       .pc_is_jump (pbu_pc_is_jump),
       .pc_valid   (pbu_pc_valid),
       .pre_nextpc (pbu_next_pc),
-      .csr_datf(csr_datf)
+      .csr_datf(csr_datf),
+      .install    (bpu_install)
   );
   IF_stage1 IF_stage1 (
       .clk(aclk),
       .rst(reset),
-      .flush_IF(flush_IF1 | flush_IF2),
+      .flush_IF(flush_IF1 | flush_IF2 | bpu_flush | ID_flush),
       .if0_if1_bus(if0_if1_bus),
 
       .if1_to_ib(if1_to_ib),
@@ -321,7 +342,7 @@ icache_v5 icache_dummy(
   InstrBuffer InstrBuffer (
       .clk(aclk),
       .rst(reset),
-      .flush(flush_IF1 | flush_IF2),
+      .flush(flush_IF1 | flush_IF2 | bpu_flush | ID_flush),
       .if1_to_ib(if1_to_ib),
       .push_num(push_num),
       .pop_op(IB_pop_op),
@@ -393,8 +414,8 @@ icache_v5 icache_dummy(
       .EXE_instr0_valid(ds_to_es_valid1),
       .EXE_instr1_valid(ds_to_es_valid2),
       .EXE_ready       (es_ready1 & es_ready2),
-      .flush_ID1        (flush_ID1),
-      .flush_ID2        (flush_ID2),
+      .flush_ID1        (flush_ID1 | bpu_flush),
+      .flush_ID2        (flush_ID2 | bpu_flush),
       .instr1_ok        (es_ok1),
       //for regfile
       .read_addr0      (read_addr0),
@@ -405,7 +426,9 @@ icache_v5 icache_dummy(
       .read_data1      (read_data1),
       .read_data2      (read_data2),
       .read_data3      (read_data3),
-      .have_intrpt(have_intrpt)
+      .have_intrpt     (have_intrpt),
+      .ID_flush        (ID_flush),
+      .ID_jump_pc      (ID_jump_pc)
 
   );
 
@@ -447,7 +470,9 @@ icache_v5 icache_dummy(
       .csr_rdata_t(csr_data1),
 
       .my_ok(es_ok1),
-      .another_ok(es_ok2)
+      .another_ok(es_ok2),
+
+      .bpu_es_bus(bpu_es_bus1)
 
   );
   EXM_stage EXM_stage2 (
@@ -478,7 +503,7 @@ icache_v5 icache_dummy(
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
       .flush_ID      (flush_ID2),
-      .flush_ES      (flush_IF1),
+      .flush_ES      (flush_IF1 | bpu_flush1),
 
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
@@ -488,7 +513,9 @@ icache_v5 icache_dummy(
       .csr_rdata_t(csr_data2),
 
       .my_ok(es_ok2),
-      .another_ok(es_ok1)
+      .another_ok(es_ok1),
+
+      .bpu_es_bus(bpu_es_bus2)
 
   );
 

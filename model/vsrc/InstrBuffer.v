@@ -23,9 +23,14 @@ module InstrBuffer (
   integer i;
 
 
+
   always @(posedge clk) begin
     if (rst | flush) begin
       buffer_size <= {1'b0,`IB_WIDTH_LOG2'h0};
+
+      //FIX ME  
+
+      
 
       //FIX ME  
 

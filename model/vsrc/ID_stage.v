@@ -25,6 +25,8 @@ module ID_stage (
     input instr1_ok,
 
     input have_intrpt,
+    output ID_flush,
+    output [31:0] ID_jump_pc,
 
     //for regfile
     output [ 4:0] read_addr0,
@@ -107,6 +109,12 @@ module ID_stage (
   wire instr1_use_csr_data;
   wire [13:0] instr0_csr_addr;
   wire [13:0] instr1_csr_addr;
+  wire instr0_need_flush;
+  wire instr1_need_flush;
+  wire [31:0] instr0_pc;
+  wire [31:0] instr1_pc;
+  wire instr0_is_guess;
+  wire instr1_is_guess;
 
   ID_decoder ID_decoder0 (
       .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-2:0]),
@@ -127,7 +135,10 @@ module ID_stage (
       .is_div(instr0_is_div),
       .is_mul(instr0_is_mul),
       .use_csr_data(instr0_use_csr_data),
-      .csr_addr(instr0_csr_addr)
+      .csr_addr(instr0_csr_addr),
+      .need_flush(instr0_need_flush),
+      .ds_pc(instr0_pc),
+      .guess_jump(instr0_is_guess)
   );
   ID_decoder ID_decoder1 (
       .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
@@ -147,7 +158,10 @@ module ID_stage (
       .is_div(instr1_is_div),
       .is_mul(instr1_is_mul),
       .use_csr_data(instr1_use_csr_data),
-      .csr_addr(instr1_csr_addr)
+      .csr_addr(instr1_csr_addr),
+      .need_flush(instr1_need_flush),
+      .ds_pc(instr1_pc),
+      .guess_jump(instr1_is_guess)
   );
 
     // reg [31:0] can_doubles ;
@@ -187,19 +201,22 @@ module ID_stage (
                          (instr0_is_div & instr1_is_div) |
                          (instr0_is_mul & instr1_is_mul) |
                          (instr0_use_csr_data  | instr1_use_csr_data ) |
-                         instr0_must_single | instr1_must_single;
+                         instr0_must_single | instr1_must_single |
+                         (instr0_is_guess & instr1_is_guess);
                         
   assign IF_pop_op[0] = EXE_instr0_valid_w & EXE_ready;
   assign IF_pop_op[1] = EXE_instr1_valid_w & EXE_ready;
   assign EXE_instr0_valid_w = IF_instr0_valid;
-  assign EXE_instr1_valid_w = IF_instr1_valid & ~need_single;
+  assign EXE_instr1_valid_w = IF_instr1_valid & ~need_single & ~instr0_need_flush;
+  assign ID_flush = instr0_need_flush | instr1_need_flush;
+  assign ID_jump_pc = (instr0_need_flush ? instr0_pc : instr1_pc) + 32'h4;
+  
 endmodule
 
 module ID_decoder (
     input [`IB_DATA_BUS_WD-2:0] fs_to_ds_bus,
     //to es
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
-    
 
     // judge RAW 
     output is_ls,
@@ -217,7 +234,10 @@ module ID_decoder (
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
     input [31:0] rf_rdata2,
-    input have_intrpt
+    input have_intrpt,
+    output need_flush,
+    output guess_jump,
+    output [31:0] ds_pc
 );
 
   wire        use_rj_value;
@@ -362,8 +382,6 @@ module ID_decoder (
   wire        need_si20;
   wire        need_si26;
   wire        src2_is_4;
-
-  wire [31:0] ds_pc;
 
   
   assign op_31_26 = ds_inst[31:26];
@@ -567,6 +585,10 @@ module ID_decoder (
   wire [8:0]ds_excp_subEcode;
   wire need_add_4;
   wire have_excp;
+  wire [1:0] jump_type;
+
+  assign jump_type[0] = inst_bl;
+  assign jump_type[1] = inst_jirl;
   
   assign have_excp =  have_intrpt|inst_syscall | inst_break | have_ine;
   assign use_badv = in_excp;
@@ -608,6 +630,7 @@ module ID_decoder (
     alu_op,  // 12
     bit_width,  // 4
 
+    jump_type,
     may_jump,  // 1 
     use_rj_value,  // 1
     use_less,  // 1
@@ -629,7 +652,7 @@ module ID_decoder (
     rj_value,  // 32
     rkd_value,  // 32
     ds_pc,  // 32
-    pc_is_jump,  //1
+    pc_is_jump & may_jump,  //1
     res_from_mem,  //1
 
     use_mul,
@@ -638,7 +661,9 @@ module ID_decoder (
     use_div,
     use_mod
   };
-
+  
+  assign need_flush = pc_is_jump &  ~may_jump;
+  assign guess_jump = pc_is_jump;
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;
   assign use_rj = use_rj_value | ~src1_is_pc;
