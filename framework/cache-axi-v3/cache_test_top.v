@@ -185,8 +185,8 @@ module cache_test_top (
     wire                   axi_rvalid;
     wire                   axi_rready;
 
-    axi_bridge u_axi(
-        .clk             ( clock       ),
+    axi_bridge_v2 u_axi(
+        .clock           ( clock       ),
         .reset           ( reset       ),
 
         .awid            ( axi_awid    ),
