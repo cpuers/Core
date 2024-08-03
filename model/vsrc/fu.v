@@ -392,7 +392,7 @@ module BranchCond (
                    ~(use_zero & ~(need_zero & zero| ~need_zero & ~ zero ));
   wire [31:0] src1 = use_rj_value ? rj_value : pc;
   wire [31:0] src2 = {imm[29:0], 2'b00};
-  assign jump_target = (!need_jump && pre_jump) ? pc + 32'b100 : src1 + src2;
+  assign jump_target = (!may_jump && pre_jump) ? pc : (!need_jump && pre_jump) ? pc + 32'b100 : src1 + src2;
   assign pre_fail = (need_jump ^ pre_jump);
 
 endmodule

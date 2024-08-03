@@ -223,6 +223,7 @@ module core_top (
 
   assign need_jump = br_bus1[32] | br_bus2[32] | bpu_flush;
   assign jump_pc = bpu_flush ? bpu_jump_pc : (br_bus1[32]) ? br_bus1[31:0] : (br_bus2[32]) ? br_bus2[31:0] : 32'b0;
+  wire flush_ES;
 
   BPU BPU (
     .clk(aclk),
@@ -422,7 +423,8 @@ module core_top (
       .excp_pc(excp_pc),
       .csr_addr(csr_addr1),
       .csr_rdata_t(csr_data1),
-      .bpu_es_bus(bpu_es_bus1)
+      .bpu_es_bus(bpu_es_bus1),
+      .flush_ES_t(1'b0)
 
   );
   EXM_stage EXM_stage2 (
@@ -454,7 +456,8 @@ module core_top (
       .excp_pc(excp_pc),
       .csr_addr(csr_addr2),
       .csr_rdata_t(csr_data2),
-      .bpu_es_bus(bpu_es_bus2)
+      .bpu_es_bus(bpu_es_bus2),
+      .flush_ES_t(flush_IF1)
   );
 
   MEM_stage MEM_stage (
