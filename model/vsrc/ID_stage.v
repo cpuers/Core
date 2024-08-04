@@ -194,6 +194,8 @@ module ID_stage (
   wire need_single;
   assign need_single =  instr1_may_jump & (instr0_is_div | instr0_is_ls| instr0_is_mul) |
                         instr0_may_jump |
+                        instr0_is_ls |
+                        instr1_is_ls & (instr0_is_div | instr0_is_mul) |
                         ((|instr0_dest) & 
                           instr0_gr_we  &
                         ((instr0_dest==read_addr2 & instr1_use_rj) |
