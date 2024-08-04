@@ -14,7 +14,9 @@
 class Dut {
 private:
     VerilatedContext* ctxp;
+#ifndef TRACE_DISABLE
     VerilatedFstC* fstp;
+#endif
     VTOP* const dut;
     Ram* ram;
 
@@ -43,16 +45,22 @@ private:
 public:
     Dut(int argc, char **argv, Ram *ram) : 
         ctxp(new VerilatedContext), 
+#ifndef TRACE_DISABLE
         fstp(new VerilatedFstC), 
+#endif
         dut(new VTOP),
         ram(ram),
         hit_i(0), tot_i(0), hit_d(0), tot_d(0)
     {
+#ifndef TRACE_DISABLE
         ctxp->traceEverOn(true);
+#endif
         ctxp->commandArgs(argc, argv);
 
+#ifndef TRACE_DISABLE
         dut->trace(fstp, 0);
         fstp->open("build/" TEST ".fst");
+#endif
 
         update_timestamp();
 
@@ -63,12 +71,16 @@ public:
 
         delay(10);
         dut->final();
+#ifndef TRACE_DISABLE
         fstp->close();
+#endif
 
         statistics();
 
         delete dut;
+#ifndef TRACE_DISABLE
         delete fstp;
+#endif
         delete ctxp;
     }
 
@@ -94,7 +106,7 @@ public:
 
     bool stall() {
         return 
-            (!empty_i() && (ctxp->time() - timestamp_i > 1000)) || 
+            (!empty_i() && (ctxp->time() - timestamp_i > 1000)) &&
             (!empty_d() && (ctxp->time() - timestamp_d > 1000));
     }
 
@@ -125,12 +137,16 @@ public:
         dut->clock = 0;
         for (u64 i = 0; i < ticks; i ++) {
             dut->eval();
+#ifndef TRACE_DISABLE
             fstp->dump(ctxp->time());
+#endif
             ctxp->timeInc(1);
 
             dut->clock = 1;
             dut->eval();
+#ifndef TRACE_DISABLE
             fstp->dump(ctxp->time());
+#endif
             ctxp->timeInc(1);
 
             dut->clock = 0;
@@ -254,10 +270,10 @@ public:
     }
 };
 
-bool step_and_check(Dut &dut, Ram &ram) {
+bool step_and_check(Dut &dut, Ram *ram) {
     dut.step();
     while (auto t = dut.receive()) {
-        if (!t->check(&ram)) {
+        if (!t->check(ram)) {
             delete t;
             return false;
         }
@@ -267,8 +283,8 @@ bool step_and_check(Dut &dut, Ram &ram) {
 }
 
 int main(int argc, char **argv, char **envp) {
-    Ram ram;
-    Dut dut(argc, argv, &ram);
+    Ram *ram = new Ram();
+    Dut dut(argc, argv, ram);
     dut.reset(10);
     Testbench tb(argc, argv);
     for (auto t : tb.tests()) {
@@ -295,5 +311,6 @@ int main(int argc, char **argv, char **envp) {
             return 1;
         }
     }
+    delete ram;
     return 0;
 }

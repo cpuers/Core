@@ -1,34 +1,24 @@
 [*]
 [*] GTKWave Analyzer v3.3.104 (w)1999-2020 BSI
-[*] Sat Aug  3 10:45:11 2024
+[*] Sun Aug  4 04:01:55 2024
 [*]
 [dumpfile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-spec/dcache-v4/build/dcache-v4.fst"
-[dumpfile_mtime] "Sat Aug  3 10:39:25 2024"
-[dumpfile_size] 148010
+[dumpfile_mtime] "Sun Aug  4 04:00:16 2024"
+[dumpfile_size] 3509307
 [savefile] "/home/pc/Digital/NSCSCC/Testing/nscscc-team-la32r/Core/tests/cache-spec/dcache-v4/dcache-v4.gtkw"
-[timestart] 4852
+[timestart] 129497
 [size] 1920 1016
 [pos] -1 -1
-*-1.720637 4858 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-6.720637 129801 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
 [treeopen] TOP.cache_test_top.
-[treeopen] TOP.cache_test_top.u_dcache.genblk4[0].
-[treeopen] TOP.cache_test_top.u_dcache.genblk4[1].
-[treeopen] TOP.cache_test_top.u_dcache.genblk4[2].
-[treeopen] TOP.cache_test_top.u_dcache.genblk4[3].
+[treeopen] TOP.cache_test_top.u_dcache.genblk3.
 [treeopen] TOP.cache_test_top.u_dcache.genblk5[0].
 [treeopen] TOP.cache_test_top.u_dcache.genblk6[0].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].
 [treeopen] TOP.cache_test_top.u_dcache.genblk6[1].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[0].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[1].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[2].
-[treeopen] TOP.cache_test_top.u_dcache.genblk6[1].genblk1[3].
-[sst_width] 305
-[signals_width] 270
+[treeopen] TOP.cache_test_top.u_dcache.genblk7[2].
+[sst_width] 301
+[signals_width] 340
 [sst_expanded] 1
 [sst_vpaned_height] 338
 @c00200
@@ -130,7 +120,7 @@ TOP.cache_test_top.u_icache.data_wea[0]
 @1401200
 -data_sram
 -icache
-@c00200
+@800200
 -dcache
 @28
 TOP.cache_test_top.u_dcache.clock
@@ -175,57 +165,40 @@ TOP.cache_test_top.u_dcache.rdata[31:0]
 [color] 1
 TOP.cache_test_top.u_dcache.lookup_hit
 @c00200
+-replace
+@22
+TOP.cache_test_top.u_dcache.lookup_miss_way_replace_en[3:0]
+@28
+TOP.cache_test_top.u_dcache.genblk3.u_replace.accu
+TOP.cache_test_top.u_dcache.genblk3.u_replace.clock
+TOP.cache_test_top.u_dcache.genblk3.u_replace.en
+@420
+TOP.cache_test_top.u_dcache.genblk3.u_replace.i
+@28
+TOP.cache_test_top.u_dcache.genblk3.u_replace.need_send
+TOP.cache_test_top.u_dcache.genblk3.u_replace.reset
+@22
+TOP.cache_test_top.u_dcache.genblk3.u_replace.way_d[3:0]
+TOP.cache_test_top.u_dcache.genblk3.u_replace.way_replace_en[3:0]
+TOP.cache_test_top.u_dcache.genblk3.u_replace.way_v[3:0]
+@1401200
+-replace
+@c00200
 -data_sram
 @800200
 -addr
-@22
-[color] 1
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.addra[7:0]
-[color] 1
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.addra[7:0]
-[color] 1
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.addra[7:0]
-[color] 1
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.addra[7:0]
 @1000200
 -addr
 @800200
 -wea
-@28
-[color] 2
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.wea
-[color] 2
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.wea
-[color] 2
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.wea
-[color] 2
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.wea
 @1000200
 -wea
 @800200
 -din
-@22
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.dina[31:0]
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.dina[31:0]
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.dina[31:0]
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.dina[31:0]
 @1000200
 -din
 @800200
 -dout
-@22
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[0].u_data_sram.douta[31:0]
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[1].u_data_sram.douta[31:0]
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[2].u_data_sram.douta[31:0]
-[color] 5
-TOP.cache_test_top.u_dcache.genblk6[0].genblk1[3].u_data_sram.douta[31:0]
 @1000200
 -dout
 @1401200
@@ -325,21 +298,11 @@ TOP.cache_test_top.u_dcache.wr_type[2:0]
 TOP.cache_test_top.u_dcache.wr_wstrb[3:0]
 @1000200
 -axi_wr
-@1401200
 -dcache
-@c00200
--axi_ram
-@22
-TOP.cache_test_top.u_axi_ram.mem_rd_result[31:0]
-TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
-TOP.cache_test_top.u_axi_ram.s_axi_wdata[31:0]
-TOP.cache_test_top.u_axi_ram.write_addr_valid[13:0]
-TOP.cache_test_top.u_axi_ram.read_addr_valid[13:0]
-@1401200
--axi_ram
 @800200
 -axi_bridge
 -inst
+@c00200
 -inst_rd
 @28
 TOP.cache_test_top.u_axi.inst_rd_req
@@ -349,14 +312,14 @@ TOP.cache_test_top.u_axi.inst_rd_type[2:0]
 @22
 [color] 1
 TOP.cache_test_top.u_axi.inst_rd_addr[31:0]
-@1000200
+@1401200
 -inst_rd
 @800200
 -inst_ret
 @28
 TOP.cache_test_top.u_axi.inst_ret_valid
 TOP.cache_test_top.u_axi.inst_ret_last
-@23
+@22
 [color] 5
 TOP.cache_test_top.u_axi.inst_ret_data[31:0]
 @1000200
@@ -409,6 +372,10 @@ TOP.cache_test_top.u_axi.data_wr_data[127:0]
 @1000200
 -data_wr
 -data
+@28
+TOP.cache_test_top.u_axi.rd_s[1:0]
+@29
+TOP.cache_test_top.u_axi.rd_req_recv
 @28
 TOP.cache_test_top.u_axi.wr_s[2:0]
 @22
@@ -493,10 +460,18 @@ TOP.cache_test_top.u_axi.bresp[1:0]
 -b
 -axi
 -axi_bridge
+@c00200
+-axi_ram
+@22
+TOP.cache_test_top.u_axi_ram.mem_rd_result[31:0]
+TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
+TOP.cache_test_top.u_axi_ram.s_axi_wdata[31:0]
+@1401200
+-axi_ram
 [pattern_trace] 1
-[pattern_trace] 0
 !100000@@
-?"00002040
+?"0000DCF0
 @23
-TOP.cache_test_top.u_axi.data_wr_addr[31:0]
+TOP.cache_test_top.u_dcache.wr_addr[31:0]
 !!
+[pattern_trace] 0

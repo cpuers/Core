@@ -62,7 +62,9 @@ DCacheTxW::DCacheTxW(u32 addr, u8 strb, u32 wdata) {
 Tx::~Tx() {}
 void ICacheTx::push(VTOP *dut) {
   dut->i_araddr = this->araddr;
+#ifndef CACHE_ALL
   dut->i_uncached = this->uncached;
+#endif
 }
 void ICacheTx::pull(VTOP *dut) {
   for (u32 i = 0; i < 4; i++) {
@@ -73,7 +75,11 @@ void ICacheTx::pull(VTOP *dut) {
 void DCacheTx::push(VTOP *dut) {
   dut->d_op = this->op;
   dut->d_addr = this->addr;
+#ifndef CACHE_ALL
   dut->d_uncached = this->uncached;
+#else
+  dut->d_uncached = false;
+#endif
   dut->d_wdata = this->wdata;
   dut->d_strb = this->strb;
 }
@@ -145,12 +151,14 @@ bool DCacheTxR::check(Ram *ram) {
     }
     return false;
   }
+#ifndef CACHE_ALL
   if (addr < UNCACHED_SIZE && hit()) {
     printf("DCache Read (%s): %08x, [%lu -- %lu]\n", 
       (uncached) ? "Uncached" : "Cached", addr, st(), ed());
     printf("  is Uncached but hit.\n");
     return false;
   }
+#endif
   return true;
 }
 bool DCacheTxR::hit() {
@@ -159,12 +167,14 @@ bool DCacheTxR::hit() {
 }
 bool DCacheTxW::check(Ram *ram) {
   CacheTx::check(ram);
+#ifndef CACHE_ALL
   if (addr < UNCACHED_SIZE && hit()) {
     printf("DCache Write (%s): %08x, %08x, %x, [%lu -- %lu]\n", 
       (uncached) ? "Uncached" : "Cached", addr, wdata, strb, st(), ed());
     printf("  is Uncached but hit.\n");
     return false;
   }
+#endif
   ram->dwrite(addr, strb, wdata);
   return true;
 }

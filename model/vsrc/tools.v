@@ -1,7 +1,7 @@
 /* verilator lint_off DECLFILENAME */
 module encoder_4_2(
-    input  [3:0] in,
-    output [1:0] out
+    input  wire [3:0] in,
+    output wire [1:0] out
 );
 
 assign out = {2{in[0]}} & 2'd0 |
@@ -12,8 +12,8 @@ assign out = {2{in[0]}} & 2'd0 |
 endmodule
 
 module encoder_16_4(
-    input  [15:0] in,
-    output [ 3:0] out
+    input  wire [15:0] in,
+    output wire [ 3:0] out
 );
 
 wire [1:0] out_0, out_1, out_2, out_3;

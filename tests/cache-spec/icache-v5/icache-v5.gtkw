@@ -140,5 +140,160 @@ TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
 TOP.cache_test_top.u_axi_ram.s_axi_wdata[31:0]
 TOP.cache_test_top.u_axi_ram.write_addr_valid[13:0]
 TOP.cache_test_top.u_axi_ram.read_addr_valid[13:0]
+-axi_bridge
+-inst
+-inst_rd
+@28
+TOP.cache_test_top.u_axi.inst_rd_req
+TOP.cache_test_top.u_axi.inst_rd_rdy
+[color] 2
+TOP.cache_test_top.u_axi.inst_rd_type[2:0]
+@22
+[color] 1
+TOP.cache_test_top.u_axi.inst_rd_addr[31:0]
+@1000200
+-inst_rd
+@800200
+-inst_ret
+@28
+TOP.cache_test_top.u_axi.inst_ret_valid
+TOP.cache_test_top.u_axi.inst_ret_last
+@23
+[color] 5
+TOP.cache_test_top.u_axi.inst_ret_data[31:0]
+@1000200
+-inst_ret
+-inst
+@800200
+-data
+@c00200
+-data_rd
+@28
+[color] 2
+TOP.cache_test_top.u_axi.data_rd_req
+[color] 2
+TOP.cache_test_top.u_axi.data_rd_rdy
+@22
+[color] 1
+TOP.cache_test_top.u_axi.data_rd_addr[31:0]
+@28
+TOP.cache_test_top.u_axi.data_rd_type[2:0]
+@1401200
+-data_rd
+@c00200
+-data_ret
+@28
+[color] 2
+TOP.cache_test_top.u_axi.data_ret_valid
+[color] 2
+TOP.cache_test_top.u_axi.data_ret_last
+@22
+[color] 5
+TOP.cache_test_top.u_axi.data_ret_data[31:0]
+@1401200
+-data_ret
+@800200
+-data_wr
+@28
+[color] 4
+TOP.cache_test_top.u_axi.data_wr_req
+[color] 4
+TOP.cache_test_top.u_axi.data_wr_rdy
+[color] 2
+TOP.cache_test_top.u_axi.data_wr_type[2:0]
+@22
+[color] 2
+TOP.cache_test_top.u_axi.data_wr_wstrb[3:0]
+[color] 1
+TOP.cache_test_top.u_axi.data_wr_addr[31:0]
+[color] 5
+TOP.cache_test_top.u_axi.data_wr_data[127:0]
+@1000200
+-data_wr
+-data
+@28
+TOP.cache_test_top.u_axi.wr_s[2:0]
+@22
+TOP.cache_test_top.u_axi.wr_req_buf_len[7:0]
+TOP.cache_test_top.u_axi.wr_req_buf_wstrb[3:0]
+[color] 5
+TOP.cache_test_top.u_axi.wr_req_buf_data[0][31:0]
+[color] 5
+TOP.cache_test_top.u_axi.wr_req_buf_data[1][31:0]
+[color] 5
+TOP.cache_test_top.u_axi.wr_req_buf_data[2][31:0]
+[color] 5
+TOP.cache_test_top.u_axi.wr_req_buf_data[3][31:0]
+@800200
+-axi
+@c00200
+-ar
+@28
+[color] 2
+TOP.cache_test_top.u_axi.arvalid
+[color] 2
+TOP.cache_test_top.u_axi.arready
+@22
+[color] 3
+TOP.cache_test_top.u_axi.arid[3:0]
+[color] 3
+TOP.cache_test_top.u_axi.arlen[7:0]
+@28
+[color] 3
+TOP.cache_test_top.u_axi.arsize[2:0]
+@22
+[color] 1
+TOP.cache_test_top.u_axi.araddr[31:0]
+@1401200
+-ar
+@800200
+-aw
+@28
+[color] 4
+TOP.cache_test_top.u_axi.awvalid
+[color] 4
+TOP.cache_test_top.u_axi.awready
+@22
+[color] 3
+TOP.cache_test_top.u_axi.awlen[7:0]
+@28
+[color] 3
+TOP.cache_test_top.u_axi.awsize[2:0]
+@22
+[color] 1
+TOP.cache_test_top.u_axi.awaddr[31:0]
+@1000200
+-aw
+@800200
+-w
+@28
+[color] 4
+TOP.cache_test_top.u_axi.wvalid
+[color] 4
+TOP.cache_test_top.u_axi.wready
+[color] 2
+TOP.cache_test_top.u_axi.wlast
+@22
+[color] 5
+TOP.cache_test_top.u_axi.wdata[31:0]
+@1000200
+-w
+@800200
+-b
+@28
+[color] 4
+TOP.cache_test_top.u_axi.bready
+[color] 4
+TOP.cache_test_top.u_axi.bvalid
+@22
+[color] 3
+TOP.cache_test_top.u_axi.bid[3:0]
+@28
+[color] 3
+TOP.cache_test_top.u_axi.bresp[1:0]
+@1000200
+-b
+-axi
+-axi_bridge
 [pattern_trace] 1
 [pattern_trace] 0
