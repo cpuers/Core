@@ -86,6 +86,28 @@ include ../tests.mk # common rules for unit tests
 
 目前仅支持 Read-only 的随机访存测试；
 
+### cache-axi-v3
+
+V3 版本是一个较为通用、完备的访存子系统测试框架。单元测试编写者只要实现 `Testbench` 类，使其 `tests` 方法返回访存事务 `Tx` 类列表即可，框架自动验证 Cache 正确性。支持读写，支持 Uncached，但是不支持 CACOP。
+
+以下是所有可用的 Cache 事务：
+
+```cpp
+class TxClear : public Tx;
+class ICacheTxR: public ICacheTx;
+    ICacheTxR(u32 araddr);
+class ICacheTxRH: public ICacheTxR; // automatically assert hit
+    ICacheTxRH(u32 addr);
+class DCacheTxR : public DCacheTx;
+    DCacheTxR(u32 addr, u8 strb);
+class DCacheTxW: public DCacheTx;
+    DCacheTxW(u32 addr, u8 strb, dw_t wdata);
+class DCacheTxRH: public DCacheTxR;
+    DCacheTxRH(u32 addr, u8 strb);
+class DCacheTxWH: public DCacheTxW;
+    DCacheTxWH(u32 addr, u8 strb, u32 wdata);
+```
+
 ### nvboard (WIP)
 
 接入 NVBoard，可以以图形化方式，手动测试一些简单电路；

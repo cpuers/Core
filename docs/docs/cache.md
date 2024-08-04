@@ -81,7 +81,7 @@ ICache 只支持读取和 CACOP 操作。读取时，一次性返回给定地址
 
 大小 8KB，2 路组相连，256 行，每行 16B，LRU 替换；
 
-#### `icache_v5` (WIP)
+#### `icache_v5`
 
 - 在 `state_lookup` 阶段如果 `hit`，接受新请求，不返回 `state_idle` 再重新接受请求；
 
@@ -89,14 +89,75 @@ ICache 只支持读取和 CACOP 操作。读取时，一次性返回给定地址
 
 - 添加性能计数器接口；
 
+##### 规格
+
+8KB, 2-way, 256 lines, 16B/line (4 insts), LRU/Random replace.
+
+##### 状态
+
 ![状态机](images/icache_v5.svg)
+
+- 能够在 `IDLE`, `LOOKUP (hit)` 时接受 R/W 请求；
+- 对于 Uncached R/W 请求，直接与 AXI Bridge 握手，进入对应的接收状态；
+- 对于 CACOP 请求，必须回到 `IDLE` 状态接受，优先接受 CACOP 请求；
+
+##### Cache 控制
+
+在 `IDLE`, `LOOKUP (hit)` 状态下同时读 `tagv_sram` 和 `data_sram`，在 `RECEIVE (recv_fin)` 状态写 `tagv_sram` 和 `data_sram`；
 
 ## DCache
 
 ### 接口
 
+#### 流水线请求端
+
+| I/O 	| 信号     	| 位宽 	| 含义                                                                               	|
+|-----	|----------	|------	|------------------------------------------------------------------------------------	|
+| I   	| `op`       	| 1    	| 读: 0, 写: 1                                                                       	|
+| I   	| `strb`     	| 4    	| 操作的字节使能信息，为 4B 对齐地址开始的 4B 的字节使能<br>注意读操作也需要字节使能 	|
+| I   	| `uncached` 	| 1    	| 操作是否为 Uncached                                                                	|
+| I   	| `wdata`    	| 32   	| 写操作的数据                                                                       	|
+
+#### 流水线接收端
+
+| I/O 	| 信号   	| 位宽 	| 含义                        	|
+|-----	|--------	|------	|-----------------------------	|
+| O   	| `rvalid` 	| 1    	|                             	|
+| O   	| `rdata`  	| 32   	|                             	|
+| O   	| `rhit`   	| 1    	| 读请求是否命中，持续 1 周期 	|
+| O   	| `whit`   	| 1    	| 写请求是否命中，持续 1 周期 	|
+
+#### CACOP 端
+
+| I/O 	| 信号          	| 位宽 	| 含义                        	|
+|-----	|---------------	|------	|-----------------------------	|
+| I   	| `cacop_valid` 	| 1    	| CACOP 端口握手信号          	|
+| O   	| `cacop_ready` 	| 1    	|                             	|
+| I   	| `cacop_code`  	| 2    	| 即 CACOP 指令的 `code[3:2]` 	|
+| I   	| `cacop_addr`  	| 32   	|                             	|
+
 ### 版本
 
-#### `dcache_dummy`
+#### `dcache_dummy_v3`
 
-#### `dcache_dummy_v2`
+带有 Uncached 访问，且支持所有规格访存，且能够和 AXI Bridge 直接握手的 Dummy DCache;
+
+#### `dcache_v4`
+
+##### 规格
+
+8/16KB, 2/4-way, 256 lines, 16B/line, 4 banks, Random/LRU replace;
+
+第一代全功能、支持参数化配置的 DCache，能够通过修改 `DCACHE_WAY=2/4`, 定义宏 `DCACHE_LRU` 选择路数、替换策略；
+
+##### 状态
+
+![状态机](images/dcache_v4.svg)
+
+
+- Uncached 请求和 CACOP 请求会使 DCache 尽快返回 IDLE 状态，以便流水线和 AXI Bridge 直接握手；
+
+##### Cache 控制
+
+- 在 `IDLE`, `LOOKUP (hit)`, `REQW (wr_rdy)` 时读取 `tagv_sram`；
+- 在 Write Buffer `WRITE` 状态写对应 Bank；
