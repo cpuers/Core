@@ -198,7 +198,7 @@ localparam wait_me_state = 2'b01;
 localparam wait_an_state = 2'b10;
 localparam idle = 2'b00;
 
-assign wait_another = (state==wait_an_state);
+assign wait_another = ~|(state^wait_an_state);
 assign cal_valid = ds_to_es_valid && !(wait_another);
 
 always @(posedge clk) begin
@@ -268,8 +268,8 @@ assign es_to_ws_bus    = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
 //assign exm_forward_bus = exm_forward_bus_r; //es_to_ws_bus_r[`ES_TO_WS_BUS_WD:32]; //exm_forward_bus_r;
 
 //csr forward
-assign forw_csr[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[84] && use_csr_data && forward_data1[83:70]==csr_addr;
-assign forw_csr[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[84] && use_csr_data && forward_data2[83:70]==csr_addr;
+assign forw_csr[0] = forward_data1[`FORWAED_BUS_WD-1] && forward_data1[84] && use_csr_data && ~|(forward_data1[83:70]^csr_addr);
+assign forw_csr[1] = forward_data2[`FORWAED_BUS_WD-1] && forward_data2[84] && use_csr_data && ~|(forward_data2[83:70]^csr_addr);
 assign csr_rdata = forw_csr[0] ? forward_data1[69:38] : forw_csr[1] ? forward_data2[69:38] : csr_rdata_t;
 assign csr_wdata_t = (rj_value & rkd_value) | (~rj_value & csr_rdata);
 assign csr_wdata = use_mark ?  csr_wdata_t : rkd_value;
@@ -323,7 +323,7 @@ assign {div_result, div_ok} = div_to_es_bus;
 assign es_to_mul_bus = {use_mul && cal_valid && !in_excp_t , use_high, is_unsigned, src1, src2};
 assign {mul_result, mul_ok} = mul_to_es_bus;
 
-assign bpu_es_bus = {flush, in_excp, is_etrn, es_pc, may_jump&cal_valid, need_jump&cal_valid, pre_fail&cal_valid, jump_target, jump_type};
+assign bpu_es_bus = {flush, es_pc, may_jump&cal_valid&!in_excp&!is_etrn, need_jump&cal_valid, pre_fail&cal_valid, jump_target, jump_type};
 
 Alu u_alu (
     .alu_op    (alu_op),

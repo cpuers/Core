@@ -693,20 +693,20 @@ icache_v5 icache_dummy(
     .write_buffer_empty (wr_buf_empty )
   );
 
-//   perf_counter u_perf(
-//     .clock      ( aclk         ),
-//     .reset      ( reset         ),
-//     .ifetch     (i_valid_i && i_ready_i),
-//     .ifetch_hit (icache_rhit),
-//     .load       (d_valid_i && d_ready_i && !dcache_op),
-//     .load_hit   (dcache_rhit),
-//     .store      (d_valid_i && d_ready_i &&  dcache_op),
-//     .store_hit  (dcache_whit),
-//     // TODO
-//     .jump       (1'b0       ),
-//     .jump_correct (1'b0     ),
-//     .jump_correct_target (1'b0)
-//   );
+  perf_counter u_perf(
+    .clock      ( aclk         ),
+    .reset      ( reset         ),
+    .ifetch     (i_valid_i && i_ready_i),
+    .ifetch_hit (icache_rhit),
+    .load       (d_valid_i && d_ready_i && !dcache_op),
+    .load_hit   (dcache_rhit),
+    .store      (d_valid_i && d_ready_i &&  dcache_op),
+    .store_hit  (dcache_whit),
+    // TODO
+    .jump       (1'b0       ),
+    .jump_correct (1'b0     ),
+    .jump_correct_target (1'b0)
+  );
 
 
 endmodule

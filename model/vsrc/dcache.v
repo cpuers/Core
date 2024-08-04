@@ -1926,7 +1926,7 @@ module dcache_v4(
 
     wire cache_sram_rw_collision;
     assign cache_sram_rw_collision = 
-        (valid && wr_buf_state_is_write && wr_buf_bank == req_bank);
+        (valid && !uncached && wr_buf_state_is_write && wr_buf_bank == req_bank);
 
     /// idle
     /// lookup
