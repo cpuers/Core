@@ -147,24 +147,27 @@ module core_top (
   wire        dcache_rhit;
   wire        dcache_whit;
 
-  wire           inst_rd_req     ;
-  wire [ 2:0]    inst_rd_type    ;
-  wire [31:0]    inst_rd_addr    ;
-  wire           inst_rd_rdy     ;
-  wire           inst_ret_valid  ;
-  wire           inst_ret_last   ;
-  wire [31:0]    inst_ret_data   ;
-  wire           inst_wr_req     ;
-  wire [ 2:0]    inst_wr_type    ;
-  wire [31:0]    inst_wr_addr    ;
-  wire [ 3:0]    inst_wr_wstrb   ;
-  wire [127:0]   inst_wr_data    ;
-  /* verilator lint_off UNUSED */
-  wire           inst_wr_rdy     ;
-  /* verilator lint_on UNUSED */
+  wire           i_rd_req     ;
+  wire [ 2:0]    i_rd_type    ;
+  wire [31:0]    i_rd_addr    ;
+  wire           i_rd_rdy     ;
+  wire           i_ret_valid  ;
+  wire           i_ret_last   ;
+  wire [31:0]    i_ret_data   ;
 
-  assign {inst_wr_req, inst_wr_type, inst_wr_addr, 
-    inst_wr_wstrb, inst_wr_data} = 0;
+  wire           d_rd_req     ;
+  wire [ 2:0]    d_rd_type    ;
+  wire [31:0]    d_rd_addr    ;
+  wire           d_rd_rdy     ;
+  wire           d_ret_valid  ;
+  wire           d_ret_last   ;
+  wire [31:0]    d_ret_data   ;
+  wire           d_wr_req     ;
+  wire [ 2:0]    d_wr_type    ;
+  wire [31:0]    d_wr_addr    ;
+  wire [ 3:0]    d_wr_wstrb   ;
+  wire [127:0]   d_wr_data    ;
+  wire           d_wr_rdy     ;
 
   wire           data_rd_req     ;
   wire [ 2:0]    data_rd_type    ;
@@ -292,13 +295,13 @@ icache_v5 icache_dummy(
     /* verilator lint_on UNUSED */
     
     // axi bridge
-    .rd_req(inst_rd_req),
-    .rd_type(inst_rd_type),
-    .rd_addr(inst_rd_addr),
-    .rd_rdy(inst_rd_rdy),
-    .ret_valid(inst_ret_valid),
-    .ret_last(inst_ret_last),
-    .ret_data(inst_ret_data)
+    .rd_req(i_rd_req),
+    .rd_type(i_rd_type),
+    .rd_addr(i_rd_addr),
+    .rd_rdy(i_rd_rdy),
+    .ret_valid(i_ret_valid),
+    .ret_last(i_ret_last),
+    .ret_data(i_ret_data)
 );
   IF_stage0 IF_stage0 (
       .clk      (aclk),
@@ -609,24 +612,24 @@ icache_v5 icache_dummy(
       .cacop_addr(dcache_cacop_addr),
   
       // axi bridge
-      .rd_req(data_rd_req),
-      .rd_type(data_rd_type),
-      .rd_addr(data_rd_addr),
-      .rd_rdy(data_rd_rdy),
-      .ret_valid(data_ret_valid),
-      .ret_last(data_ret_last),
-      .ret_data(data_ret_data),
-      .wr_req(data_wr_req),
-      .wr_type(data_wr_type),
-      .wr_addr(data_wr_addr),
-      .wr_wstrb(data_wr_wstrb),
-      .wr_data(data_wr_data),
-      .wr_rdy(data_wr_rdy)
+      .rd_req(d_rd_req),
+      .rd_type(d_rd_type),
+      .rd_addr(d_rd_addr),
+      .rd_rdy(d_rd_rdy),
+      .ret_valid(d_ret_valid),
+      .ret_last(d_ret_last),
+      .ret_data(d_ret_data),
+      .wr_req(d_wr_req),
+      .wr_type(d_wr_type),
+      .wr_addr(d_wr_addr),
+      .wr_wstrb(d_wr_wstrb),
+      .wr_data(d_wr_data),
+      .wr_rdy(d_wr_rdy)
   );  
   //regfile
 
-  axi_bridge u_axi_bridge(
-    .clk(aclk),
+  axi_bridge_v2 u_axi_bridge(
+    .clock(aclk),
     .reset(reset),
     
     .arid(arid),
@@ -666,33 +669,27 @@ icache_v5 icache_dummy(
     .bvalid(bvalid),
     .bready(bready),
 
-    .inst_rd_req     ( inst_rd_req    ),    
-    .inst_rd_type    ( inst_rd_type   ),
-    .inst_rd_addr    ( inst_rd_addr   ),
-    .inst_rd_rdy     ( inst_rd_rdy    ),
-    .inst_ret_valid  ( inst_ret_valid ),
-    .inst_ret_last   ( inst_ret_last  ),
-    .inst_ret_data   ( inst_ret_data  ),
-    .inst_wr_req     ( inst_wr_req    ),
-    .inst_wr_type    ( inst_wr_type   ),
-    .inst_wr_addr    ( inst_wr_addr   ),
-    .inst_wr_wstrb   ( inst_wr_wstrb  ),
-    .inst_wr_data    ( inst_wr_data   ),
-    .inst_wr_rdy     ( inst_wr_rdy    ),
+    .i_rd_req     ( i_rd_req    ),    
+    .i_rd_type    ( i_rd_type   ),
+    .i_rd_addr    ( i_rd_addr   ),
+    .i_rd_rdy     ( i_rd_rdy    ),
+    .i_ret_valid  ( i_ret_valid ),
+    .i_ret_last   ( i_ret_last  ),
+    .i_ret_data   ( i_ret_data  ),
     
-    .data_rd_req     ( data_rd_req    ),
-    .data_rd_type    ( data_rd_type   ),
-    .data_rd_addr    ( data_rd_addr   ),
-    .data_rd_rdy     ( data_rd_rdy    ),
-    .data_ret_valid  ( data_ret_valid ),
-    .data_ret_last   ( data_ret_last  ),
-    .data_ret_data   ( data_ret_data  ),
-    .data_wr_req     ( data_wr_req    ),
-    .data_wr_type    ( data_wr_type   ),
-    .data_wr_addr    ( data_wr_addr   ),
-    .data_wr_wstrb   ( data_wr_wstrb  ),
-    .data_wr_data    ( data_wr_data   ),
-    .data_wr_rdy     ( data_wr_rdy    ),
+    .d_rd_req     ( d_rd_req    ),
+    .d_rd_type    ( d_rd_type   ),
+    .d_rd_addr    ( d_rd_addr   ),
+    .d_rd_rdy     ( d_rd_rdy    ),
+    .d_ret_valid  ( d_ret_valid ),
+    .d_ret_last   ( d_ret_last  ),
+    .d_ret_data   ( d_ret_data  ),
+    .d_wr_req     ( d_wr_req    ),
+    .d_wr_type    ( d_wr_type   ),
+    .d_wr_addr    ( d_wr_addr   ),
+    .d_wr_wstrb   ( d_wr_wstrb  ),
+    .d_wr_data    ( d_wr_data   ),
+    .d_wr_rdy     ( d_wr_rdy    ),
     .write_buffer_empty (wr_buf_empty )
   );
 

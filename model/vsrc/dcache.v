@@ -1778,6 +1778,7 @@ module dcache_v3(
     endgenerate
 endmodule
 
+`define DCACHE_LRU
 
 module dcache_v4(
     input               clock,
@@ -1790,9 +1791,7 @@ module dcache_v4(
     input               op,         // 0: read, 1: write
     input       [31:0]  addr,
     input       [ 3:0]  strb,
-    /* verilator lint_off UNUSED */
     input               uncached,
-    /* verilator lint_on UNUSED */
     /// read data (r) channel
     output              rvalid,
     output      [31:0]  rdata,
@@ -1823,7 +1822,7 @@ module dcache_v4(
     input               wr_rdy
     );
 
-    parameter DCACHE_WAY = 2;
+    parameter DCACHE_WAY = 4;
 
     genvar i; // way
     genvar j;
@@ -1838,11 +1837,11 @@ module dcache_v4(
     wire    [20:0]  tagv_dina   [0:DCACHE_WAY-1];
     wire    [20:0]  tagv_douta  [0:DCACHE_WAY-1];
 
-    wire            data_ena    [0:DCACHE_WAY-1][ 3:0];
-    wire            data_wea    [0:DCACHE_WAY-1][ 3:0];
-    wire    [ 7:0]  data_addra  [0:DCACHE_WAY-1][ 3:0];
-    wire    [31:0]  data_dina   [0:DCACHE_WAY-1][ 3:0];
-    wire    [31:0]  data_douta  [0:DCACHE_WAY-1][ 3:0];
+    wire            data_ena    [0:DCACHE_WAY-1][ 0:3];
+    wire            data_wea    [0:DCACHE_WAY-1][ 0:3];
+    wire    [ 7:0]  data_addra  [0:DCACHE_WAY-1][ 0:3];
+    wire    [31:0]  data_dina   [0:DCACHE_WAY-1][ 0:3];
+    wire    [31:0]  data_douta  [0:DCACHE_WAY-1][ 0:3];
 
     reg             dirt        [0:DCACHE_WAY-1][0:255];
     wire            dirt_wea    [0:DCACHE_WAY-1];
@@ -1865,10 +1864,10 @@ module dcache_v4(
     // request
     /* verilator lint_off UNUSED */
     wire    [19:0]  req_tag;
+    /* verilator lint_on UNUSED */
     wire    [ 7:0]  req_idx; 
     wire    [ 1:0]  req_bank;
     wire    [ 1:0]  req_off; 
-    /* verilator lint_on UNUSED */
     assign {req_tag, req_idx, req_bank, req_off} = addr;
     wire req_is_r_uc = !op && uncached;
     wire req_is_w_uc =  op && uncached;
@@ -1893,8 +1892,6 @@ module dcache_v4(
     wire    [ 1:0]  req_buf_off;
     /* verilator lint_on UNUSED */
     assign {req_buf_tag, req_buf_idx, req_buf_bank, req_buf_off} = req_buf_addr;
-    // wire req_buf_is_r = !req_buf_op;
-    // wire req_buf_is_w =  req_buf_op;
 
     /// wr_buf
     reg [DCACHE_WAY-1:0]    wr_buf_way;
@@ -1960,15 +1957,105 @@ module dcache_v4(
     wire [DCACHE_WAY-1:0]   lookup_miss_way_replace_en_w;
     reg  [DCACHE_WAY-1:0]   lookup_miss_way_replace_en;
     wire                    lookup_miss_need_send;
-    replace_rand_2 u_replace(
-        .clock          ( clock         ),
-        .reset          ( reset         ),
-        .en             ( 1'b1          ),
-        .way_v          ( lookup_way_v  ),
-        .way_d          ( lookup_way_d  ),
-        .way_replace_en ( lookup_miss_way_replace_en_w ),
-        .need_send      ( lookup_miss_need_send )
-    );
+    `ifdef DCACHE_LRU
+    generate
+        if (DCACHE_WAY == 2) begin
+            reg             lru     [0:255];
+            replace_lru_2 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .lru            ( lru[req_buf_idx]),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+            wire            lookup_hit_way;
+            wire            lookup_miss_replace_way;
+            assign lookup_hit_way = lookup_way_hit[1];
+            assign lookup_miss_replace_way = lookup_miss_way_replace_en[1];
+            always @(posedge clock) begin
+                case (state) 
+                state_lookup: begin
+                    if (lookup_hit) begin
+                        lru[req_buf_idx] <= ~lookup_hit_way;
+                    end
+                end
+                state_recv: begin
+                    if (recv_fin) begin
+                        lru[req_buf_idx] <= ~lookup_miss_replace_way;
+                    end
+                end
+                endcase
+            end
+        end else if (DCACHE_WAY == 4) begin
+            reg             lru_o0  [0:255];
+            reg     [ 1:0]  lru_o1  [0:255];
+            wire    [ 1:0]  lookup_hit_way;
+            wire    [ 1:0]  lookup_miss_replace_way;
+            encoder_4_2 u_lookup_way(
+                .in             ( lookup_way_hit),
+                .out            ( lookup_hit_way)
+            );
+            encoder_4_2 u_replace_way(
+                .in             ( lookup_miss_way_replace_en),
+                .out            ( lookup_miss_replace_way)
+            );
+            replace_lru_4 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .lru_o0         ( lru_o0[req_buf_idx]),
+                .lru_o1         ( lru_o1[req_buf_idx]),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+            always @(posedge clock) begin
+                case (state) 
+                state_lookup: begin
+                    if (lookup_hit) begin
+                        lru_o0[req_buf_idx] <= ~lookup_hit_way[1];
+                        lru_o1[req_buf_idx][lookup_hit_way[1]] <= ~lookup_hit_way[0];
+                    end
+                end
+                state_recv: begin
+                    if (recv_fin) begin
+                        lru_o0[req_buf_idx] <= ~lookup_miss_replace_way[1];
+                        lru_o1[req_buf_idx][lookup_miss_replace_way[1]] <= ~lookup_miss_replace_way[0];
+                    end                    
+                end
+                endcase
+            end            
+        end
+    endgenerate
+    `else
+    generate
+        if (DCACHE_WAY == 2) begin
+            replace_rand_2 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+        end else if (DCACHE_WAY == 4) begin
+            replace_rand_4 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+        end
+    endgenerate
+    `endif
     /// send
     reg     [19:0]  send_tag; // combinational logic
     always @(*) begin

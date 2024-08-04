@@ -173,8 +173,8 @@ module cache_test_top (
     wire                   axi_rvalid;
     wire                   axi_rready;
 
-    axi_bridge u_axi(
-        .clk             ( clock       ),
+    axi_bridge_v2 u_axi(
+        .clock           ( clock       ),
         .reset           ( reset       ),
 
         .awid            ( axi_awid    ),
@@ -214,35 +214,27 @@ module cache_test_top (
         .rvalid          ( axi_rvalid  ),
         .rready          ( axi_rready  ),
 
-        .inst_rd_req     ( i_rd_req    ),
-        .inst_rd_type    ( i_rd_type   ),
-        .inst_rd_addr    ( i_rd_addr   ),
-        .inst_rd_rdy     ( i_rd_rdy    ),
-        .inst_ret_valid  ( i_ret_valid ),
-        .inst_ret_last   ( i_ret_last  ),
-        .inst_ret_data   ( i_ret_data  ),
-        .inst_wr_req     ( 1'b0        ),
-        .inst_wr_type    ( 3'b0        ),
-        .inst_wr_addr    ( 32'b0       ),
-        .inst_wr_wstrb   ( 4'b0        ),
-        .inst_wr_data    ( 128'b0      ),
-        /* verilator lint_off PINCONNECTEMPTY */
-        .inst_wr_rdy     (             ),
-        /* verilator lint_on PINCONNECTEMPTY */
+        .i_rd_req     ( i_rd_req    ),
+        .i_rd_type    ( i_rd_type   ),
+        .i_rd_addr    ( i_rd_addr   ),
+        .i_rd_rdy     ( i_rd_rdy    ),
+        .i_ret_valid  ( i_ret_valid ),
+        .i_ret_last   ( i_ret_last  ),
+        .i_ret_data   ( i_ret_data  ),
                            
-        .data_rd_req     ( d_rd_req    ),
-        .data_rd_type    ( d_rd_type   ),
-        .data_rd_addr    ( d_rd_addr   ),
-        .data_rd_rdy     ( d_rd_rdy    ),
-        .data_ret_valid  ( d_ret_valid ),
-        .data_ret_last   ( d_ret_last  ),
-        .data_ret_data   ( d_ret_data  ),
-        .data_wr_req     ( d_wr_req    ),
-        .data_wr_type    ( d_wr_type   ),
-        .data_wr_addr    ( d_wr_addr   ),
-        .data_wr_wstrb   ( d_wr_wstrb  ),
-        .data_wr_data    ( d_wr_data   ),
-        .data_wr_rdy     ( d_wr_rdy    ),
+        .d_rd_req     ( d_rd_req    ),
+        .d_rd_type    ( d_rd_type   ),
+        .d_rd_addr    ( d_rd_addr   ),
+        .d_rd_rdy     ( d_rd_rdy    ),
+        .d_ret_valid  ( d_ret_valid ),
+        .d_ret_last   ( d_ret_last  ),
+        .d_ret_data   ( d_ret_data  ),
+        .d_wr_req     ( d_wr_req    ),
+        .d_wr_type    ( d_wr_type   ),
+        .d_wr_addr    ( d_wr_addr   ),
+        .d_wr_wstrb   ( d_wr_wstrb  ),
+        .d_wr_data    ( d_wr_data   ),
+        .d_wr_rdy     ( d_wr_rdy    ),
 
         /* verilator lint_off PINCONNECTEMPTY */
         .write_buffer_empty (          )

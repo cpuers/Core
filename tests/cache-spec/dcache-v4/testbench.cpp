@@ -22,7 +22,7 @@ std::vector<Tx *> Testbench::tests() {
     v.push_back(new DCacheTxR(0xa010, DCacheTx::rand_strb(0xa010)));
     v.push_back(new DCacheTxR(0xb010, DCacheTx::rand_strb(0xb010)));
     v.push_back(new DCacheTxR(0x8010, DCacheTx::rand_strb(0x8010)));
-    // v.push_back(new TxClear);
+    v.push_back(new TxClear);
     u32 addr;
     for (int i = 0; i < 512; i ++) {
         if (rand() & 1) {
@@ -48,7 +48,7 @@ std::vector<Tx *> Testbench::tests() {
         } break;
         }
     }
-    // v.push_back(new TxClear);
+    v.push_back(new TxClear);
     for (int i = 0; i < 16384; i ++) {
         int c = rand() % 3;
         u32 addr;
