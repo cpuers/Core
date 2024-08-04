@@ -4,10 +4,10 @@
 `define FS_ICACHE_WD 128
 `define FS_ES_BUS_WD 114
 //for InstrBuffer
-`define IB_WIDTH 16
-`define IB_WIDTH_LOG2 4
+`define IB_WIDTH 8
+`define IB_WIDTH_LOG2 3
 
-`define IB_DATA_BUS_WD 82
+`define IB_DATA_BUS_WD 81
 `define DS_TO_ES_BUS_WD 246
 // 流水线寄存器位宽
 `define IF0_TO_IF1_BUS_WD 56

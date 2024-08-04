@@ -49,7 +49,7 @@ module ID_stage (
   reg [`DS_TO_ES_BUS_WD:0] EXE_instr1_r;
   always @(posedge clk) 
   begin
-    if (rst | flush_ID1 | (flush_ID2 &instr1_ok) ) 
+    if (rst | flush_ID1 | (flush_ID2) ) 
     begin
       EXE_instr0_r[`DS_TO_ES_BUS_WD]<= 1'b0;
     end 
@@ -95,8 +95,8 @@ module ID_stage (
   wire instr1_gr_we;
   wire instr1_use_rj;
   wire instr1_use_rkd;
-  wire instr0_jmp_and_wr;
-  wire instr1_jmp_and_wr;
+  wire instr0_may_jump;
+  wire instr1_may_jump;
   wire instr0_is_ls;
   wire instr1_is_ls;
   wire instr0_must_single;
@@ -127,7 +127,7 @@ module ID_stage (
       .use_rj(instr0_use_rj),
       .use_rkd(instr0_use_rkd),
       .dest(instr0_dest),
-      .jmp_and_wr(instr0_jmp_and_wr),
+      .may_jump(instr0_may_jump),
       .is_ls(instr0_is_ls),
 
       .have_intrpt(have_intrpt),
@@ -151,7 +151,7 @@ module ID_stage (
       .use_rj(instr1_use_rj),
       .use_rkd(instr1_use_rkd),
       .dest(instr1_dest),
-      .jmp_and_wr(instr1_jmp_and_wr),
+      .may_jump(instr1_may_jump),
       .is_ls(instr1_is_ls),
       .have_intrpt(have_intrpt),
       .must_single(instr1_must_single),
@@ -164,35 +164,36 @@ module ID_stage (
       .guess_jump(instr1_is_guess)
   );
 
-    // reg [31:0] can_doubles ;
-    // reg [31:0] need_singles;
+    reg [31:0] can_doubles ;
+    reg [31:0] need_singles;
 
-    // always @(posedge clk ) 
-    // begin
-    //     if (rst) 
-    //     begin
-    //         can_doubles <= 32'h0;    
-    //     end 
-    //     else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
-    //     begin
-    //         can_doubles <= can_doubles + 32'h1;
-    //     end   
-    // end
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            can_doubles <= 32'h0;    
+        end 
+        else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
+        begin
+            can_doubles <= can_doubles + 32'h1;
+        end   
+    end
 
-    // always @(posedge clk) 
-    // begin
-    //     if (rst) 
-    //     begin
-    //         need_singles <= 32'h0;
-    //     end
-    //     else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
-    //     begin
-    //         need_singles <= need_singles + 32'h1;
-    //     end
-    // end
+    always @(posedge clk) 
+    begin
+        if (rst) 
+        begin
+            need_singles <= 32'h0;
+        end
+        else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
+        begin
+            need_singles <= need_singles + 32'h1;
+        end
+    end
   // 判断发射逻辑
   wire need_single;
-  assign need_single =  instr1_jmp_and_wr & (instr0_is_div | instr0_is_ls| instr0_is_mul) |
+  assign need_single =  instr1_may_jump & (instr0_is_div | instr0_is_ls| instr0_is_mul) |
+                        instr0_may_jump |
                         ((|instr0_dest) & 
                           instr0_gr_we  &
                         ((instr0_dest==read_addr2 & instr1_use_rj) |
@@ -229,7 +230,7 @@ module ID_decoder (
     output use_csr_data,
     output [13:0] csr_addr,
     output [4:0] dest,
-    output jmp_and_wr,
+    output may_jump,
     output [4:0] rf_raddr1,
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
@@ -244,7 +245,6 @@ module ID_decoder (
   wire        use_less;
   wire        need_less;
   
-  wire        may_jump;
   wire        use_zero;
   wire        need_zero;
 
@@ -543,7 +543,7 @@ module ID_decoder (
   assign res_from_mem = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_hu | inst_ld_bu;
   assign dst_is_r1 = inst_bl;
   assign dst_is_rj = inst_rdcntid;
-  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &~inst_syscall &~inst_ertn;
+  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &~inst_syscall &~inst_ertn & |dest;
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
   assign dest = dst_is_r1 ? 5'd1 :
                 dst_is_rj  ? rj : rd;
@@ -667,7 +667,7 @@ module ID_decoder (
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;
   assign use_rj = use_rj_value | ~src1_is_pc;
-  assign jmp_and_wr = gr_we & may_jump;
+  
   assign csr_addr = csr_num;
 endmodule
 module decoder_2_4(

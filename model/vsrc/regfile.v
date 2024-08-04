@@ -15,13 +15,13 @@ module regfile (
 );
   reg [`WIDTH-1:0] mem[`NR_REG-1:0];
 
-  assign rs1data = (rs1 == 0) ? `WIDTH'b0 : mem[rs1];
-  assign rs2data = (rs2 == 0) ? `WIDTH'b0 : mem[rs2];
-  assign rs3data = (rs3 == 0) ? `WIDTH'b0 : mem[rs3];
-  assign rs4data = (rs4 == 0) ? `WIDTH'b0 : mem[rs4];
+  assign rs1data =  mem[rs1];
+  assign rs2data =  mem[rs2];
+  assign rs3data =  mem[rs3];
+  assign rs4data =  mem[rs4];
 
   always @(posedge clock) begin
-    if (wen1 && (rd1!=5'b0)) 
+    if (wen1) 
     begin
       mem[rd1] <= wdata1;
     end 
@@ -29,7 +29,7 @@ module regfile (
     begin
 
     end
-    if (wen2 && (rd2!=5'b0)) 
+    if (wen2) 
     begin
       mem[rd2] <= wdata2;
     end 

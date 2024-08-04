@@ -36,7 +36,7 @@ module InstrBuffer (
 
       
     end else begin
-      buffer_size <= buffer_size + {2'b0, push_num} - {3'b0, (&pop_op ? 2'd2 : pop_op)};  // FIX ME
+      buffer_size <= buffer_size + {1'b0, push_num} - {2'b0, (&pop_op ? 2'd2 : pop_op)};  // FIX ME
     end
   end
   assign if_bf_sz = buffer_size;
@@ -46,22 +46,7 @@ module InstrBuffer (
       tail_ptr <= `IB_WIDTH_LOG2'h0;
 
       //FIX ME
-      buffer[0][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[1][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[2][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[3][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[4][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[5][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[6][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[7][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[8][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[9][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[10][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[11][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[12][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[13][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[14][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
-      buffer[15][`IB_DATA_BUS_WD-1] <= 1'b0; // 初始化为0
+
     end else begin
       //push
       case (push_num)
@@ -124,13 +109,13 @@ module InstrBuffer (
         end 
       {1'b0,`IB_WIDTH_LOG2'h1}:
       begin
-          instr0_valid = buffer[head_ptr][`IB_DATA_BUS_WD-1];
+          instr0_valid = 1'b1;
           instr1_valid = 1'b0;
       end
       default: 
       begin
-          instr0_valid = buffer[head_ptr][`IB_DATA_BUS_WD-1];
-          instr1_valid = buffer[head_ptr+ `IB_WIDTH_LOG2'h1][`IB_DATA_BUS_WD-1];
+          instr0_valid = 1'b1;
+          instr1_valid = 1'b1;
       end
     endcase  
   end

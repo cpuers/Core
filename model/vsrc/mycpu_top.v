@@ -503,7 +503,7 @@ icache_v5 icache_dummy(
       .br_bus        (br_bus2),
       .flush_IF      (flush_IF2),
       .flush_ID      (flush_ID2),
-      .flush_ES      (flush_IF1 | bpu_flush1),
+      .flush_ES      (1'b0),
 
       .csr_bus       (csr_bus2),
       .jump_excp_fail(jump_excp_fail),
@@ -528,7 +528,7 @@ icache_v5 icache_dummy(
       .dcache_rdata_bus (dcache_rdata_bus),
       .dcache_wdata_bus (dcache_wdata_bus),
       .csr_datm(csr_datm),
-      .flush(flush_IF1| bpu_flush1),
+      .flush(1'b0),
       .excp_ale(excp_ale)
   );
 
@@ -538,7 +538,7 @@ icache_v5 icache_dummy(
     .es_to_div_bus1(es_to_div_bus1),
     .es_to_div_bus2(es_to_div_bus2),
     .div_to_es_bus(div_to_es_bus),
-    .flush(flush_IF1| bpu_flush1)
+    .flush(1'b0)
   );
 
   MUL_top MUL_top (
@@ -547,7 +547,7 @@ icache_v5 icache_dummy(
     .es_to_mul_bus1(es_to_mul_bus1),
     .es_to_mul_bus2(es_to_mul_bus2),
     .mul_to_es_bus(mul_to_es_bus),
-    .flush(flush_IF1| bpu_flush1)
+    .flush(1'b0)
   );
 
   WB_stage wb_stage (

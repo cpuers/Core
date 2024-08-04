@@ -35,7 +35,7 @@ module IF_stage1 (
   /* verilator lint_off UNUSED */
   wire  [`IB_WIDTH_LOG2:0]total_size;
   wire [2:0] real_inst_rum = in_excp ?  3'b1 : ({2'b0,pc_valid[0]}+ {2'b0,pc_valid[1]}+{2'b0,pc_valid[2]}+{2'b0,pc_valid[3]}) ;
-  assign total_size = {can_push_size + (buf_empty ? {2'b0, real_inst_rum} : {2'b0, buf_num})};
+  assign total_size = {can_push_size + (buf_empty ? {1'b0, real_inst_rum} : {1'b0, buf_num})};
   assign can_push   = ~total_size[`IB_WIDTH_LOG2];
   /* verilator lint_on  UNUSED */
   wire data_valid;
@@ -44,28 +44,28 @@ module IF_stage1 (
     case (instr_num)
 
       3'd1: begin
-        instrs[0] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[127:96]};
-        instrs[1] = {pc_valid[1], pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[63:32]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
+        instrs[0] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[127:96]};
+        instrs[1] = { pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[63:32]};
+        instrs[2] = { pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
+        instrs[3] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
       3'd2: begin
-        instrs[0] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc , rdata[95:64]};
-        instrs[1] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[127:96]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
+        instrs[0] = { pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc , rdata[95:64]};
+        instrs[1] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[127:96]};
+        instrs[2] = { pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
+        instrs[3] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
       3'd3: begin
-        instrs[0] = {pc_valid[1], pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[63:32]};
-        instrs[1] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[95:64]};
-        instrs[2] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[127:96]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
+        instrs[0] = { pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[63:32]};
+        instrs[1] = { pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[95:64]};
+        instrs[2] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[127:96]};
+        instrs[3] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
       default: begin
-        instrs[0] = {pc_valid[0], pc_is_jump[0],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[31:0]};
-        instrs[1] = {pc_valid[1], pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[63:32]};
-        instrs[2] = {pc_valid[2], pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
-        instrs[3] = {pc_valid[3], pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
+        instrs[0] = { pc_is_jump[0],in_excp,excp_Ecode,excp_subEcode, fs_pc, rdata[31:0]};
+        instrs[1] = { pc_is_jump[1],in_excp,excp_Ecode,excp_subEcode, fs_pc + 4, rdata[63:32]};
+        instrs[2] = { pc_is_jump[2],in_excp,excp_Ecode,excp_subEcode, fs_pc + 8, rdata[95:64]};
+        instrs[3] = { pc_is_jump[3],in_excp,excp_Ecode,excp_subEcode, fs_pc + 12, rdata[127:96]};
       end
     endcase
   end
