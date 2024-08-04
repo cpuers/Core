@@ -22,11 +22,11 @@ module axi_bridge_v2 (
     /* verilator lint_on UNUSED */
     input               rlast,
 
-    output              awvalid,
+    output  reg         awvalid,
     input               awready,
-    output      [31:0]  awaddr,
-    output      [ 7:0]  awlen,
-    output      [ 2:0]  awsize,
+    output  reg [31:0]  awaddr,
+    output  reg [ 7:0]  awlen,
+    output  reg [ 2:0]  awsize,
     output      [ 3:0]  awid,       // fixed
     output      [ 1:0]  awburst,    // fixed
     output      [ 1:0]  awlock,     // fixed
@@ -161,7 +161,7 @@ module axi_bridge_v2 (
     // RET Channel
     wire    ret_is_data = rid == 4'd1;
     /// axi fixed signals
-    assign rready = 1'b1;
+    assign rready = 1;
     /// i/o
     assign i_ret_valid = rvalid && !ret_is_data;
     assign i_ret_last = rlast;
@@ -182,9 +182,10 @@ module axi_bridge_v2 (
 
     /// state machine
     localparam  wr_s_idle   = 0;
-    localparam  wr_s_send   = 1;
-    localparam  wr_s_recv   = 2;
-    localparam  wr_s_reset  = 3;
+    localparam  wr_s_reqw   = 1;
+    localparam  wr_s_send   = 2;
+    localparam  wr_s_recv   = 3;
+    localparam  wr_s_reset  = 4;
     
     reg     [ 2:0]  wr_s;
     wire wr_s_is_idle = wr_s == wr_s_idle;
@@ -204,46 +205,66 @@ module axi_bridge_v2 (
     wire send_fin = wready && (wr_send_cnt == wr_req_buf_len);
     always @(posedge clock) begin
         if (reset) begin
-            wr_s <= wr_s_reset;
+            wr_s <= wr_s_idle;
+            awvalid <= 0;
+            awaddr <= 0;
+            awlen <= 0;
+            awsize <= 0;
+            wvalid <= 0;
+            wlast <= 0;
+            bready <= 0;
         end else case (wr_s)
             wr_s_idle: begin
-                if (awvalid && awready) begin
-                    wr_s <= wr_s_send;
-                    wvalid <= 1'b1;
-                    wr_send_cnt <= 0;
+                if (d_wr_req) begin
+                    wr_s <= wr_s_reqw;
+                    awvalid <= 1;
+                    awaddr <= d_wr_addr;
+                    awlen <= wr_req_len;
+                    awsize <= wr_req_size;
                         {wr_req_buf_wstrb, wr_req_buf_len}
                     <=  {d_wr_wstrb   , wr_req_len    };                    
                         {wr_req_buf_data[3], wr_req_buf_data[2], wr_req_buf_data[1], wr_req_buf_data[0]}
                     <=  {d_wr_data};
+                end
+            end
+            wr_s_reqw: begin
+                if (awready) begin
+                    wr_s <= wr_s_send;
+                    awvalid <= 0;
+                    wvalid <= 1;
+                    wr_send_cnt <= 0;
                     if (wr_req_is_line) begin
-                        wlast <= 1'b0;
+                        wlast <= 0;
                     end else begin
-                        wlast <= 1'b1;
+                        wlast <= 1;
                     end
                 end
             end
             wr_s_send: begin
                 if (wready) begin
-                    if (send_fin) begin
+                     if (send_fin) begin
                         wr_s <= wr_s_recv;
-                        wvalid <= 1'b0;
-                        bready <= 1'b1;
+                        wvalid <= 0;
+                        bready <= 1;
                     end else begin
                         wr_send_cnt <= wr_send_cnt + 1;
+                        if (wr_send_cnt + 1 == wr_req_buf_len) begin
+                            wlast <= 1;                            
+                        end
                     end
                 end
             end
             wr_s_recv: begin
                 if (bvalid && bready) begin
                     wr_s <= wr_s_idle;
-                    bready <= 1'b0;
+                    bready <= 0;
                 end
             end
             wr_s_reset: begin
                 wr_s <= wr_s_idle;
                 wr_send_cnt <= 0;
-                wvalid <= 1'b0;
-                bready <= 1'b0;
+                wvalid <= 0;
+                bready <= 0;
             end
             default: begin
                 wr_s <= wr_s_reset;
@@ -251,14 +272,10 @@ module axi_bridge_v2 (
         endcase
     end
     /// i/o
-    assign awvalid = wr_s_is_idle && d_wr_req;
-    assign awaddr = d_wr_addr;
-    assign awlen = wr_req_len;
-    assign awsize = wr_req_size;
     assign wstrb = wr_req_buf_wstrb;
     /* TODO: len change */
     assign wdata = wr_req_buf_data[wr_send_cnt[1:0]];
 
-    assign d_wr_rdy = wr_s_is_idle && awready;
-    assign write_buffer_empty = 1'b1;
+    assign d_wr_rdy = wr_s_is_idle;
+    assign write_buffer_empty = 1;
 endmodule
