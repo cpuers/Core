@@ -78,19 +78,12 @@ module mul (
     output [31:0] mul_result
 );
 
-    wire [63:0] result;
+    wire [63:0] result, result_s, result_us;
     assign mul_result = use_high ? result[63:32] : result[31:0];
 
     reg [31:0] rx, ry;
     reg rmul_signed;
     reg status;
-    reg reg_en;
-
-    assign mul_ok = reg_en & (~status);
-
-    always @(posedge clk) begin
-        reg_en <= en;
-    end
 
     always @(posedge clk) begin
         if(~en) status <= 1'b0;
@@ -98,7 +91,25 @@ module mul (
             status <= ~status;
         end 
     end    
+    assign mul_ok = status;
 
+    mult_gen_0 mg0(
+        .CLK(clk),
+        .A(x),
+        .B(y),
+        .P(result_s)
+    );
+
+    mult_gen_1 mg1(
+        .CLK(clk),
+        .A(x),
+        .B(y),
+        .P(result_us)
+    );
+    
+    assign result = mul_signed ? result_s : result_us;
+
+/*
     always @(posedge clk) begin
         rx <= x;
         ry <= y;
@@ -111,7 +122,7 @@ module mul (
         .mul_signed(rmul_signed),
         .result(result)
     );  
-
+*/
 endmodule
 
 module boothEncoder (
