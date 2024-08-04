@@ -52,6 +52,7 @@ module BPU (
   reg [`BTB_LINE_SIZE-1:0] btb [0:`BTB_SIZE-1];
 
   reg [`RAS_LINE_SIZE-1:0] ras [0:`RAS_SIZE-1];
+  reg [`RAS_SIZE-1:0] ras_valid;
   reg [`RAS_IDX_SIZE-1:0] num_ras;
   wire pop;
   wire push;
@@ -111,7 +112,7 @@ module BPU (
   always @(*) begin
     if(group_valid[0] && bpu_valid[ridx1] && pht[ridx1] >=2'b10 && btb[ridx1][`BTB_TAG]==rtag) 
     begin
-      if(btb[ridx1][`BTB_TYPE]==2'b10) 
+      if(btb[ridx1][`BTB_TYPE]==2'b10 && ras_valid[num_ras - `RAS_IDX_SIZE'b1]) 
       begin
         next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
       end
@@ -124,7 +125,7 @@ module BPU (
     end
     else if(group_valid[1] && bpu_valid[ridx2] && pht[ridx2] >=2'b10 && btb[ridx2][`BTB_TAG]==rtag) 
     begin
-      if(btb[ridx2][`BTB_TYPE]==2'b10) 
+      if(btb[ridx2][`BTB_TYPE]==2'b10 && ras_valid[num_ras - `RAS_IDX_SIZE'b1]) 
       begin
         next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
       end
@@ -137,7 +138,7 @@ module BPU (
     end
     else if(group_valid[2] && bpu_valid[ridx3] && pht[ridx3] >=2'b10 && btb[ridx3][`BTB_TAG]==rtag) 
     begin
-      if(btb[ridx3][`BTB_TYPE]==2'b10) 
+      if(btb[ridx3][`BTB_TYPE]==2'b10 && ras_valid[num_ras - `RAS_IDX_SIZE'b1]) 
       begin
         next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
       end
@@ -150,7 +151,7 @@ module BPU (
     end
     else if(group_valid[3] && bpu_valid[ridx4] && pht[ridx4] >=2'b10 && btb[ridx4][`BTB_TAG]==rtag) 
     begin
-      if(btb[ridx4][`BTB_TYPE]==2'b10) 
+      if(btb[ridx4][`BTB_TYPE]==2'b10 && ras_valid[num_ras - `RAS_IDX_SIZE'b1]) 
       begin
         next_pc = {ras[num_ras - `RAS_IDX_SIZE'b1],2'b0};
       end
@@ -179,6 +180,7 @@ module BPU (
     if(reset) 
     begin
       bpu_valid <= 0;
+      ras_valid <= 0;
       num_ras <= 0;
       num_need <= 0;
       num_succ <= 0;
@@ -236,10 +238,12 @@ module BPU (
         if(jump_type1==2'b01) //call(bl) push ras
         begin  
           ras[num_ras] <= es_pc1[31:2] + 30'b1;
+          ras_valid[num_ras] <= 1'b1;
           num_ras <= num_ras + `RAS_IDX_SIZE'b1;
         end
         else if(jump_type1==2'b10 && !bpu_flush1) //return(jirl) pop ras
         begin  
+          ras_valid[num_ras] <= 1'b0;
           num_ras <= num_ras - `RAS_IDX_SIZE'b1;
         end
       end
@@ -273,10 +277,12 @@ module BPU (
         if(jump_type2==2'b01) 
         begin
           ras[num_ras] <= es_pc2[31:2] + 30'b1;
+          ras_valid[num_ras] <= 1'b1;
           num_ras <= num_ras + `RAS_IDX_SIZE'b1;
         end
         else if(jump_type2==2'b10 && !bpu_flush) 
         begin
+          ras_valid[num_ras] <= 1'b0;
           num_ras <= num_ras - `RAS_IDX_SIZE'b1;
         end
       end

@@ -117,7 +117,7 @@ module ID_stage (
   wire instr1_is_guess;
 
   ID_decoder ID_decoder0 (
-      .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-2:0]),
+      .fs_to_ds_bus(IF_instr0[`IB_DATA_BUS_WD-1:0]),
       .ds_to_es_bus(EXE_instr0_w),
       .rf_raddr1(read_addr0),
       .rf_raddr2(read_addr1),
@@ -141,7 +141,7 @@ module ID_stage (
       .guess_jump(instr0_is_guess)
   );
   ID_decoder ID_decoder1 (
-      .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-2:0]),
+      .fs_to_ds_bus(IF_instr1[`IB_DATA_BUS_WD-1:0]),
       .ds_to_es_bus(EXE_instr1_w),
       .rf_raddr1(read_addr2),
       .rf_raddr2(read_addr3),
@@ -215,7 +215,7 @@ module ID_stage (
 endmodule
 
 module ID_decoder (
-    input [`IB_DATA_BUS_WD-2:0] fs_to_ds_bus,
+    input [`IB_DATA_BUS_WD-1:0] fs_to_ds_bus,
     //to es
     output [`DS_TO_ES_BUS_WD -1:0] ds_to_es_bus,
 
