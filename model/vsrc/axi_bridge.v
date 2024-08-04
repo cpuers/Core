@@ -35,7 +35,7 @@ module axi_bridge_v2 (
 
     output  reg         wvalid,
     input               wready,
-    output  reg         wlast,
+    output              wlast,
     output      [31:0]  wdata,
     output      [ 3:0]  wstrb,
     output      [ 3:0]  wid,        // fixed
@@ -189,6 +189,7 @@ module axi_bridge_v2 (
     
     reg     [ 2:0]  wr_s;
     wire wr_s_is_idle = wr_s == wr_s_idle;
+    wire wr_s_is_send = wr_s == wr_s_send;
     // wire wr_s_is_recv = wr_s == wr_s_recv;
     // s_idle
     wire    [ 7:0]  wr_req_len;
@@ -211,7 +212,6 @@ module axi_bridge_v2 (
             awlen <= 0;
             awsize <= 0;
             wvalid <= 0;
-            wlast <= 0;
             bready <= 0;
         end else case (wr_s)
             wr_s_idle: begin
@@ -233,24 +233,16 @@ module axi_bridge_v2 (
                     awvalid <= 0;
                     wvalid <= 1;
                     wr_send_cnt <= 0;
-                    if (wr_req_is_line) begin
-                        wlast <= 0;
-                    end else begin
-                        wlast <= 1;
-                    end
                 end
             end
             wr_s_send: begin
                 if (wready) begin
-                     if (send_fin) begin
+                    if (send_fin) begin
                         wr_s <= wr_s_recv;
                         wvalid <= 0;
                         bready <= 1;
                     end else begin
                         wr_send_cnt <= wr_send_cnt + 1;
-                        if (wr_send_cnt + 1 == wr_req_buf_len) begin
-                            wlast <= 1;                            
-                        end
                     end
                 end
             end
@@ -275,6 +267,7 @@ module axi_bridge_v2 (
     assign wstrb = wr_req_buf_wstrb;
     /* TODO: len change */
     assign wdata = wr_req_buf_data[wr_send_cnt[1:0]];
+    assign wlast = (wr_s_is_send && wr_send_cnt == wr_req_buf_len);
 
     assign d_wr_rdy = wr_s_is_idle;
     assign write_buffer_empty = 1;
