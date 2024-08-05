@@ -19,8 +19,8 @@ module BPU (
     output [31:0] bpu_jump_pc,
     input ID_flush
 );
-  reg [31:0] num_need;
-  reg [31:0] num_succ;
+  // reg [31:0] num_need;
+  // reg [31:0] num_succ;
   //assign next_pc = (pc + 31'd16) & 32'hfffffff0;
   //assign pc_is_jump = 4'b00;
   //assign pc_valid = 4'b1111;
@@ -151,9 +151,9 @@ module BPU (
   always @(posedge clk) begin
     if(reset) 
     begin
-      bpu_valid <= 0;
-      num_need <= 0;
-      num_succ <= 0;
+      bpu_valid <= `BTB_SIZE'h0;
+      // num_need <= 0;
+      // num_succ <= 0;
       qtop <= 0;
       qtail <= 0;
       qvalid <= 0;
@@ -227,22 +227,22 @@ module BPU (
         btb[widx2] <= btb[widx2];
       end 
 
-      if(jump_valid1 && jump_valid2) 
-      begin
-        num_need <= num_need + 32'b10;
-      end
-      else if(jump_valid2 || jump_valid2) 
-      begin
-        num_need <= num_need + 32'b1;
-      end
-      if(jump_valid1 && !flush && !bpu_flush && jump_valid2) 
-      begin
-        num_succ <= num_succ +32'b10;
-      end
-      else if((jump_valid2 || jump_valid2)&& !flush && !bpu_flush2) 
-      begin
-        num_succ <= num_succ +32'b1;
-      end
+      // if(jump_valid1 && jump_valid2) 
+      // begin
+      //   num_need <= num_need + 32'b10;
+      // end
+      // else if(jump_valid2 || jump_valid2) 
+      // begin
+      //   num_need <= num_need + 32'b1;
+      // end
+      // if(jump_valid1 && !flush && !bpu_flush && jump_valid2) 
+      // begin
+      //   num_succ <= num_succ +32'b10;
+      // end
+      // else if((jump_valid2 || jump_valid2)&& !flush && !bpu_flush2) 
+      // begin
+      //   num_succ <= num_succ +32'b1;
+      // end
     
     end
   end

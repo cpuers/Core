@@ -164,32 +164,32 @@ module ID_stage (
       .guess_jump(instr1_is_guess)
   );
 
-    reg [31:0] can_doubles ;
-    reg [31:0] need_singles;
+    // reg [31:0] can_doubles ;
+    // reg [31:0] need_singles;
 
-    always @(posedge clk ) 
-    begin
-        if (rst) 
-        begin
-            can_doubles <= 32'h0;    
-        end 
-        else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
-        begin
-            can_doubles <= can_doubles + 32'h1;
-        end   
-    end
+    // always @(posedge clk ) 
+    // begin
+    //     if (rst) 
+    //     begin
+    //         can_doubles <= 32'h0;    
+    //     end 
+    //     else if (IF_instr0_valid & IF_instr1_valid & EXE_ready) 
+    //     begin
+    //         can_doubles <= can_doubles + 32'h1;
+    //     end   
+    // end
 
-    always @(posedge clk) 
-    begin
-        if (rst) 
-        begin
-            need_singles <= 32'h0;
-        end
-        else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
-        begin
-            need_singles <= need_singles + 32'h1;
-        end
-    end
+    // always @(posedge clk) 
+    // begin
+    //     if (rst) 
+    //     begin
+    //         need_singles <= 32'h0;
+    //     end
+    //     else if(IF_instr0_valid & IF_instr1_valid & EXE_ready & need_single)
+    //     begin
+    //         need_singles <= need_singles + 32'h1;
+    //     end
+    // end
   // 判断发射逻辑
   wire need_single;
   assign need_single =  instr1_may_jump & (instr0_is_div | instr0_is_ls| instr0_is_mul) |
