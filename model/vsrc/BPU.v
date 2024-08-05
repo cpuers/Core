@@ -47,7 +47,7 @@ module BPU (
   wire flush;
 
   //reg [`BPU_NUM-1:0] ras_valid;
-  reg     [`BTB_SIZE-1:0]                 bpu_valid ;
+  reg [`BTB_SIZE-1:0]      bpu_valid ;
   reg [`PHT_LINE_SIZE-1:0] pht [0:`PHT_SIZE-1];
   reg [`BTB_LINE_SIZE-1:0] btb [0:`BTB_SIZE-1];
 
@@ -151,7 +151,7 @@ module BPU (
   always @(posedge clk) begin
     if(reset) 
     begin
-      bpu_valid <= 0;
+      bpu_valid <= `BTB_SIZE'b0;
       num_need <= 0;
       num_succ <= 0;
       qtop <= 0;

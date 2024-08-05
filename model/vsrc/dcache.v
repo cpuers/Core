@@ -1778,7 +1778,6 @@ module dcache_v3(
     endgenerate
 endmodule
 
-`define DCACHE_LRU
 
 module dcache_v4(
     input               clock,
