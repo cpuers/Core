@@ -233,7 +233,7 @@ module core_top (
   wire [           31:0] csr_wdata;
   wire                   excp_jump;
   wire [           31:0] excp_pc;
-  assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 : (csr_bus2[`CSR_BUS_WD-1] || csr_bus2[`CSR_BUS_WD-2]) ? csr_bus2 : `CSR_BUS_WD'b0;
+  assign csr_bus = (csr_bus1[`CSR_BUS_WD-1] || csr_bus1[`CSR_BUS_WD-2]) ? csr_bus1 :  csr_bus2;
   
   wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus1;
   wire [`ES_TO_DIV_BUS_MD-1:0] es_to_div_bus2;
@@ -255,7 +255,7 @@ module core_top (
 
   assign need_jump = br_bus1[32] | br_bus2[32] | bpu_flush | ID_flush;
   assign jump_pc = br_bus1[32] | br_bus2[32] | bpu_flush ? bpu_jump_pc :
-                   ID_flush ? ID_jump_pc : 32'b0;
+                  ID_jump_pc;
 
   BPU BPU (
     .clk(aclk),
@@ -693,20 +693,20 @@ icache_v5 icache_dummy(
     .write_buffer_empty (wr_buf_empty )
   );
 
-  perf_counter u_perf(
-    .clock      ( aclk         ),
-    .reset      ( reset         ),
-    .ifetch     (i_valid_i && i_ready_i),
-    .ifetch_hit (icache_rhit),
-    .load       (d_valid_i && d_ready_i && !dcache_op),
-    .load_hit   (dcache_rhit),
-    .store      (d_valid_i && d_ready_i &&  dcache_op),
-    .store_hit  (dcache_whit),
-    // TODO
-    .jump       (1'b0       ),
-    .jump_correct (1'b0     ),
-    .jump_correct_target (1'b0)
-  );
+  // perf_counter u_perf(
+  //   .clock      ( aclk         ),
+  //   .reset      ( reset         ),
+  //   .ifetch     (i_valid_i && i_ready_i),
+  //   .ifetch_hit (icache_rhit),
+  //   .load       (d_valid_i && d_ready_i && !dcache_op),
+  //   .load_hit   (dcache_rhit),
+  //   .store      (d_valid_i && d_ready_i &&  dcache_op),
+  //   .store_hit  (dcache_whit),
+  //   // TODO
+  //   .jump       (1'b0       ),
+  //   .jump_correct (1'b0     ),
+  //   .jump_correct_target (1'b0)
+  // );
 
 
 endmodule
