@@ -41,6 +41,7 @@ private:
     }
 
     u32 hit_i, tot_i, hit_d, tot_d;
+    u32 st, ed;
 
 public:
     Dut(int argc, char **argv, Ram *ram) : 
@@ -50,7 +51,8 @@ public:
 #endif
         dut(new VTOP),
         ram(ram),
-        hit_i(0), tot_i(0), hit_d(0), tot_d(0)
+        hit_i(0), tot_i(0), hit_d(0), tot_d(0),
+        st(0), ed(0)
     {
 #ifndef TRACE_DISABLE
         ctxp->traceEverOn(true);
@@ -65,8 +67,11 @@ public:
         update_timestamp();
 
         reset(10);
+
+        st = ctxp->time();
     }
     ~Dut() {
+        ed = ctxp->time();
         dut->i_valid = dut->d_valid = false;
 
         delay(10);
@@ -93,6 +98,7 @@ public:
         if (tot_d) {
             printf("DCache Hit / Tot: %u / %u (%.3lf%%)\n", hit_d, tot_d, (double)hit_d*100/tot_d);
         }
+        printf("Total Time: %d\n", ed - st);
         printf("==================\n");
     }
 
@@ -117,6 +123,8 @@ public:
     }
 
     void reset(u64 ticks) {
+        delay(3);
+
         dut->reset = 1;
         dut->clock = 0;
         dut->i_valid = false;
@@ -127,6 +135,10 @@ public:
         dut->reset = 0;
 
         update_timestamp();
+
+        hit_i = hit_d = tot_i = tot_d = 0;
+
+        st = ctxp->time();
     }
 
     void delay(u64 ticks) {
@@ -161,6 +173,8 @@ public:
                     tx_d.empty(), p_d.empty(), rx_d.empty());
             fprintf(stderr, "ICache update time: %lu, DCache update time: %lu\n", timestamp_i, timestamp_d);
         }
+
+        ed = ctxp->time();
     }
 
     void step() {
@@ -300,6 +314,7 @@ int main(int argc, char **argv, char **envp) {
             if (auto txc = dynamic_cast<TxClear *>(t)) {
                 (void) txc;
                 dut.statistics();
+                dut.reset(5);
                 continue;
             } else {
                 assert(false);

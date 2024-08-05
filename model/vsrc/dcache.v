@@ -1987,6 +1987,7 @@ module dcache_v4(
                         lru[req_buf_idx] <= ~lookup_miss_replace_way;
                     end
                 end
+                default: begin end
                 endcase
             end
         end else if (DCACHE_WAY == 4) begin
@@ -2027,6 +2028,7 @@ module dcache_v4(
                         lru_o1[req_buf_idx][lookup_miss_replace_way[1]] <= ~lookup_miss_replace_way[0];
                     end                    
                 end
+                default: begin end
                 endcase
             end            
         end
