@@ -1,20 +1,4 @@
-site_name: Core Documentation
-theme:
-  name: material
-
-plugins:
-  - search
-
-markdown_extensions: 
-  - extra
-  - codehilite
-  - toc:
-      permalink: true
-      separator: '_'
-  - sane_lists
-  - smarty
-  - pymdownx.arithmatex:
-      generic: true
+site_name: OpenJiuXiang Documentation
 
 nav:
   - Home: 'index.md'
@@ -25,6 +9,44 @@ nav:
   - Framework: 'framework.md'
   - Reference design: 'ip.md'
   - About: 'about.md'
+
+theme:
+  name: material
+
+plugins:
+  - search
+
+markdown_extensions: 
+
+  # Python Markdown
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+
+  # Python Markdown Extensions
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
 
 extra_javascript:
   - js/katex.js
