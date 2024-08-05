@@ -19,6 +19,7 @@ nav:
   - Pipeline: 'cpu.md'
   - TLB: 'tlb.md'
   - Cache: 'cache.md'
+  - Mul: 'mul.md'
   - Div: 'div.md'
   - Framework: 'framework.md'
   - Reference design: 'ip.md'
