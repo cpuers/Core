@@ -36,7 +36,9 @@ module ID_stage (
     input  [31:0] read_data0,
     input  [31:0] read_data1,
     input  [31:0] read_data2,
-    input  [31:0] read_data3
+    input  [31:0] read_data3,
+    input  [ `FORWAED_BUS_WD - 1:0] forward_data1,
+    input  [ `FORWAED_BUS_WD - 1:0] forward_data2
 
 );
   
@@ -123,6 +125,8 @@ module ID_stage (
       .rf_raddr2(read_addr1),
       .rf_rdata1(read_data0),
       .rf_rdata2(read_data1),
+      .forward_data1(forward_data1),
+      .forward_data2(forward_data2),
       .rg_en(instr0_gr_we),
       .use_rj(instr0_use_rj),
       .use_rkd(instr0_use_rkd),
@@ -147,6 +151,8 @@ module ID_stage (
       .rf_raddr2(read_addr3),
       .rf_rdata1(read_data2),
       .rf_rdata2(read_data3),
+      .forward_data1(forward_data1),
+      .forward_data2(forward_data2),
       .rg_en(instr1_gr_we),
       .use_rj(instr1_use_rj),
       .use_rkd(instr1_use_rkd),
@@ -237,6 +243,8 @@ module ID_decoder (
     input [31:0] rf_rdata1,
     output [4:0] rf_raddr2,
     input [31:0] rf_rdata2,
+    input  [ `FORWAED_BUS_WD - 1:0] forward_data1,
+    input  [ `FORWAED_BUS_WD - 1:0] forward_data2,
     input have_intrpt,
     output need_flush,
     output guess_jump,
@@ -385,7 +393,22 @@ module ID_decoder (
   wire        need_si26;
   wire        src2_is_4;
 
-  
+  wire        forward1_valid;
+  wire        forward1_csr_we;
+  wire  [13:0]forward1_csr_addr;
+  wire  [31:0]forward1_csr_wdata;
+  wire        forward1_gr_we;
+  wire   [4:0]forward1_dest;
+  wire  [31:0]forward1_gr_data;
+
+  wire        forward2_valid;
+  wire        forward2_csr_we;
+  wire  [13:0]forward2_csr_addr;
+  wire  [31:0]forward2_csr_wdata;
+  wire        forward2_gr_we;
+  wire   [4:0]forward2_dest;
+  wire  [31:0]forward2_gr_data;
+
   assign op_31_26 = ds_inst[31:26];
   assign op_25_22 = ds_inst[25:22];
   assign op_21_20 = ds_inst[21:20];
@@ -566,8 +589,12 @@ module ID_decoder (
                     |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w);
                       
 
-  assign rj_value = rf_rdata1;
-  assign rkd_value = rf_rdata2;
+  assign rj_value = forward2_gr_we&forward2_valid && forward2_dest==rf_raddr1 ? forward2_gr_data:
+                    forward1_gr_we&forward1_valid && forward1_dest==rf_raddr1 ? forward1_gr_data:
+                    rf_rdata1;
+  assign rkd_value = forward2_gr_we&forward2_valid && forward2_dest==rf_raddr2 ? forward2_gr_data:
+                     forward1_gr_we&forward1_valid && forward1_dest==rf_raddr2 ? forward1_gr_data:
+                     rf_rdata2;
 
 
 
@@ -615,7 +642,23 @@ module ID_decoder (
   assign must_single =  in_excp | have_excp | is_etrn;
  
   assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;
+  
+  assign {  forward1_valid,
+            forward1_csr_we,
+            forward1_csr_addr,
+            forward1_csr_wdata,
+            forward1_gr_we,
+            forward1_dest,
+            forward1_gr_data} = forward_data1;
 
+
+  assign {  forward2_valid,
+            forward2_csr_we,
+            forward2_csr_addr,
+            forward2_csr_wdata,
+            forward2_gr_we,
+            forward2_dest,
+            forward2_gr_data} = forward_data2;
 
 
   assign ds_to_es_bus = {

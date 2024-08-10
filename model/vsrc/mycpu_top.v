@@ -357,7 +357,7 @@ icache_v5 icache_dummy(
 
   );
   regfile regfile (
-      .clock(~aclk),
+      .clock(aclk),
       .reset(reset),
       .rd1(rf_waddr1),
       .rs1(read_addr0),
@@ -429,6 +429,8 @@ icache_v5 icache_dummy(
       .read_data1      (read_data1),
       .read_data2      (read_data2),
       .read_data3      (read_data3),
+      .forward_data1  (exm_forward_data1),
+      .forward_data2  (exm_forward_data2),
       .have_intrpt     (have_intrpt),
       .ID_flush        (ID_flush),
       .ID_jump_pc      (ID_jump_pc)

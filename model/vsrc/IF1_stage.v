@@ -136,7 +136,7 @@ module IF_stage1 (
 
   always @(*) 
   begin
-    if (rst| flush_IF)
+    if (rst)
     begin
       if1_ready = 1'b1;
     end
