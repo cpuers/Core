@@ -146,7 +146,7 @@ module tlb_async (
                     (inv_op == 5'h4 && !g[i] && asid[i] == inv_asid) |
                     (inv_op == 5'h5 && !g[i] && asid[i] == inv_asid 
                         && vppn[i] == inv_vppn) |
-                    (inv_op == 5'h6 && g[i] && asid[i] == inv_asid
+                    (inv_op == 5'h6 && (g[i] || asid[i] == inv_asid)
                         && vppn[i] == inv_vppn)
                 ));
             always @(posedge clock) begin
@@ -325,7 +325,7 @@ module tlb_sync(
                     (inv_op == 5'h4 && !g[i] && asid[i] == inv_asid) |
                     (inv_op == 5'h5 && !g[i] && asid[i] == inv_asid 
                         && vppn[i] == inv_vppn) |
-                    (inv_op == 5'h6 && g[i] && asid[i] == inv_asid
+                    (inv_op == 5'h6 && (g[i] || asid[i] == inv_asid)
                         && vppn[i] == inv_vppn)
                 ));
             always @(posedge clock) begin
