@@ -1,6 +1,6 @@
 `include "define.vh"
 
-module core_top (
+ module core_top (
     input  wire        aclk,
     input  wire        aresetn,
     /* verilator lint_off UNUSED */
@@ -61,7 +61,20 @@ module core_top (
     output wire [ 4:0] debug1_wb_rf_wnum,
     output wire [31:0] debug1_wb_rf_wdata
     `endif
+    `ifdef DIFFTEST_EN
+    ,
+    output wire [31:0] debug0_wb_pc,
+    output wire  debug0_wb_rf_wen,
+    output wire [ 4:0] debug0_wb_rf_wnum,
+    output wire [31:0] debug0_wb_rf_wdata,
+    output wire [31:0] debug1_wb_pc,
+    output wire  debug1_wb_rf_wen,
+    output wire [ 4:0] debug1_wb_rf_wnum,
+    output wire [31:0] debug1_wb_rf_wdata
+    `endif
 );
+  genvar i; // NR_PIPELINE
+
   reg reset;
   always @(posedge aclk) reset <= ~aresetn;
 
@@ -373,6 +386,10 @@ icache_v5 icache_dummy(
       .rs2data(read_data1),
       .rs3data(read_data2),
       .rs4data(read_data3)
+      `ifdef DIFFTEST_EN
+      ,
+      .regs (regs)
+      `endif
   );
   csr my_csr (
     .clk(aclk),
@@ -400,7 +417,25 @@ icache_v5 icache_dummy(
     .csr_datm(csr_datm),
     .csr_datf(csr_datf)
 
-
+    `ifdef DIFFTEST_EN
+    ,
+    .csr_crmd_diff    ( csr_crmd_diff   ),
+    .csr_prmd_diff    ( csr_prmd_diff   ),
+    .csr_estat_diff   ( csr_estat_diff  ),
+    .csr_era_diff     ( csr_era_diff    ),
+    .csr_eentry_diff  ( csr_eentry_diff  ),
+    .csr_save0_diff   ( csr_save0_diff  ),
+    .csr_save1_diff   ( csr_save1_diff  ),
+    .csr_save2_diff   ( csr_save2_diff  ),
+    .csr_save3_diff   ( csr_save3_diff  ),
+    .csr_ecfg_diff    ( csr_ecfg_diff   ),
+    .csr_tid_diff     ( csr_tid_diff    ),
+    .csr_tcfg_diff    ( csr_tcfg_diff   ),
+    .csr_tval_diff    ( csr_tval_diff   ),
+    .csr_badv_diff    ( csr_badv_diff   ),
+    .csr_timer_64_diff(csr_timer_64_diff),
+    .intrNo_diff    (intrNo_diff)
+    `endif
 );
   ID_stage ID_stage (
       .clk             (aclk),
@@ -434,6 +469,12 @@ icache_v5 icache_dummy(
       .have_intrpt     (have_intrpt),
       .ID_flush        (ID_flush),
       .ID_jump_pc      (ID_jump_pc)
+    `ifdef DIFFTEST_EN
+    ,
+
+    .ds_to_es_debug_bus1(ds_to_es_debug_bus1),
+    .ds_to_es_debug_bus2(ds_to_es_debug_bus2)
+    `endif 
 
   );
 
@@ -522,6 +563,15 @@ icache_v5 icache_dummy(
 
       .bpu_es_bus(bpu_es_bus2)
 
+      `ifdef DIFFTEST_EN
+    ,
+
+    .ds_to_es_debug_bus(ds_to_es_debug_bus2),
+    .es_to_ws_debug_bus(es_to_ws_debug_bus2),
+    .csr_timer_64_diff(csr_timer_64_diff),
+    .intrNo_diff(intrNo_diff) 
+    `endif
+
   );
 
   MEM_stage MEM_stage (
@@ -572,6 +622,15 @@ icache_v5 icache_dummy(
       .csr_we         (csr_wen),
       .csr_addr       (csr_waddr),
       .csr_wdata      (csr_wdata)
+
+      `ifdef DIFFTEST_EN
+    ,
+
+    .es_to_ws_debug_bus1(es_to_ws_debug_bus1),
+    .ws_debug_bus1(ws_debug_bus1),
+    .es_to_ws_debug_bus2(es_to_ws_debug_bus2),
+    .ws_debug_bus2(ws_debug_bus2),
+    `endif 
 
   );
   
@@ -710,5 +769,225 @@ icache_v5 icache_dummy(
     .jump_correct_target (1'b0)
   );
 
+`ifdef DIFFTEST_EN
+/* verilator lint_off WIDTH */
+
+// TODO: please connect the following wires to signals in WB stage
+//       according to the descriptions in chiplab/sims/verilator/README_DIFF.md
+wire          cmt_valid           [ 0:1];
+wire  [31:0]  cmt_pc              [ 0:1];
+wire  [31:0]  cmt_instr           [ 0:1];
+wire          cmt_is_cnt_inst     [ 0:1];
+wire  [63:0]  cmt_timer_64_value  [ 0:1];
+wire          cmt_wen             [ 0:1];
+wire  [ 4:0]  cmt_wdest           [ 0:1];
+wire  [31:0]  cmt_wdata           [ 0:1];
+wire          cmt_csr_rstat_en    [ 0:1];
+wire  [31:0]  cmt_csr_data        [ 0:1];
+wire [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus1;
+wire [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus2;
+wire [63:0] csr_timer_64_diff;
+wire [10:0] intrNo_diff;
+wire [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus1;
+wire [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus2;
+wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus1;
+wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus2;
+
+wire          t_cmt_excp_valid[0:1];
+wire          t_cmt_eret[0:1];
+wire  [10:0]  t_csr_estat_intrno[0:1];
+wire  [ 5:0]  t_csr_estat_ecode[0:1];
+wire  [31:0]  t_cmt_excp_pc[0:1];
+wire  [31:0]  t_cmt_excp_instr[0:1];
+
+assign {cmt_pc[0],t_cmt_excp_pc[0],cmt_st_vaddr[0], cmt_st_paddr[0], cmt_st_data[0], cmt_ld_vaddr[0], cmt_st_paddr[0],
+        cmt_timer_64_value[0], t_csr_estat_intrno[0], t_cmt_excp_valid[0], t_csr_estat_ecode[0], cmt_wdata[0],cmt_csr_data[0],
+        cmt_instr[0], cmt_is_cnt_inst[0], cmt_wen[0], cmt_wdest[0], cmt_csr_rstat_en[0], t_cmt_eret[0], cmt_st_valid[0], cmt_ld_valid[0]} = ws_debug_bus1;
+assign {cmt_pc[1],t_cmt_excp_pc[1],cmt_st_vaddr[1], cmt_st_paddr[1], cmt_st_data[1], cmt_ld_vaddr[1], cmt_st_paddr[1],
+        cmt_timer_64_value[1], t_csr_estat_intrno[1], t_cmt_excp_valid[1], t_csr_estat_ecode[1], cmt_wdata[1],cmt_csr_data[1],
+        cmt_instr[1], cmt_is_cnt_inst[1], cmt_wen[1], cmt_wdest[1], cmt_csr_rstat_en[1], t_cmt_eret[1], cmt_st_valid[1], cmt_ld_valid[1]} = ws_debug_bus2;
+assign t_cmt_excp_instr[0] = cmt_instr[0];
+assign t_cmt_excp_instr[1] = cmt_instr[1];
+
+assign cmt_excp_valid=(t_cmt_excp_valid[0]) ? t_cmt_excp_valid[0] : t_cmt_excp_valid[1];
+assign cmt_eret=(t_cmt_excp_valid[0]) ? t_cmt_eret[0] : t_cmt_eret[1];
+assign csr_estat_intrno=(t_cmt_excp_valid[0]) ? t_csr_estat_intrno[0] : t_csr_estat_intrno[1];
+assign csr_estat_ecode=(t_cmt_excp_valid[0]) ? t_csr_estat_ecode[0] : t_csr_estat_ecode[1];
+assign cmt_excp_pc=(t_cmt_excp_valid[0]) ? t_cmt_excp_pc[0] : t_cmt_excp_pc[1];
+assign cmt_excp_instr=(t_cmt_excp_valid[0]) ? t_cmt_excp_instr[0] : t_cmt_excp_instr[1];
+
+generate 
+    for (i = 0; i < 2; i = i + 1) begin
+        DifftestInstrCommit DifftestInstrCommit(
+            .clock              (aclk           ),
+            .coreid             (0              ),
+            .index              (i              ),
+            .valid              (cmt_valid[i]   ),
+            .pc                 (cmt_pc[i]      ),
+            .instr              (cmt_instr[i]   ),
+            .skip               (0              ),
+            .is_TLBFILL         (0              ),
+            .TLBFILL_index      (0              ),
+            .is_CNTinst         (cmt_is_cnt_inst[i]),
+            .timer_64_value     (cmt_timer_64_value[i]),
+            .wen                (cmt_wen[i]     ),
+            .wdest              (cmt_wdest[i]   ),
+            .wdata              (cmt_wdata[i]   ),
+            .csr_rstat          (cmt_csr_rstat_en[i]),
+            .csr_data           (cmt_csr_data[i])
+        );
+    end
+endgenerate
+
+// TODO
+wire          cmt_excp_valid;//in_excp
+wire          cmt_eret;
+wire  [10:0]  csr_estat_intrno;
+wire  [ 5:0]  csr_estat_ecode;
+wire  [31:0]  cmt_excp_pc;    
+wire  [31:0]  cmt_excp_instr; //ds
+
+DifftestExcpEvent DifftestExcpEvent(
+    .clock              (aclk           ),
+    .coreid             (0              ),
+    .excp_valid         (cmt_excp_valid ),
+    .eret               (cmt_eret       ),
+    .intrNo             (csr_estat_intrno),
+    .cause              (csr_estat_ecode),
+    .exceptionPC        (cmt_excp_pc     ),
+    .exceptionInst      (cmt_excp_instr  )
+);
+
+DifftestTrapEvent DifftestTrapEvent(
+    .clock              (aclk           ),
+    .coreid             (0              ),
+    .valid              (0              ),
+    .code               (0              ),
+    .pc                 (0              ),
+    .cycleCnt           (0              ),
+    .instrCnt           (0              )
+);
+
+// TODO
+wire  [ 7:0]  cmt_st_valid  [0:1];
+wire  [31:0]  cmt_st_vaddr  [0:1];
+wire  [31:0]  cmt_st_paddr  [0:1];
+wire  [31:0]  cmt_st_data   [0:1];
+wire  [ 7:0]  cmt_ld_valid  [0:1];
+wire  [31:0]  cmt_ld_vaddr  [0:1];
+wire  [31:0]  cmt_ld_paddr  [0:1];
+
+generate
+    for (i = 0; i < 2; i = i + 1) begin
+      DifftestStoreEvent DifftestStoreEvent(
+          .clock              (aclk           ),
+          .coreid             (0              ),
+          .index              (i              ),
+          .valid              (cmt_st_valid[i]),
+          .storePAddr         (cmt_st_paddr[i]),
+          .storeVAddr         (cmt_st_vaddr[i]),
+          .storeData          (cmt_st_data[i] )
+      );
+
+      DifftestLoadEvent DifftestLoadEvent(
+          .clock              (aclk           ),
+          .coreid             (0              ),
+          .index              (i              ),
+          .valid              (cmt_ld_valid[i]),
+          .paddr              (cmt_ld_paddr[i]),
+          .vaddr              (cmt_ld_vaddr[i])
+      );
+    end
+endgenerate
+
+// The following wires has been connected (CSR & REG)
+wire [31:0] csr_crmd_diff;
+wire [31:0] csr_prmd_diff;
+wire [31:0] csr_estat_diff;
+wire [31:0] csr_era_diff;
+wire [31:0] csr_eentry_diff;
+wire [31:0] csr_save0_diff;
+wire [31:0] csr_save1_diff;
+wire [31:0] csr_save2_diff;
+wire [31:0] csr_save3_diff;
+wire [31:0] csr_ecfg_diff;
+wire [31:0] csr_tid_diff;
+wire [31:0] csr_tcfg_diff;
+wire [31:0] csr_tval_diff;
+wire [31:0] csr_badv_diff;
+
+DifftestCSRRegState DifftestCSRRegState(
+    .clock              (aclk               ),
+    .coreid             (0                  ),
+    .crmd               (csr_crmd_diff      ),
+    .prmd               (csr_prmd_diff      ),
+    .euen               (0                  ),
+    .ecfg               (csr_ecfg_diff      ),
+    .estat              (csr_estat_diff     ),
+    .era                (csr_era_diff       ),
+    .badv               (csr_badv_diff      ),
+    .eentry             (csr_eentry_diff    ),
+    .tlbidx             (0                  ),
+    .tlbehi             (0                  ),
+    .tlbelo0            (0                  ),
+    .tlbelo1            (0                  ),
+    .asid               (0                  ),
+    .pgdl               (0                  ),
+    .pgdh               (0                  ),
+    .save0              (csr_save0_diff     ),
+    .save1              (csr_save1_diff     ),
+    .save2              (csr_save2_diff     ),
+    .save3              (csr_save3_diff     ),
+    .tid                (csr_tid_diff       ),
+    .tcfg               (csr_tcfg_diff      ),
+    .tval               (csr_tval_diff      ),
+    .ticlr              (0                  ),
+    .llbctl             (0                  ),
+    .tlbrentry          (0                  ),
+    .dmw0               (0                  ),
+    .dmw1               (0                  )
+);
+
+wire  [31:0]  regs  [31:0];
+
+DifftestGRegState DifftestGRegState(
+    .clock              (aclk       ),
+    .coreid             (0          ),
+    .gpr_0              (0          ),
+    .gpr_1              (regs[1]    ),
+    .gpr_2              (regs[2]    ),
+    .gpr_3              (regs[3]    ),
+    .gpr_4              (regs[4]    ),
+    .gpr_5              (regs[5]    ),
+    .gpr_6              (regs[6]    ),
+    .gpr_7              (regs[7]    ),
+    .gpr_8              (regs[8]    ),
+    .gpr_9              (regs[9]    ),
+    .gpr_10             (regs[10]   ),
+    .gpr_11             (regs[11]   ),
+    .gpr_12             (regs[12]   ),
+    .gpr_13             (regs[13]   ),
+    .gpr_14             (regs[14]   ),
+    .gpr_15             (regs[15]   ),
+    .gpr_16             (regs[16]   ),
+    .gpr_17             (regs[17]   ),
+    .gpr_18             (regs[18]   ),
+    .gpr_19             (regs[19]   ),
+    .gpr_20             (regs[20]   ),
+    .gpr_21             (regs[21]   ),
+    .gpr_22             (regs[22]   ),
+    .gpr_23             (regs[23]   ),
+    .gpr_24             (regs[24]   ),
+    .gpr_25             (regs[25]   ),
+    .gpr_26             (regs[26]   ),
+    .gpr_27             (regs[27]   ),
+    .gpr_28             (regs[28]   ),
+    .gpr_29             (regs[29]   ),
+    .gpr_30             (regs[30]   ),
+    .gpr_31             (regs[31]   )
+);
+`endif
+
+/* verilator lint_on WIDTH */
 
 endmodule

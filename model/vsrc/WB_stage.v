@@ -1,10 +1,8 @@
 `include "define.vh"
 
 module WB_stage(
-    /* verilator lint_off EOFNEWLINE */
     input  wire                     clk,
     input  wire                     reset,
-    /* verilator lint_on EOFNEWLINE */
     //for EXM
     output                          ws_ready,
     input  [                   1:0] es_to_ws_valid1,
@@ -21,6 +19,15 @@ module WB_stage(
     output reg                      csr_we,
     output reg [13:0]               csr_addr,
     output reg [31:0]               csr_wdata
+
+    `ifdef DIFFTEST_EN
+    ,
+
+    input  [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus1,
+    output [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus1,
+    input  [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus2,
+    output [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus2,
+    `endif 
 
 );
 
@@ -120,5 +127,38 @@ always @(*) begin
         {csr_we, csr_addr, csr_wdata} = 0;
     end
 end
+
+ `ifdef DIFFTEST_EN
+
+  wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus_w1;
+  reg  [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus_r1;
+  wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus_w2;
+  reg  [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus_r2;
+  
+  wire [31:0] cmt_pc1 ;
+  wire [31:0] cmt_excp_pc1; 
+
+  assign cmt_pc1 = ws_pc1;
+  assign cmt_excp_pc1 = ws_pc1;
+  assign cmt_pc2 = ws_pc2;
+  assign cmt_excp_pc2 = ws_pc2;
+  assign ws_debug_bus_w1 = {cmt_pc1, cmt_excp_pc1, es_to_ws_debug_bus1};
+  assign ws_debug_bus_w2 = {cmt_pc2, cmt_excp_pc2, es_to_ws_debug_bus2};
+
+  always @(posedge clk ) 
+  begin
+    if (reset) begin
+        ws_debug_bus_r1 <= `WS_DEBUG_BUS_WD'h0;
+        ws_debug_bus_r2 <= `WS_DEBUG_BUS_WD'h0;  
+    end
+    else
+    begin
+        ws_debug_bus_r1 <= ws_debug_bus_w1;
+        ws_debug_bus_r2 <= ws_debug_bus_w2;
+    end  
+  end
+  assign ws_debug_bus1 = ws_debug_bus_r1;
+  assign ws_debug_bus2 = ws_debug_bus_r2;
+  `endif 
 
 endmodule

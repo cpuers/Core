@@ -28,7 +28,25 @@ module csr (
     output have_intrpt,
     input [7:0] intrpt
 
-
+    `ifdef DIFFTEST_EN
+    ,
+    output [31:0] csr_crmd_diff,
+    output [31:0] csr_prmd_diff,
+    output [31:0] csr_estat_diff,
+    output [31:0] csr_era_diff,
+    output [31:0] csr_eentry_diff,
+    output [31:0] csr_save0_diff,
+    output [31:0] csr_save1_diff,
+    output [31:0] csr_save2_diff,
+    output [31:0] csr_save3_diff,
+    output [31:0] csr_ecfg_diff,
+    output [31:0] csr_tid_diff,
+    output [31:0] csr_tcfg_diff,
+    output [31:0] csr_tval_diff,
+    output [31:0] csr_badv_diff,
+    output [63:0] csr_timer_64_diff,
+    output [10:0] intrNo_diff    
+    `endif
 );
     wire in_excp;
     wire [5:0]excp_Ecode;
@@ -407,5 +425,24 @@ module csr (
             csr_timer_64 <=csr_timer_64 + 64'h1;
         end   
     end
+
+    `ifdef DIFFTEST_EN
+    assign csr_crmd_diff = csr_crmd;
+    assign csr_prmd_diff = csr_prmd;
+    assign csr_estat_diff = csr_estat;
+    assign csr_era_diff = csr_era;
+    assign csr_eentry_diff = csr_eentry;
+    assign csr_save0_diff = csr_save0;
+    assign csr_save1_diff = csr_save1;
+    assign csr_save2_diff = csr_save2;
+    assign csr_save3_diff = csr_save3;
+    assign csr_ecfg_diff = csr_ecfg;
+    assign csr_tid_diff = csr_tid;
+    assign csr_tcfg_diff = csr_tcfg;
+    assign csr_tval_diff = csr_tval;
+    assign csr_badv_diff = csr_badv;
+    assign csr_timer_64_diff = csr_timer_64;
+    assign intrNo_diff = csr_estat[12:2];
+    `endif
 endmodule
 

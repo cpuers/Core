@@ -34,4 +34,10 @@
 `define ES_TO_MUL_BUS_MD 67
 `define MUL_TO_ES_BUS_MD 33
 
+`ifdef DIFFTEST_EN
+`define DS_ES_DEBUG_BUS_WD 57
+`define ES_WS_DEBUG_BUS_WD 288
+`define WS_DEBUG_BUS_WD 352
+`endif 
+
 `endif
