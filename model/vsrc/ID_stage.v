@@ -603,7 +603,8 @@ module ID_decoder (
                     |inst_mulh_w|inst_mulhu_w|inst_div_w|inst_mod_w|inst_divu_w
                     |inst_modu_w|inst_csrrd|inst_csrwr|inst_csrxchg|inst_syscall
                     |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w
-                    | inst_tlbwr | inst_tlbrd| inst_tlbfill | inst_tlbsrch | inst_invtlb);
+                    | inst_tlbwr | inst_tlbrd| inst_tlbfill | inst_tlbsrch | inst_invtlb)
+                    | (inst_invtlb & !(rd_d[5'h00]|rd_d[5'h01] |rd_d[5'h02] |rd_d[5'h03] |rd_d[5'h04] |rd_d[5'h05] |rd_d[5'h06]));
                       
 
   assign rj_value = forward2_gr_we&forward2_valid && ~|(forward2_dest^rf_raddr1) ? forward2_gr_data:
