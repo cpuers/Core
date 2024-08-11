@@ -92,6 +92,9 @@ module mul (
         end 
     end    
     assign mul_ok = status;
+    assign result = mul_signed ? result_s : result_us;
+
+`ifndef MUL_USE_WALLACE
 
     mult_gen_0 mg0(
         .CLK(clk),
@@ -107,9 +110,8 @@ module mul (
         .P(result_us)
     );
     
-    assign result = mul_signed ? result_s : result_us;
+`else
 
-/*
     always @(posedge clk) begin
         rx <= x;
         ry <= y;
@@ -122,7 +124,8 @@ module mul (
         .mul_signed(rmul_signed),
         .result(result)
     );  
-*/
+`endif 
+
 endmodule
 
 module boothEncoder (
@@ -330,6 +333,3 @@ module WallaceTree32(
     assign result = l6 + l6c;
 
 endmodule
-
-
-

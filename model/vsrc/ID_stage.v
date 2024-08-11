@@ -102,7 +102,7 @@ module ID_stage (
     reg [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_r2;
   always @(posedge clk ) 
   begin
-    if (rst|flush_ID) begin
+    if (rst|flush_ID1 | flush_ID2) begin
         ds_to_es_debug_r1 <= `DS_ES_DEBUG_BUS_WD'h0;
         ds_to_es_debug_r2 <= `DS_ES_DEBUG_BUS_WD'h0;
     
