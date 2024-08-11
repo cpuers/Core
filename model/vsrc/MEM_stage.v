@@ -12,8 +12,12 @@ module MEM_stage(
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
     input csr_datm,
     input flush,
-    output excp_ale
+    output excp_ale,
+
+    output [19:0]                  ls_vpn                  
 );
+
+ 
 reg [31:0] mem_addr;
 reg        is_unsigned;
 reg        mem_we;
@@ -26,6 +30,7 @@ wire        dcache_ok;
 
 reg [31:0] ms_pc;
 
+wire        is_tlbsrch1;
 wire [31:0] mem_addr1;
 wire        is_unsigned1;
 wire        mem_we1;
@@ -34,6 +39,7 @@ wire [3:0]  bit_width1;
 wire [31:0] wdata1;
 wire [31:0] pc1;
 
+wire        is_tlbsrch2;
 wire [31:0] mem_addr2;
 wire        is_unsigned2;
 wire        mem_we2;
@@ -42,7 +48,8 @@ wire [3:0]  bit_width2;
 wire [31:0] wdata2;
 wire [31:0] pc2;
 
-assign {mem_addr1, //32
+assign {is_tlbsrch1,
+        mem_addr1, //32
         is_unsigned1,
         mem_we1,
         mem_rd1,
@@ -50,7 +57,8 @@ assign {mem_addr1, //32
         wdata1,
         pc1
 } = es_to_ms_bus1;
-assign {mem_addr2, //32
+assign {is_tlbsrch2,
+        mem_addr2, //32
         is_unsigned2,
         mem_we2,
         mem_rd2,
@@ -60,7 +68,7 @@ assign {mem_addr2, //32
 } = es_to_ms_bus2;
 
 always @(*) begin
-    if(mem_we1 || mem_rd1) begin
+    if(mem_we1 || mem_rd1||is_tlbsrch1) begin
         mem_addr = mem_addr1;
         is_unsigned = is_unsigned1; 
         mem_we = mem_we1;
@@ -69,7 +77,7 @@ always @(*) begin
         wdata = wdata1;
         ms_pc = pc1;
     end
-    else if(mem_we2 || mem_rd2) begin
+    else if(mem_we2 || mem_rd2 || is_tlbsrch2) begin
         mem_addr = mem_addr2;
         is_unsigned = is_unsigned2; 
         mem_we = mem_we2;
@@ -82,7 +90,7 @@ always @(*) begin
         {mem_addr, is_unsigned, mem_we, mem_rd, bit_width, wdata, ms_pc} = 0;
     end 
 end
-
+assign ls_vpn = mem_addr[31:12];
 assign ms_to_es_bus = {dcache_ok, mem_result};
 
 Agu u_agu(

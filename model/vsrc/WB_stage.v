@@ -22,6 +22,8 @@ module WB_stage(
     output reg [13:0]               csr_addr,
     output reg [31:0]               csr_wdata
 
+    
+
 );
 
 // reg         ws_valid;
@@ -56,8 +58,15 @@ wire [31:0] rf_wdata2;
 /* verilator lint_off UNUSED */
 wire debug1_gr_we;
 wire debug2_gr_we;
+
+wire ds_inst_tlbrd1;
+wire ds_inst_tlbwr1;
+wire ds_inst_tlbrd2;
+wire ds_inst_tlbwr2;
 /* verilator lint_on UNUSED */
 assign {//csr_rd1,
+        ds_inst_tlbrd1,
+        ds_inst_tlbwr1,
         csr_we1,
         csr_addr1,
         csr_wdata1,
@@ -68,6 +77,8 @@ assign {//csr_rd1,
         ws_pc1             //31:0
        } = es_to_ws_bus1;
 assign {//csr_rd2,
+        ds_inst_tlbrd2,
+        ds_inst_tlbwr2,
         csr_we2,
         csr_addr2,
         csr_wdata2,
@@ -80,8 +91,9 @@ assign {//csr_rd2,
 
 //assign ws_ready_go = 1'b1;
 //assign ws_ready  = !ws_valid || ws_ready_go;
-assign forward_data1 = {es_to_ws_valid1[0], es_to_ws_bus1[`ES_TO_WS_BUS_WD - 1:32]};
-assign forward_data2 = {es_to_ws_valid2[0], es_to_ws_bus2[`ES_TO_WS_BUS_WD - 1:32]};
+
+assign forward_data1 = {es_to_ws_valid1[0], csr_we1, csr_addr1, csr_wdata1, ws_gr_we1, ws_dest1, ws_final_result1};
+assign forward_data2 = {es_to_ws_valid2[0], csr_we2, csr_addr2, csr_wdata2, ws_gr_we2, ws_dest2, ws_final_result2};
 
 assign ws_ready = nblock1 && nblock2; // es_to_ws_valid1[1] & es_to_ws_valid2[1]; //nblock1 && nblock2; //1'b1;//(es_to_ws_valid1 && es_to_ws_valid2);
 

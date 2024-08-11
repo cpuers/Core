@@ -371,6 +371,12 @@ module ID_decoder (
   wire        inst_rdcntvh_w;
   wire        inst_rdcntid;
 
+  wire        inst_tlbrd;
+  wire        inst_tlbwr;
+  wire        inst_tlbfill;
+  wire        inst_tlbsrch;
+  wire        inst_invtlb;
+
   wire csr_wen;
   wire csr_use_mark;
   wire is_etrn;
@@ -500,6 +506,11 @@ module ID_decoder (
   assign inst_rdcntvh_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h19] & rj_d[5'h00];
   assign inst_rdcntvl_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rj_d[5'h00] & !rd_d[5'h00];
   assign inst_rdcntid = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rd_d[5'h00] & !rj_d[5'h00];
+  assign inst_tlbrd   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & rk_d[5'h0b] & rj_d[5'h00] & rd_d[5'h00];
+  assign inst_tlbwr   = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & rk_d[5'h0c] & rj_d[5'h00] & rd_d[5'h00]; 
+  assign inst_tlbfill    = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & rk_d[5'h0d] & rj_d[5'h00] & rd_d[5'h00];
+  assign inst_tlbsrch    = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h10] & rk_d[5'h0a] & rj_d[5'h00] & rd_d[5'h00];
+  assign inst_invtlb     = op_31_26_d[6'h01] & op_25_22_d[4'h9] & op_21_20_d[2'h0] & op_19_15_d[5'h13]; 
 
   assign use_div = inst_div_w | inst_divu_w | inst_modu_w | inst_mod_w;
   assign use_mod = inst_mod_w | inst_modu_w;
@@ -537,7 +548,8 @@ module ID_decoder (
              need_si26 ? {{6{i26[25]}},i26[25:0]}   :
              need_si16 ? {{16{i16[15]}},i16[15:0]}  :
              need_si12_u ? {{20{1'b0}}, i12[11:0]}:
-             need_si12 ? {{20{i12[11]}}, i12[11:0]} : {{{20{1'b0}}, i12[11:0]}};
+             need_si12 ? {{20{i12[11]}}, i12[11:0]} :
+             inst_invtlb ? {27'h0,rd}                :{{{20{1'b0}}, i12[11:0]}};
 
   assign src_reg_is_rd = inst_beq | inst_bne|inst_blt|inst_bltu|inst_bge|inst_bgeu | inst_st_w | inst_st_b |inst_st_h| inst_csrrd|inst_csrxchg| inst_csrwr;
 
@@ -568,7 +580,11 @@ module ID_decoder (
   assign res_from_mem = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_hu | inst_ld_bu;
   assign dst_is_r1 = inst_bl;
   assign dst_is_rj = inst_rdcntid;
-  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &~inst_syscall &~inst_ertn & |dest;
+  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne &
+                 ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &
+                 ~inst_syscall &~inst_ertn & |dest & ~inst_tlbrd &~inst_tlbwr &
+                 ~inst_tlbfill &~inst_tlbsrch &~inst_invtlb;
+
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
   assign dest = dst_is_r1 ? 5'd1 :
                 dst_is_rj  ? rj : rd;
@@ -586,14 +602,15 @@ module ID_decoder (
                     |inst_bltu|inst_bgeu|inst_lu12i_w |inst_pcaddu|inst_mul_w
                     |inst_mulh_w|inst_mulhu_w|inst_div_w|inst_mod_w|inst_divu_w
                     |inst_modu_w|inst_csrrd|inst_csrwr|inst_csrxchg|inst_syscall
-                    |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w);
+                    |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w
+                    | inst_tlbwr | inst_tlbrd| inst_tlbfill | inst_tlbsrch | inst_invtlb);
                       
 
-  assign rj_value = forward2_gr_we&forward2_valid && forward2_dest==rf_raddr1 ? forward2_gr_data:
-                    forward1_gr_we&forward1_valid && forward1_dest==rf_raddr1 ? forward1_gr_data:
+  assign rj_value = forward2_gr_we&forward2_valid && ~|(forward2_dest^rf_raddr1) ? forward2_gr_data:
+                    forward1_gr_we&forward1_valid && ~|(forward1_dest^rf_raddr1) ? forward1_gr_data:
                     rf_rdata1;
-  assign rkd_value = forward2_gr_we&forward2_valid && forward2_dest==rf_raddr2 ? forward2_gr_data:
-                     forward1_gr_we&forward1_valid && forward1_dest==rf_raddr2 ? forward1_gr_data:
+  assign rkd_value = forward2_gr_we&forward2_valid && ~|(forward2_dest^rf_raddr2) ? forward2_gr_data:
+                     forward1_gr_we&forward1_valid && ~|(forward1_dest^rf_raddr2) ? forward1_gr_data:
                      rf_rdata2;
 
 
@@ -639,7 +656,7 @@ module ID_decoder (
   assign is_ls = (|bit_width );
   assign is_div = use_div | use_mod;
   assign is_mul = use_mul;
-  assign must_single =  in_excp | have_excp | is_etrn;
+  assign must_single =  in_excp | have_excp | is_etrn | inst_tlbrd | inst_tlbwr|inst_tlbsrch|inst_invtlb | inst_tlbfill;
  
   assign {pc_is_jump,in_excp,excp_Ecode,excp_subEcode,  ds_pc,ds_inst} = fs_to_ds_bus;
   
@@ -662,6 +679,10 @@ module ID_decoder (
 
 
   assign ds_to_es_bus = {
+    inst_tlbrd,
+    inst_tlbwr|inst_tlbfill,
+    inst_tlbsrch,
+    inst_invtlb,
     in_excp | have_excp,
     ds_excp_Ecode,
     ds_excp_subEcode,

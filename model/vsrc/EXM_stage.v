@@ -39,6 +39,18 @@ module EXM_stage(
     output [                  13:0] csr_addr,
     input  [                  31:0] csr_rdata_t,
 
+    output                           inv_en,
+    output                   [ 4:0]  inv_op,
+    output                   [ 9:0]  inv_asid,
+    output                   [18:0]  inv_vppn,
+
+    input [18:0] csr_vppn,
+    output is_tlbrd,
+    output is_tlbwr,
+    output is_tlbsrch,
+    input  tlbrd_csr_install,
+
+
     input another_ok,
     output my_ok,
     output [`BPU_ES_BUS_WD-1:0]     bpu_es_bus
@@ -46,6 +58,10 @@ module EXM_stage(
 );
 
 //wire [`FORWAED_BUS_WD -1:0]  exm_forward_bus_w;
+wire     ds_inst_tlbrd;
+wire     ds_inst_tlbwr;
+wire     ds_inst_tlbsrch;
+wire     ds_inst_invtlb;
 wire        in_excp;
 wire        in_excp_t;
 wire        is_etrn;
@@ -131,6 +147,8 @@ wire [                 1:0] es_to_ws_valid_w;
 wire [`ES_TO_WS_BUS_WD-1:0] es_to_ws_bus_w;
 reg  [`ES_TO_WS_BUS_WD+1:0] es_to_ws_bus_r;
 wire                        dcache_ok;
+wire                 [31:0] mem_addr;
+
 
 wire [1:0] forw_rj;
 wire [1:0] forw_rkd;
@@ -142,6 +160,10 @@ reg [1:0] state;
 wire wait_another;
 
 assign {
+    ds_inst_tlbrd,
+    ds_inst_tlbwr,
+    ds_inst_tlbsrch,
+    ds_inst_invtlb,
     in_excp_t, //1   例外
     excp_Ecode_t, //6
     excp_subEcode_t, //9
@@ -184,12 +206,22 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul)) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
+
+assign inv_en = ds_inst_invtlb & ds_to_es_valid;
+assign inv_op = imm[4:0];
+assign inv_asid = rj_value[9:0];
+assign inv_vppn = rkd_value[31:13];
+
+assign mem_addr = ds_inst_tlbsrch? {csr_vppn,13'b0} : alu_result; 
+assign is_tlbrd = ds_inst_tlbrd & ds_to_es_valid;
+assign is_tlbwr = ds_inst_tlbwr & ds_to_es_valid;
+assign is_tlbsrch = ds_inst_tlbsrch & ds_to_es_valid;
+assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul) && !((is_tlbrd||is_tlbwr||is_tlbsrch)&&tlbrd_csr_install )) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
 assign nblock = my_ok;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 //assign es_to_ws_valid_w[1] =  state==idle || (state==wait_an_state&&another_ok) || (state==wait_me_state&&my_ok&&another_ok);
 assign es_to_ws_valid_w[1] = another_ok && my_ok;
-assign es_to_ws_bus_w = {csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result, es_pc};
+assign es_to_ws_bus_w = {ds_inst_tlbrd,ds_inst_tlbwr ,csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result, es_pc};
 //assign exm_forward_bus_w = {es_to_ws_valid_w[0],csr_wen, csr_addr, csr_wdata, gr_we&!in_excp, dest, final_result};
 
 assign es_ready = ws_ready; 
@@ -296,7 +328,7 @@ assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 assign final_result = (state==wait_an_state && another_ok) ? temp_r : use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
 //for mem
-assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&&cal_valid&&!in_excp_t, res_from_mem&cal_valid&!in_excp_t, bit_width, rkd_value, es_pc};
+assign es_to_ms_bus = { is_tlbsrch,mem_addr, is_unsigned, mem_we&&cal_valid&&!in_excp_t, res_from_mem&cal_valid&!in_excp_t, bit_width, rkd_value, es_pc};
 assign {dcache_ok, mem_result} = ms_to_es_bus;
 
 //flush: jump or excp or etrn 
@@ -324,6 +356,8 @@ assign es_to_mul_bus = {use_mul && cal_valid && !in_excp_t , use_high, is_unsign
 assign {mul_result, mul_ok} = mul_to_es_bus;
 
 assign bpu_es_bus = {flush, es_pc, may_jump&cal_valid&!in_excp&!is_etrn, need_jump&cal_valid, pre_fail&cal_valid, jump_target, jump_type};
+
+
 
 Alu u_alu (
     .alu_op    (alu_op),

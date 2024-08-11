@@ -7,6 +7,7 @@ module csr (
     output csr_datf,
     output csr_datm, 
     //for ID
+    output tlbrd_csr_install,
     input [13:0] csr_addr1,
     output  reg [31:0] csr_data1,
     input [13:0] csr_addr2,
@@ -26,8 +27,36 @@ module csr (
 
     //intrpt
     output have_intrpt,
-    input [7:0] intrpt
+    input [7:0] intrpt,
 
+
+    input is_tlbsrch,
+    input [$clog2(`TLBENTRY)-1:0] tlb_srch_idx,
+    input tlb_srch_valid,
+
+    output [18:0] csr_vppn,
+    output [9:0]  tlb_csr_asid,
+
+    //for TLB read
+    input is_tlbrd,
+    output [$clog2(`TLBENTRY)-1:0] tlb_r_idx,
+    input [18:0]  tlb_r_vppn,
+    input [9:0]  tlb_r_asid,
+    input [5:0]  tlb_r_ps,
+    input        tlb_r_e,
+    input [27:0] tlb_r_lbelo0,
+    input [27:0] tlb_r_lbelo1,
+
+    //for TLB write
+    input                           is_tlbwr,
+    output                          tlb_w_en,
+    output  [$clog2(`TLBENTRY)-1:0] tlb_w_idx,
+    output  [18:0]                  tlb_w_vppn,
+    output  [ 5:0]                  tlb_w_ps,
+    output  [ 9:0]                  tlb_w_asid,
+    output                          tlb_w_e,
+    output  [27:0]                  tlb_w_tlbelo0,
+    output  [27:0]                  tlb_w_tlbelo1
 
 );
     wire in_excp;
@@ -38,6 +67,12 @@ module csr (
     wire tval_is_nzero;
     wire [31:0] bad_vaddr;
     wire use_badv;
+    wire rd_valid;
+    wire rd_invalid;
+
+    wire srch_valid = is_tlbsrch & tlb_srch_valid &~csr_wen;
+    wire srch_invalid = is_tlbsrch & ~tlb_srch_valid &~csr_wen;
+
     assign {is_etrn, in_excp,excp_Ecode,excp_subEcode,excp_era,use_badv,bad_vaddr} = csr_bus;
     reg [31:0] csr_crmd;
     reg [31:0] csr_prmd;
@@ -54,6 +89,12 @@ module csr (
     reg [31:0] csr_tval;
     reg [31:0] csr_badv;
     reg [63:0] csr_timer_64;
+    reg [31:0] csr_tlbidx;
+    reg [31:0] csr_tlbehi;
+    reg [31:0] csr_tlblo0;
+    reg [31:0] csr_tlblo1;
+    reg [31:0] csr_asid;
+    reg [31:0] csr_tlbrentry;
     reg timer_en;
 
     
@@ -66,6 +107,25 @@ module csr (
     assign excp_pc = in_excp ? csr_eentry :
                      csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
     assign have_intrpt = csr_crmd[`IE] &|(csr_ecfg[12:0]&csr_estat[12:0]);
+    
+    assign rd_valid = is_tlbrd & tlb_r_e &!csr_wen;
+    assign rd_invalid = is_tlbrd & !tlb_r_e &!csr_wen;
+
+    assign tlb_r_idx = csr_tlbidx[`Index];
+    assign tlb_w_en = is_tlbwr & !csr_wen;
+    assign tlb_w_idx = csr_tlbidx[`Index];
+    assign tlb_w_vppn = csr_tlbehi[`TLBEHI_VPPN];
+    assign tlb_w_ps = csr_tlbidx[`PS];
+    assign tlb_w_asid = csr_asid[`ASID_ASID];
+    assign tlb_w_e = (csr_estat[`Ecode] == 6'h3f)| ~csr_tlbidx[`NE]; 
+    assign tlb_w_tlbelo0 = csr_tlblo0[27:0];
+    assign tlb_w_tlbelo1 = csr_tlblo1[27:0];
+    
+    assign csr_vppn = csr_tlbehi[`TLBEHI_VPPN];
+    assign tlb_csr_asid = csr_asid[`ASID_ASID];
+    
+    assign tlbrd_csr_install = csr_wen & (is_tlbrd|is_tlbwr|is_tlbsrch);
+
     always @(*) 
     begin
         case (csr_addr1)
@@ -85,6 +145,12 @@ module csr (
             `BADV: csr_data1 = csr_badv;
             `TIMER_64_H: csr_data1 = csr_timer_64[63:32];
             `TIMER_64_L: csr_data1 = csr_timer_64[31:0];
+            `TLBIDX: csr_data1 = csr_tlbidx;
+            `TLBEHI: csr_data1 = csr_tlbehi;
+            `TLBLO0: csr_data1 = csr_tlblo0;
+            `TLBLO1: csr_data1 = csr_tlblo1;
+            `ASID: csr_data1 = csr_asid;
+            `TLBRENTRY: csr_data1 = csr_tlbrentry;
         default: 
             csr_data1 = 32'h0;
         endcase    
@@ -109,6 +175,12 @@ module csr (
             `BADV: csr_data2 = csr_badv;
             `TIMER_64_L: csr_data2 = csr_timer_64[31:0];
             `TIMER_64_H: csr_data2 = csr_timer_64[63:32];
+            `TLBIDX: csr_data2 = csr_tlbidx;
+            `TLBEHI: csr_data2 = csr_tlbehi;           
+            `TLBLO0: csr_data2 = csr_tlblo0;
+            `TLBLO1: csr_data2 = csr_tlblo1;
+            `ASID: csr_data2 = csr_asid;
+            `TLBRENTRY: csr_data2 = csr_tlbrentry;
         default: 
             csr_data2 = 32'h0;
         endcase    
@@ -407,5 +479,154 @@ module csr (
             csr_timer_64 <=csr_timer_64 + 64'h1;
         end   
     end
+
+    //TLBIDX
+    always @(posedge clk ) 
+    begin
+        if(rst)
+        begin
+            csr_tlbidx <=32'h0;
+        end
+        else if(csr_wen && (csr_waddr == `TLBIDX))
+        begin
+            csr_tlbidx[`Index] <= wdata[`Index];
+            csr_tlbidx[`PS] <=wdata[`PS];
+            csr_tlbidx[`NE] <=wdata[`NE];
+        end
+        else if(rd_valid)
+        begin
+            csr_tlbidx[`PS]<= tlb_r_ps;
+            csr_tlbidx[`NE] <= 1'b0;    
+        end 
+        else if(rd_invalid)
+        begin
+            csr_tlbidx[`PS] <= 6'b0;
+            csr_tlbidx[`NE] <= 1'b1;
+        end
+        else if(srch_valid)
+        begin
+            csr_tlbidx[`Index] <= tlb_srch_idx;
+            csr_tlbidx[`NE] <= 1'b0;
+        end
+        else if(srch_invalid)
+        begin
+            csr_tlbidx[`NE] <= 1'b1;
+        end
+   
+    end
+
+    //TLBEHI
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            csr_tlbehi <= 32'h0;    
+        end
+        else if(csr_wen && (csr_waddr == `TLBEHI))
+        begin
+            csr_tlbehi[`TLBEHI_VPPN] <= wdata[`TLBEHI_VPPN];
+        end 
+        else if(rd_valid)
+        begin
+            csr_tlbehi[`TLBEHI_VPPN] <= tlb_r_vppn;
+        end
+        else if(rd_invalid)    
+        begin
+            csr_tlbehi[`TLBEHI_VPPN] <= 19'h0;
+        end
+    end
+
+    //TLBLO0
+
+    always @(posedge clk ) 
+    begin
+        if(rst)
+        begin
+            csr_tlblo0 <= 32'h0;
+        end    
+        else if(csr_wen && (csr_waddr == `TLBLO0))
+        begin
+            csr_tlblo0[`TLBLO_V] <= wdata[`TLBLO_V];
+            csr_tlblo0[`TLBLO_D] <= wdata[`TLBLO_D];
+            csr_tlblo0[`TLBLO_PLV] <= wdata[`TLBLO_PLV];
+            csr_tlblo0[`TLBLO_MAT] <= wdata[`TLBLO_MAT];
+            csr_tlblo0[`TLBLO_G] <= wdata[`TLBLO_G];
+            csr_tlblo0[`TLBLO_PPN] <= wdata[`TLBLO_PPN];
+        end
+        else if(rd_valid)
+        begin
+            csr_tlblo0[27:0] <= tlb_r_lbelo0;
+        end
+        else if(rd_invalid)
+        begin
+            csr_tlblo0[27:0] <= 28'h0;
+        end
+    end
+
+    //TLBLO1
+    always @(posedge clk ) 
+    begin
+        if(rst)
+        begin
+            csr_tlblo1 <= 32'h0;
+        end    
+        else if(csr_wen && (csr_waddr == `TLBLO1))
+        begin
+            csr_tlblo1[`TLBLO_V] <= wdata[`TLBLO_V];
+            csr_tlblo1[`TLBLO_D] <= wdata[`TLBLO_D];
+            csr_tlblo1[`TLBLO_PLV] <= wdata[`TLBLO_PLV];
+            csr_tlblo1[`TLBLO_MAT] <= wdata[`TLBLO_MAT];
+            csr_tlblo1[`TLBLO_G] <= wdata[`TLBLO_G];
+            csr_tlblo1[`TLBLO_PPN] <= wdata[`TLBLO_PPN];
+        end
+        else if(rd_valid)
+        begin
+            csr_tlblo1[27:0] <= tlb_r_lbelo1;
+        end
+        else if(rd_invalid)
+        begin
+            csr_tlblo1[27:0] <= 28'h0;
+        end
+    end
+
+    //ASID
+
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            csr_asid[`ASID_ASID] <= 10'h0;
+            csr_asid[`ASID_ASIDBITS] <= 8'd10;
+            csr_asid[`ASID_REV0]<= 6'h0;
+            csr_asid[`ASID_REV1] <= 8'h0;    
+        end    
+        else if(csr_wen && (csr_waddr == `ASID))
+        begin
+            csr_asid[`ASID_ASID] <= wdata[`ASID_ASID];
+        end
+        else if(rd_valid)
+        begin
+            csr_asid[`ASID_ASID] <= tlb_r_asid;
+        end
+        else if(rd_invalid)
+        begin
+            csr_asid[`ASID_ASID] <= 10'b0;
+        end
+    end
+
+    //TLBRENTRY
+
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            csr_tlbrentry <= 32'h0;  
+        end    
+        else if(csr_wen && (csr_waddr == `TLBRENTRY))
+        begin
+            csr_tlbrentry[`TLBRENTRY_PA] <= wdata[`TLBRENTRY_PA];
+        end
+    end
+
 endmodule
 

@@ -1,5 +1,5 @@
 `include "define.vh"
-
+`include "config.vh"
 module core_top (
     input  wire        aclk,
     input  wire        aresetn,
@@ -253,6 +253,50 @@ module core_top (
   wire                      ID_flush;
   wire [              31:0] ID_jump_pc;
 
+  wire tlb_csr_install;
+
+  wire is_tlbrd;
+  wire is_tlbwr;
+  wire is_tlbsrch;
+
+  wire is_tlbrd2;
+  wire is_tlbwr2;
+  wire is_tlbsrch2;
+
+  wire [18:0] csr_vppn;
+  wire [19:0] ls_vpn;
+  wire [9:0] csr_asid;
+  wire [$clog2(`TLBENTRY)-1:0] ls_idx;
+  wire  ls_valid;
+  wire  ls_found;
+
+  wire                         inv_en;
+  wire [ 4:0]                  inv_op;
+  wire [ 9:0]                  inv_asid;
+  wire [18:0]                  inv_vppn;
+
+  wire                         inv_en2;
+  wire [ 4:0]                  inv_op2;
+  wire [ 9:0]                  inv_asid2;
+  wire [18:0]                  inv_vppn2;
+
+  wire                         tlb_w_en;
+  wire [$clog2(`TLBENTRY)-1:0] tlb_w_idx;
+  wire [18:0]                  tlb_w_vppn;
+  wire [ 5:0]                  tlb_w_ps;
+  wire [ 9:0]                  tlb_w_asid;
+  wire                         tlb_w_e;
+  wire [27:0]                  tlb_w_tlbelo0;
+  wire [27:0]                  tlb_w_tlbelo1;
+
+  wire [$clog2(`TLBENTRY)-1:0] tlb_r_idx;
+  wire [18:0]                  tlb_r_vppn;
+  wire [ 9:0]                  tlb_r_asid;
+  wire [ 5:0]                  tlb_r_ps;
+  wire                         tlb_r_e;
+  wire [27:0]                  tlb_r_tlbelo0;
+  wire [27:0]                  tlb_r_tlbelo1;
+
   assign need_jump = br_bus1[32] | br_bus2[32] | bpu_flush | ID_flush;
   assign jump_pc = br_bus1[32] | br_bus2[32] | bpu_flush ? bpu_jump_pc :
                    ID_flush ? ID_jump_pc : 32'b0;
@@ -398,7 +442,34 @@ icache_v5 icache_dummy(
     .intrpt(intrpt),
     .have_intrpt(have_intrpt),
     .csr_datm(csr_datm),
-    .csr_datf(csr_datf)
+    .csr_datf(csr_datf),
+    .tlbrd_csr_install(tlb_csr_install),
+    .is_tlbrd(is_tlbrd),
+    .tlb_r_idx(tlb_r_idx),
+    .tlb_r_vppn(tlb_r_vppn),
+    .tlb_r_asid(tlb_r_asid),
+    .tlb_r_ps(tlb_r_ps),
+    .tlb_r_e(tlb_r_e),
+    .tlb_r_lbelo0(tlb_r_tlbelo0),
+    .tlb_r_lbelo1(tlb_r_tlbelo1),
+    
+
+    .is_tlbwr(is_tlbwr),
+    .tlb_w_en(tlb_w_en),
+    .tlb_w_idx(tlb_w_idx),
+    .tlb_w_vppn(tlb_w_vppn),
+    .tlb_w_ps(tlb_w_ps),
+    .tlb_w_asid(tlb_w_asid),
+    .tlb_w_e(tlb_w_e),
+    .tlb_w_tlbelo0(tlb_w_tlbelo0),
+    .tlb_w_tlbelo1(tlb_w_tlbelo1),
+
+    .csr_vppn(csr_vppn),
+    .is_tlbsrch(is_tlbsrch),
+    .tlb_csr_asid(csr_asid),
+    .tlb_srch_idx(ls_idx),
+    .tlb_srch_valid(ls_found)
+    
 
 
 );
@@ -477,7 +548,17 @@ icache_v5 icache_dummy(
       .my_ok(es_ok1),
       .another_ok(es_ok2),
 
-      .bpu_es_bus(bpu_es_bus1)
+      .bpu_es_bus(bpu_es_bus1),
+      .is_tlbrd(is_tlbrd),
+      .is_tlbwr(is_tlbwr),
+      .tlbrd_csr_install(tlb_csr_install),
+      .csr_vppn(csr_vppn),
+      .is_tlbsrch(is_tlbsrch),
+
+      .inv_en(inv_en),
+      .inv_op(inv_op),
+      .inv_asid(inv_asid),
+      .inv_vppn(inv_vppn)
 
   );
   EXM_stage EXM_stage2 (
@@ -520,8 +601,18 @@ icache_v5 icache_dummy(
       .my_ok(es_ok2),
       .another_ok(es_ok1),
 
-      .bpu_es_bus(bpu_es_bus2)
+      .bpu_es_bus(bpu_es_bus2),
+      .is_tlbrd(is_tlbrd2),
+      .is_tlbwr(is_tlbwr2),
+      .tlbrd_csr_install(1'b0),
+      .csr_vppn(csr_vppn),
+      .is_tlbsrch(is_tlbsrch2),
 
+      .inv_en(inv_en2),
+      .inv_op(inv_op2),
+      .inv_asid(inv_asid2),
+      .inv_vppn(inv_vppn2)
+    
   );
 
   MEM_stage MEM_stage (
@@ -534,7 +625,9 @@ icache_v5 icache_dummy(
       .dcache_wdata_bus (dcache_wdata_bus),
       .csr_datm(csr_datm),
       .flush(1'b0),
-      .excp_ale(excp_ale)
+      .excp_ale(excp_ale),
+      .ls_vpn(ls_vpn)
+      
   );
 
   DIV_top DIV_top (
@@ -574,6 +667,57 @@ icache_v5 icache_dummy(
       .csr_wdata      (csr_wdata)
 
   );
+  tlb_async tlb(
+    .clock(aclk),
+    .reset(reset),
+
+    // translation: ifetch (current tick)
+    .if_vpn(),
+    .if_asid(),
+    .if_priv(),
+    .if_idx(),
+    .if_valid(),
+    // high on unprivileged access
+    .if_unpriv(),
+    .if_ppn(),
+    .if_uncached(),
+
+    // translation: load / store (current tick)
+    .ls_vpn(ls_vpn),
+    .ls_asid(csr_asid),
+    .ls_priv(),
+    .ls_idx(ls_idx),
+    .ls_valid(ls_valid),
+    .ls_unpriv(),
+    .ls_ppn(),
+    .ls_uncached(),
+    .s_valid(ls_found),
+
+    // write (one tick)
+    .w_en(tlb_w_en),
+    .w_idx(tlb_w_idx),
+    .w_vppn(tlb_w_vppn),
+    .w_ps(tlb_w_ps),
+    .w_asid(tlb_w_asid),
+    .w_e(tlb_w_e),
+    .w_tlbelo0(tlb_w_tlbelo0),
+    .w_tlbelo1(tlb_w_tlbelo1),
+
+    // read (current tick)
+    .r_idx(tlb_r_idx),
+    .r_vppn(tlb_r_vppn),
+    .r_asid(tlb_r_asid),
+    .r_ps(tlb_r_ps),
+    .r_e(tlb_r_e),
+    .r_tlbelo0(tlb_r_tlbelo0),
+    .r_tlbelo1(tlb_r_tlbelo1),
+
+    // invtlb (one tick)
+    .inv_en(inv_en),
+    .inv_op(inv_op),
+    .inv_asid(inv_asid),
+    .inv_vppn(inv_vppn)
+);
   
   `ifdef TEAMPACKAGE_EN
   assign debug0_wb_pc            = wb_stage.ws_pc1;

@@ -8,7 +8,7 @@
 `define IB_WIDTH_LOG2 3
 
 `define IB_DATA_BUS_WD 81
-`define DS_TO_ES_BUS_WD 246
+`define DS_TO_ES_BUS_WD 250
 // 流水线寄存器位宽
 `define IF0_TO_IF1_BUS_WD 56
 
@@ -17,9 +17,9 @@
 `define FORWAED_BUS_WD 86
 
 `define BR_BUS_WD 33
-`define ES_TO_WS_BUS_WD 117
+`define ES_TO_WS_BUS_WD 119
 
-`define ES_TO_MS_BUS_WD 103
+`define ES_TO_MS_BUS_WD 104
 `define MS_TO_ES_BUS_WD 33
 `define EXM_DCACHE_RD 34
 `define EXM_DCACHE_WD 106
