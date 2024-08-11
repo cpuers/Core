@@ -25,6 +25,9 @@ module tlb_async (
     output wire                         ls_unpriv,
     output wire [19:0]                  ls_ppn,
     output wire                         ls_uncached,
+    // search
+    output wire                         s_valid,
+    // output wire [$clog2(`TLBENTRY)-1:0] s_idx, // same as ls_idx
 
     // write (one tick)
     input  wire                         w_en,
@@ -125,6 +128,7 @@ module tlb_async (
     assign ls_unpriv = ls_entry[3:2] < ls_priv;
     assign ls_uncached = (ls_entry[5:4] == 2'd0);
     assign ls_ppn = ls_entry[27:8];
+    assign s_valid = |ls_hit;
 
     // write & invtlb
     wire    sel     [0:`TLBENTRY-1];
@@ -190,6 +194,9 @@ module tlb_sync(
     output wire                         ls_unpriv,
     output wire [19:0]                  ls_ppn,
     output wire                         ls_uncached,
+    // search
+    output wire                         s_valid,
+    // output wire [$clog2(`TLBENTRY)-1:0] s_idx, // same as ls_idx
 
     // write (one tick)
     input  wire                         w_en,
@@ -300,6 +307,7 @@ module tlb_sync(
     assign ls_unpriv = ls_entry[3:2] < ls_priv_r;
     assign ls_uncached = (ls_entry[5:4] == 2'd0);
     assign ls_ppn = ls_entry[27:8];
+    assign s_valid = ls_hit_r;
 
     // write & invtlb
     wire    sel     [0:`TLBENTRY-1];
