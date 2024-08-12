@@ -524,6 +524,16 @@ icache_v5 icache_dummy(
 
       .bpu_es_bus(bpu_es_bus1)
 
+      `ifdef DIFFTEST_EN
+    ,
+
+    .ds_to_es_debug_bus(ds_to_es_debug_bus1),
+    .es_to_ws_debug_bus(es_to_ws_debug_bus1),
+    .csr_timer_64_diff(csr_timer_64_diff),
+    .intrNo_diff(intrNo_diff) 
+    `endif
+
+
   );
   EXM_stage EXM_stage2 (
       .clk  (aclk),
@@ -610,7 +620,7 @@ icache_v5 icache_dummy(
   );
 
   WB_stage wb_stage (
-      .clk            (~aclk),
+      .clk            (aclk),
       .reset          (reset),
       .ws_ready       (ws_ready),
       .es_to_ws_valid1(es_to_ws_valid1),
@@ -804,10 +814,10 @@ wire  [ 5:0]  t_csr_estat_ecode[0:1];
 wire  [31:0]  t_cmt_excp_pc[0:1];
 wire  [31:0]  t_cmt_excp_instr[0:1];
 
-assign {cmt_pc[0],t_cmt_excp_pc[0],cmt_st_vaddr[0], cmt_st_paddr[0], cmt_st_data[0], cmt_ld_vaddr[0], cmt_st_paddr[0],
+assign {cmt_valid[0],cmt_pc[0],t_cmt_excp_pc[0],cmt_st_vaddr[0], cmt_st_paddr[0], cmt_st_data[0], cmt_ld_vaddr[0], cmt_st_paddr[0],
         cmt_timer_64_value[0], t_csr_estat_intrno[0], t_cmt_excp_valid[0], t_csr_estat_ecode[0], cmt_wdata[0],cmt_csr_data[0],
         cmt_instr[0], cmt_is_cnt_inst[0], cmt_wen[0], cmt_wdest[0], cmt_csr_rstat_en[0], t_cmt_eret[0], cmt_st_valid[0], cmt_ld_valid[0]} = ws_debug_bus1;
-assign {cmt_pc[1],t_cmt_excp_pc[1],cmt_st_vaddr[1], cmt_st_paddr[1], cmt_st_data[1], cmt_ld_vaddr[1], cmt_st_paddr[1],
+assign {cmt_valid[1],cmt_pc[1],t_cmt_excp_pc[1],cmt_st_vaddr[1], cmt_st_paddr[1], cmt_st_data[1], cmt_ld_vaddr[1], cmt_st_paddr[1],
         cmt_timer_64_value[1], t_csr_estat_intrno[1], t_cmt_excp_valid[1], t_csr_estat_ecode[1], cmt_wdata[1],cmt_csr_data[1],
         cmt_instr[1], cmt_is_cnt_inst[1], cmt_wen[1], cmt_wdest[1], cmt_csr_rstat_en[1], t_cmt_eret[1], cmt_st_valid[1], cmt_ld_valid[1]} = ws_debug_bus2;
 assign t_cmt_excp_instr[0] = cmt_instr[0];
