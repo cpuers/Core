@@ -135,15 +135,21 @@ end
   wire [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus_w2;
   reg  [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus_r2;
   
+  wire        cmt_valid1;
   wire [31:0] cmt_pc1 ;
   wire [31:0] cmt_excp_pc1; 
+  wire        cmt_valid2;
+  wire [31:0] cmt_pc2 ;
+  wire [31:0] cmt_excp_pc2; 
 
+  assign cmt_valid1 = es_to_ws_valid1[1] & es_to_ws_valid1[0];
+  assign cmt_valid2 = es_to_ws_valid2[1] & es_to_ws_valid2[0];
   assign cmt_pc1 = ws_pc1;
   assign cmt_excp_pc1 = ws_pc1;
   assign cmt_pc2 = ws_pc2;
   assign cmt_excp_pc2 = ws_pc2;
-  assign ws_debug_bus_w1 = {cmt_pc1, cmt_excp_pc1, es_to_ws_debug_bus1};
-  assign ws_debug_bus_w2 = {cmt_pc2, cmt_excp_pc2, es_to_ws_debug_bus2};
+  assign ws_debug_bus_w1 = {cmt_valid1, cmt_pc1, cmt_excp_pc1, es_to_ws_debug_bus1};
+  assign ws_debug_bus_w2 = {cmt_valid2, cmt_pc2, cmt_excp_pc2, es_to_ws_debug_bus2};
 
   always @(posedge clk ) 
   begin
