@@ -35,7 +35,7 @@ module IF_stage0 (
 
 
 );
-    assign uncached = iuncached;
+    assign uncached = 1'b0;
     wire IF0_valid_w;
     assign IF0_valid_w = addr_ok;
   reg  [31:0] pc_r;

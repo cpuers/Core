@@ -96,21 +96,21 @@ module csr (
                      csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
     assign have_intrpt = csr_crmd[`IE] &|(csr_ecfg[12:0]&csr_estat[12:0]);
 
-    assign iuncached = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh) ? csr_dwm0[4] :
-                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh )? csr_dwm0[4] :
-                        csr_crmd[5];
+    assign iuncached = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh) ? !csr_dwm0[4] :
+                        csr_crmd[`PG] && (csr_dwm1[`DMW_VSEG] == viaddrh )? !csr_dwm1[4] :
+                        !csr_crmd[5];
     
     assign piaddrh = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh) ? csr_dwm0[`DMW_PSEG] :
-                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh )? csr_dwm0[`DMW_PSEG] :
+                        csr_crmd[`PG] && (csr_dwm1[`DMW_VSEG] == viaddrh )? csr_dwm1[`DMW_PSEG] :
                         viaddrh;
 
 
-    assign duncached = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh) ? csr_dwm0[4] :
-                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh )? csr_dwm0[4] :
-                        csr_crmd[5];
+    assign duncached = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh) ? !csr_dwm0[4] :
+                        csr_crmd[`PG] && (csr_dwm1[`DMW_VSEG] == vdaddrh )? !csr_dwm1[4] :
+                        !csr_crmd[7];
     
     assign pdaddrh = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh) ? csr_dwm0[`DMW_PSEG] :
-                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh )? csr_dwm0[`DMW_PSEG] :
+                        csr_crmd[`PG] && (csr_dwm1[`DMW_VSEG] == vdaddrh )? csr_dwm1[`DMW_PSEG] :
                         vdaddrh;
 
 

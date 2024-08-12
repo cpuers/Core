@@ -264,7 +264,7 @@
     wire duncached;
     wire [2:0]pdaddr;
     wire [2:0]vdaddr;
-    wire iuncached;
+    wire csr_iuncached;
     wire [2:0]piaddr;
     wire [2:0]viaddr;
 
@@ -351,7 +351,7 @@ icache_v5 icache_dummy(
       .pre_nextpc (pbu_next_pc),
       .csr_datf(csr_datf),
       .install    (bpu_install),
-      .iuncached(iuncached),
+      .iuncached(csr_iuncached),
       .piaddrh(piaddr),
       .viaddrh(viaddr)
 
@@ -434,7 +434,7 @@ icache_v5 icache_dummy(
     .duncached(duncached),
     .pdaddrh(pdaddr),
     .vdaddrh(vdaddr),
-    .iuncached(iuncached),
+    .iuncached(csr_iuncached),
     .piaddrh(piaddr),
     .viaddrh(viaddr)
     

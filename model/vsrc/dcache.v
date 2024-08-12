@@ -2948,7 +2948,7 @@ module dcache_v5(
     )) || (state_is_uncached && ret_valid);
     assign rdata = 
         (state_is_uncached) ? ret_data :
-        ({req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank}) ?
+        (wr_buf_state_is_write && {req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank}) ?
             wr_buf_wdata : (
                 ({32{state_is_lookup}} & lookup_hit_data) |
                 ({32{state_is_recv}} & ret_data)
