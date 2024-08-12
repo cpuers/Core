@@ -45,7 +45,9 @@ module csr (
     output [31:0] csr_tval_diff,
     output [31:0] csr_badv_diff,
     output [63:0] csr_timer_64_diff,
-    output [10:0] intrNo_diff    
+    output [10:0] intrNo_diff,
+    output [31:0] csr_dwm0_diff,    
+    output [31:0] csr_dwm1_diff   
     `endif
 );
     wire in_excp;
@@ -72,6 +74,8 @@ module csr (
     reg [31:0] csr_tval;
     reg [31:0] csr_badv;
     reg [63:0] csr_timer_64;
+    reg [31:0] csr_dwm0;
+    reg [31:0] csr_dwm1;
     reg timer_en;
 
     
@@ -103,6 +107,8 @@ module csr (
             `BADV: csr_data1 = csr_badv;
             `TIMER_64_H: csr_data1 = csr_timer_64[63:32];
             `TIMER_64_L: csr_data1 = csr_timer_64[31:0];
+            `DMW0: csr_data1 = csr_dwm0;
+            `DMW1: csr_data1 = csr_dwm1;
         default: 
             csr_data1 = 32'h0;
         endcase    
@@ -127,6 +133,8 @@ module csr (
             `BADV: csr_data2 = csr_badv;
             `TIMER_64_L: csr_data2 = csr_timer_64[31:0];
             `TIMER_64_H: csr_data2 = csr_timer_64[63:32];
+            `DMW0: csr_data2 = csr_dwm0;
+            `DMW1: csr_data2 = csr_dwm1;
         default: 
             csr_data2 = 32'h0;
         endcase    
@@ -426,6 +434,38 @@ module csr (
         end   
     end
 
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            csr_dwm0 <= 32'h0;    
+        end
+        else if(csr_wen && (csr_waddr == `DMW0))
+        begin
+            csr_dwm0[`DMW_PLV0] <= wdata[`DMW_PLV0];
+            csr_dwm0[`DMW_PLV3] <= wdata[`DMW_PLV3];
+            csr_dwm0[`DMW_MAT]  <= wdata[`DMW_MAT];
+            csr_dwm0[`DMW_PSEG] <= wdata[`DMW_PSEG];
+            csr_dwm0[`DMW_VSEG] <= wdata[`DMW_VSEG];
+        end    
+    end
+
+    always @(posedge clk ) 
+    begin
+        if (rst) 
+        begin
+            csr_dwm1 <= 32'h0;    
+        end
+        else if(csr_wen && (csr_waddr == `DMW1))
+        begin
+            csr_dwm1[`DMW_PLV0] <= wdata[`DMW_PLV0];
+            csr_dwm1[`DMW_PLV3] <= wdata[`DMW_PLV3];
+            csr_dwm1[`DMW_MAT]  <= wdata[`DMW_MAT];
+            csr_dwm1[`DMW_PSEG] <= wdata[`DMW_PSEG];
+            csr_dwm1[`DMW_VSEG] <= wdata[`DMW_VSEG];
+        end    
+    end
+
     `ifdef DIFFTEST_EN
     assign csr_crmd_diff = csr_crmd;
     assign csr_prmd_diff = csr_prmd;
@@ -443,6 +483,8 @@ module csr (
     assign csr_badv_diff = csr_badv;
     assign csr_timer_64_diff = csr_timer_64;
     assign intrNo_diff = csr_estat[12:2];
+    assign csr_dwm0_diff = csr_dwm0;
+    assign csr_dwm1_diff = csr_dwm1;
     `endif
 endmodule
 

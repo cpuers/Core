@@ -58,6 +58,13 @@
 `define CLR 0
 `define TICLR_REV 31:1
 
+`define DMW0 14'h180
+`define DMW1 14'h181
+`define DMW_PLV0 0
+`define DMW_PLV3 3
+`define DMW_MAT 5:4
+`define DMW_PSEG 27:25
+`define DMW_VSEG 31:29
 
 // It's UB
 `define TIMER_64_H 14'h99

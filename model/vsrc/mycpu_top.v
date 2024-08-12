@@ -438,7 +438,9 @@ icache_v5 icache_dummy(
     .csr_tval_diff    ( csr_tval_diff   ),
     .csr_badv_diff    ( csr_badv_diff   ),
     .csr_timer_64_diff(csr_timer_64_diff),
-    .intrNo_diff    (intrNo_diff)
+    .intrNo_diff    (intrNo_diff),
+    .csr_dwm0_diff(csr_dmw0_diff),
+    .csr_dwm1_diff(csr_dmw1_diff)
     `endif
 );
   ID_stage ID_stage (
@@ -929,6 +931,8 @@ wire [31:0] csr_tid_diff;
 wire [31:0] csr_tcfg_diff;
 wire [31:0] csr_tval_diff;
 wire [31:0] csr_badv_diff;
+wire [31:0] csr_dmw0_diff;
+wire [31:0] csr_dmw1_diff;
 
 DifftestCSRRegState DifftestCSRRegState(
     .clock              (aclk               ),
@@ -958,8 +962,8 @@ DifftestCSRRegState DifftestCSRRegState(
     .ticlr              (0                  ),
     .llbctl             (0                  ),
     .tlbrentry          (0                  ),
-    .dmw0               (0                  ),
-    .dmw1               (0                  )
+    .dmw0               (csr_dmw0_diff      ),
+    .dmw1               (csr_dmw1_diff      )
 );
 
 wire  [31:0]  regs  [31:0];
