@@ -155,10 +155,14 @@
   wire [ 3:0] dcache_awstrb;
   wire [31:0] dcache_wdata;
   wire        dcache_cacop_en;
+  wire        icache_cacop_en;
+  wire        icache_cacop_ready;
+
   wire [ 1:0] dcache_cacop_code; 
   wire [31:0] dcache_cacop_addr;
   wire        dcache_rhit;
   wire        dcache_whit;
+  wire        dcache_cacop_ready;
 
   wire           i_rd_req     ;
   wire [ 2:0]    i_rd_type    ;
@@ -196,10 +200,10 @@
   wire [127:0]   data_wr_data    ;
   wire           data_wr_rdy     ;
 
-  assign dcache_rdata_bus = {dcache_ready, dcache_rvalid, dcache_rdata};
+  assign dcache_rdata_bus = {dcache_ready, dcache_rvalid, dcache_rdata,dcache_cacop_ready,icache_cacop_ready};
 
   assign {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
-          dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = dcache_wdata_bus;
+          dcache_cacop_en,icache_cacop_en, dcache_cacop_code, dcache_cacop_addr} = dcache_wdata_bus;
   
   wire [  4*`IB_DATA_BUS_WD-1:0] if1_to_ib;
   wire [       `IB_WIDTH_LOG2:0] can_push_size;
@@ -299,9 +303,9 @@ icache_v5 icache_dummy(
     .rhit(icache_rhit),
 
     //TODO
-    .cacop_valid(dcache_cacop_en),
+    .cacop_valid(icache_cacop_en),
     /* verilator lint_off PINCONNECTEMPTY */
-    .cacop_ready(               ),
+    .cacop_ready(icache_cacop_ready),
     /* verilator lint_on PINCONNECTEMPTY */
     .cacop_code(dcache_cacop_code), // code[4:3]
     .cacop_addr(dcache_cacop_addr),
@@ -667,7 +671,7 @@ icache_v5 icache_dummy(
       .whit(dcache_whit),
     /* verilator lint_off PINCONNECTEMPTY */
       .cacop_valid(dcache_cacop_en),
-      .cacop_ready(                ),
+      .cacop_ready(dcache_cacop_ready),
     /* verilator lint_on PINCONNECTEMPTY */
       .cacop_code(dcache_cacop_code), // code[4:3]
       .cacop_addr(dcache_cacop_addr),

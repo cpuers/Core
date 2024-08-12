@@ -116,10 +116,14 @@ module Agu(
     input [31:0] wdata,
     output[31:0] mem_result,
     output dcache_ok,
+    output cacop_ok,
     input [`EXM_DCACHE_RD -1:0] dcache_rdata_bus,
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
     output excp_ale,
-    input csr_datm
+    input csr_datm,
+    input flush_icache,
+    input flush_dcache,
+    input [1:0] cacop_code
 );
 
 // reg         wait_rready;
@@ -137,13 +141,16 @@ wire [31:0] dcache_addr = mem_addr;
 wire        dcache_uncached = (mem_addr[31:20] == 12'hbfa);
 wire [ 3:0] dcache_awstrb = we;
 wire [31:0] dcache_wdata = write_data;
-wire        dcache_cacop_en = 1'b0;
-wire [ 1:0] dcache_cacop_code = 2'b0; // code[4:3]
-wire [31:0] dcache_cacop_addr = 32'b0;
+wire        dcache_cacop_en = flush_dcache;
+wire        icache_cacop_en = flush_icache;
+wire [ 1:0] dcache_cacop_code = cacop_code; // code[4:3]
+wire [31:0] dcache_cacop_addr = mem_addr;
 
 wire        dcache_ready;
 wire        dcache_rvalid;
 wire [31:0] dcache_rdata;
+wire        icache_cacop_ready;
+wire        dcache_cacop_ready;
 
 wire [4:0] index = {3'b0,mem_addr[1:0]}<<3;
 
@@ -153,10 +160,11 @@ assign we = (bit_width==4'b0001) ? (index==5'b0) ? 4'b0001 : (index==5'b01000) ?
 assign write_data = wdata << index;
 
 assign dcache_wdata_bus = {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
-        dcache_cacop_en, dcache_cacop_code, dcache_cacop_addr};
+        dcache_cacop_en,icache_cacop_en, dcache_cacop_code, dcache_cacop_addr};
 
-assign {dcache_ready, dcache_rvalid, dcache_rdata} = dcache_rdata_bus;
+assign {dcache_ready, dcache_rvalid, dcache_rdata,icache_cacop_ready,dcache_cacop_ready} = dcache_rdata_bus;
 
+assign cacop_ok = (flush_icache & icache_cacop_ready) || (flush_dcache & dcache_cacop_ready);
 assign read_data0 = dcache_rdata >> index;
 assign read_data = (bit_width == 4'b0001)? {{24{read_data0[7] & !is_unsigned}},read_data0[7:0]}:
                    (bit_width == 4'b0011)? {{16{read_data0[15]& !is_unsigned}},read_data0[15:0]}:

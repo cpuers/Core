@@ -14,6 +14,20 @@ module MEM_stage(
     input flush,
     output excp_ale
 );
+
+wire       flush_icache;
+wire       flush_dcache;
+wire [1:0] cacop_code; 
+wire       cacop_ok;
+
+wire       flush_icache1;
+wire       flush_dcache1;
+wire [1:0] cacop_code1; 
+
+wire       flush_icache2;
+wire       flush_dcache2;
+wire [1:0] cacop_code2; 
+
 reg [31:0] mem_addr;
 reg        is_unsigned;
 reg        mem_we;
@@ -42,7 +56,11 @@ wire [3:0]  bit_width2;
 wire [31:0] wdata2;
 wire [31:0] pc2;
 
-assign {mem_addr1, //32
+assign {
+        flush_icache1,
+        flush_dcache1,
+        cacop_code1, 
+        mem_addr1, //32
         is_unsigned1,
         mem_we1,
         mem_rd1,
@@ -50,7 +68,12 @@ assign {mem_addr1, //32
         wdata1,
         pc1
 } = es_to_ms_bus1;
-assign {mem_addr2, //32
+
+assign {
+        flush_icache2,
+        flush_dcache2,
+        cacop_code2, 
+        mem_addr2, //32
         is_unsigned2,
         mem_we2,
         mem_rd2,
@@ -60,7 +83,9 @@ assign {mem_addr2, //32
 } = es_to_ms_bus2;
 
 always @(*) begin
-    if(mem_we1 || mem_rd1) begin
+    if(mem_we1 || mem_rd1) 
+    begin
+    
         mem_addr = mem_addr1;
         is_unsigned = is_unsigned1; 
         mem_we = mem_we1;
@@ -69,7 +94,8 @@ always @(*) begin
         wdata = wdata1;
         ms_pc = pc1;
     end
-    else if(mem_we2 || mem_rd2) begin
+    else
+    begin
         mem_addr = mem_addr2;
         is_unsigned = is_unsigned2; 
         mem_we = mem_we2;
@@ -78,12 +104,11 @@ always @(*) begin
         wdata = wdata2;
         ms_pc = pc2;
     end
-    else begin
-        {mem_addr, is_unsigned, mem_we, mem_rd, bit_width, wdata, ms_pc} = 0;
-    end 
 end
-
-assign ms_to_es_bus = {dcache_ok, mem_result};
+assign cacop_code =cacop_code1;
+assign flush_icache =flush_icache1;
+assign flush_dcache = flush_dcache1;
+assign ms_to_es_bus = {cacop_ok, dcache_ok, mem_result};
 
 Agu u_agu(
     .clk                (clk),
@@ -99,7 +124,11 @@ Agu u_agu(
     .dcache_rdata_bus   (dcache_rdata_bus),
     .dcache_wdata_bus   (dcache_wdata_bus),
     .excp_ale           (excp_ale),
-    .csr_datm           (csr_datm)
+    .csr_datm           (csr_datm),
+    .flush_icache(flush_icache),
+    .flush_dcache(flush_dcache),
+    .cacop_code(cacop_code),
+    .cacop_ok(cacop_ok)
 );
 
 endmodule

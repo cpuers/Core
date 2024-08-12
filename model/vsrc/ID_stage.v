@@ -256,7 +256,7 @@ module ID_stage (
   assign IF_pop_op[1] = EXE_instr1_valid_w & EXE_ready;
   assign EXE_instr0_valid_w = IF_instr0_valid;
   assign EXE_instr1_valid_w = IF_instr1_valid & ~need_single & ~instr0_need_flush;
-  assign ID_flush = instr0_need_flush | instr1_need_flush;
+  assign ID_flush = (instr0_need_flush& IF_instr0_valid)  | (instr1_need_flush& IF_instr1_valid);
   assign ID_jump_pc = (instr0_need_flush ? instr0_pc : instr1_pc) + 32'h4;
   
 endmodule
@@ -413,6 +413,12 @@ module ID_decoder (
   wire        inst_rdcntvl_w;
   wire        inst_rdcntvh_w;
   wire        inst_rdcntid;
+  
+  wire        inst_cacop;
+
+  wire        flush_icache;
+  wire        flush_dcache;
+  wire  [1:0] cacop_code;
 
   wire csr_wen;
   wire csr_use_mark;
@@ -434,6 +440,7 @@ module ID_decoder (
   wire        need_si16;
   wire        need_si20;
   wire        need_si26;
+  wire        use_code;
   wire        src2_is_4;
 
   wire        forward1_valid;
@@ -543,7 +550,7 @@ module ID_decoder (
   assign inst_rdcntvh_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h19] & rj_d[5'h00];
   assign inst_rdcntvl_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rj_d[5'h00] & !rd_d[5'h00];
   assign inst_rdcntid = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rd_d[5'h00] & !rj_d[5'h00];
-
+  assign inst_cacop      = op_31_26_d[6'h01] & op_25_22_d[4'h8];
   assign use_div = inst_div_w | inst_divu_w | inst_modu_w | inst_mod_w;
   assign use_mod = inst_mod_w | inst_modu_w;
 
@@ -568,13 +575,14 @@ module ID_decoder (
   assign alu_op[11] = inst_lu12i_w;
 
   assign need_ui5 = inst_slli_w | inst_srli_w | inst_srai_w;
-  assign need_si12 = inst_addi_w | inst_ld_w |inst_ld_b|inst_ld_bu|inst_ld_h|inst_ld_hu| inst_st_w |inst_st_h| inst_st_b| inst_slti | inst_sltui;
+  assign need_si12 = inst_addi_w | inst_ld_w |inst_ld_b|inst_ld_bu|inst_ld_h |
+                     inst_ld_hu| inst_st_w |inst_st_h| inst_st_b| inst_slti |
+                     inst_sltui | inst_cacop;
   assign need_si12_u = inst_andi | inst_ori | inst_xori;
   assign need_si16 = inst_jirl | inst_beq | inst_bne | inst_blt | inst_bge | inst_bltu | inst_bgeu;
   assign need_si20 = inst_lu12i_w | inst_pcaddu;
   assign need_si26 = inst_b | inst_bl;
   assign src2_is_4 = inst_jirl | inst_bl;
-
   assign imm = need_si20 ? {i20[19:0], 12'b0}         :
              need_ui5  ?  {{27{rk[4]}}, rk}           :
              need_si26 ? {{6{i26[25]}},i26[25:0]}   :
@@ -604,7 +612,9 @@ module ID_decoder (
                        inst_andi|
                        inst_ori|
                        inst_xori |
-                       inst_pcaddu ;
+                       inst_pcaddu |
+                       inst_cacop;
+
   assign bit_width = inst_ld_w|inst_st_w ? 4'hf:
                      inst_ld_h | inst_ld_hu|inst_st_h ? 4'h3:
                      inst_ld_b | inst_ld_bu|inst_st_b ? 4'h1 : 4'h0;
@@ -629,7 +639,8 @@ module ID_decoder (
                     |inst_bltu|inst_bgeu|inst_lu12i_w |inst_pcaddu|inst_mul_w
                     |inst_mulh_w|inst_mulhu_w|inst_div_w|inst_mod_w|inst_divu_w
                     |inst_modu_w|inst_csrrd|inst_csrwr|inst_csrxchg|inst_syscall
-                    |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w);
+                    |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w
+                    | inst_cacop);
                       
 
   assign rj_value = forward2_gr_we&forward2_valid && forward2_dest==rf_raddr1 ? forward2_gr_data:
@@ -639,7 +650,9 @@ module ID_decoder (
                      forward1_gr_we&forward1_valid && forward1_dest==rf_raddr2 ? forward1_gr_data:
                      rf_rdata2;
 
-
+  assign flush_icache = rd[2:0] ==3'd0;
+  assign flush_dcache = rd[2:0] == 3'd1;
+  assign cacop_code = rd[4:3];
 
   //跳转控制信号
   assign may_jump = (inst_beq || inst_bne ||inst_blt||inst_bge||inst_bltu||inst_bgeu|| inst_jirl || inst_bl || inst_b|| inst_ertn) ;
@@ -676,7 +689,7 @@ module ID_decoder (
   assign csr_num = inst_rdcntvh_w ?  `TIMER_64_H :
                    inst_rdcntvl_w ?   `TIMER_64_L:
                    inst_rdcntid?      `TID : ds_inst[23:10];
-  assign use_csr_data = op_31_26_d[6'h01] | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w;
+  assign use_csr_data = op_31_26_d[6'h01] | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w | inst_cacop;
   assign csr_wen = inst_csrwr | inst_csrxchg;
   assign csr_use_mark = inst_csrxchg;
   assign is_ls = (|bit_width );
@@ -705,6 +718,10 @@ module ID_decoder (
 
 
   assign ds_to_es_bus = {
+    inst_cacop,
+    flush_icache,
+    flush_dcache,
+    cacop_code,
     in_excp | have_excp,
     ds_excp_Ecode,
     ds_excp_subEcode,
@@ -750,7 +767,7 @@ module ID_decoder (
     use_mod
   };
   
-  assign need_flush = pc_is_jump &  ~may_jump;
+  assign need_flush = ((pc_is_jump &  ~may_jump) | (inst_cacop & flush_icache))& ;
   assign guess_jump = pc_is_jump;
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;

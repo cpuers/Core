@@ -55,6 +55,11 @@ module EXM_stage(
 );
 
 //wire [`FORWAED_BUS_WD -1:0]  exm_forward_bus_w;
+wire        cacop_valid;
+wire        flush_icache;
+wire        flush_dcache;
+wire  [1:0] cacop_code;
+wire        cacop_ok;
 wire        in_excp;
 wire        in_excp_t;
 wire        is_etrn;
@@ -151,6 +156,10 @@ reg [1:0] state;
 wire wait_another;
 
 assign {
+    cacop_valid,
+    flush_icache,
+    flush_dcache,
+    cacop_code,
     in_excp_t, //1   例外
     excp_Ecode_t, //6
     excp_subEcode_t, //9
@@ -193,7 +202,7 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul)) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
+assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul)&(cacop_valid & cacop_ok) ) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
 assign nblock = my_ok;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 //assign es_to_ws_valid_w[1] =  state==idle || (state==wait_an_state&&another_ok) || (state==wait_me_state&&my_ok&&another_ok);
@@ -357,8 +366,18 @@ assign src2 = src2_is_imm ? imm : src2_is_4 ? 32'h4 : rkd_value;
 assign final_result = (state==wait_an_state && another_ok) ? temp_r : use_csr_data ? csr_rdata : res_from_mem ? mem_result : use_div ? div_result : use_mul ? mul_result : alu_result;
 
 //for mem
-assign es_to_ms_bus = {alu_result, is_unsigned, mem_we&&cal_valid&&!in_excp_t, res_from_mem&cal_valid&!in_excp_t, bit_width, rkd_value, es_pc};
-assign {dcache_ok, mem_result} = ms_to_es_bus;
+assign es_to_ms_bus = {
+    flush_icache& cacop_valid & ds_to_es_valid,
+    flush_dcache& cacop_valid & ds_to_es_valid,
+    cacop_code, 
+    alu_result, 
+    is_unsigned, 
+    mem_we&&cal_valid&&!in_excp_t, 
+    res_from_mem&cal_valid&!in_excp_t, 
+    bit_width, 
+    rkd_value,
+     es_pc};
+assign {cacop_ok, dcache_ok, mem_result} = ms_to_es_bus;
 
 //flush: jump or excp or etrn 
 assign flush = (pre_fail || excp_jump && ~jump_excp_fail && (is_etrn || in_excp)) && ds_to_es_valid;
