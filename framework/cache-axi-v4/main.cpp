@@ -1,6 +1,7 @@
 #include <cassert>
 #include <common.hpp>
 
+#include <cstddef>
 #include <cstdio>
 #include <verilated.h>
 #include <verilated_fst_c.h>
@@ -25,6 +26,8 @@ private:
     std::queue<DCacheTx *> tx_d, rx_d;
     std::deque<ICacheTx *> p_i;
     std::deque<DCacheTx *> p_d;
+    DCacheTxW *wdtx = nullptr;
+    std::queue<CacheTxCacop *> tx_c;
 
     // tx_* -> p_* -> rx_*
 
@@ -107,7 +110,7 @@ public:
     }
 
     bool empty_d() {
-        return tx_d.empty() && rx_d.empty() && p_d.empty();
+        return tx_d.empty() && rx_d.empty() && p_d.empty() && !wdtx;
     }
 
     bool stall() {
@@ -179,7 +182,7 @@ public:
 
     void step() {
         // Special Judge: DCacheTxW write pulls just after the tick
-        DCacheTxW *wdtx = nullptr;
+        wdtx = nullptr;
         // Firstly, receive data at output
         if (!p_i.empty()) {
             auto irx = p_i.front();
@@ -230,6 +233,21 @@ public:
                 }
             }
         }
+
+        if (!tx_c.empty()) {
+            auto ctx = tx_c.front();
+            if (ctx->operand && dut->d_cacop_ready) {
+                tx_c.pop();
+                ctx->st(ctxp->time());
+                update_timestamp_d();
+                delete ctx;
+            } else if (!ctx->operand && dut->i_cacop_ready) {
+                tx_c.pop();
+                ctx->st(ctxp->time());
+                update_timestamp_i();
+                delete ctx;
+            }
+        }
         // Then, update the model in the middle
         delay(1);
         // Special Judge: DCacheTxW
@@ -256,6 +274,21 @@ public:
         } else {
             dut->d_valid = false;
         }
+
+        if (!tx_c.empty()) {
+            auto ctx = tx_c.front();
+            ctx->push(dut);
+            if (ctx->operand) {
+                dut->i_cacop_valid = false;
+                dut->d_cacop_valid = true;
+            } else {
+                dut->i_cacop_valid = true;
+                dut->d_cacop_valid = false;
+            }
+        } else {
+            dut->i_cacop_valid = false;
+            dut->d_cacop_valid = false;
+        }
         delay(0);
     }
 
@@ -264,6 +297,19 @@ public:
             tx_i.push(itx);
         } else if (auto dtx = dynamic_cast<DCacheTx *>(tx)) {
             tx_d.push(dtx);
+        } else if (auto ctx = dynamic_cast<CacheTxCacop *>(tx)) {
+            tx_c.push(ctx);
+        } else {
+            assert(false);
+        }
+    }
+
+    void flush(Tx *tx) {
+        if (auto dftx = dynamic_cast<DCacheTxFlushRW *>(tx)) {
+            (void) dftx;
+            while (!tx_d.empty()) {
+                step();
+            }
         } else {
             assert(false);
         }
@@ -314,10 +360,11 @@ int main(int argc, char **argv, char **envp) {
             if (auto txc = dynamic_cast<TxClear *>(t)) {
                 (void) txc;
                 dut.statistics();
-                dut.reset(5);
+                dut.delay(10);
+                dut.reset(10);
                 continue;
             } else {
-                assert(false);
+                dut.flush(t);
             }
         }
     }

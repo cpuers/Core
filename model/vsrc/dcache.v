@@ -1986,6 +1986,7 @@ module dcache_v4(
                         lru[req_buf_idx] <= ~lookup_miss_replace_way;
                     end
                 end
+                default: begin end
                 endcase
             end
         end else if (DCACHE_WAY == 4) begin
@@ -2026,6 +2027,7 @@ module dcache_v4(
                         lru_o1[req_buf_idx][lookup_miss_replace_way[1]] <= ~lookup_miss_replace_way[0];
                     end                    
                 end
+                default: begin end
                 endcase
             end            
         end
@@ -2390,6 +2392,716 @@ module dcache_v4(
             assign dirt_addra[i] = 
                 (wr_buf_state_is_write && wr_buf_way[i]) ? wr_buf_idx : req_buf_idx;
             assign dirt_addrb[i] = req_buf_idx;
+            assign dirt_dina[i] = 
+                (wr_buf_state_is_write)         ?   1'b1 :
+                (state_is_recv && req_buf_op)   ?   1'b1 : 
+                                                    1'b0;
+        end
+    endgenerate
+endmodule
+
+module dcache_v5(
+    input               clock,
+    input               reset,
+
+    // cpu load / store
+    /// common control (c) channel
+    input               valid,
+    output              ready,
+    input               op,         // 0: read, 1: write
+    input       [31:0]  addr,
+    input       [ 3:0]  strb,
+    input               uncached,
+    /// read data (r) channel
+    output              rvalid,
+    output      [31:0]  rdata,
+    output              rhit,
+    /// write data (w) channel
+    input       [31:0]  wdata,
+    output              whit,
+    input               cacop_valid,
+    output              cacop_ready,
+    input       [ 1:0]  cacop_code, // code[4:3]
+    input       [31:0]  cacop_addr,
+
+    // axi bridge
+    output              rd_req,
+    output      [ 2:0]  rd_type,
+    output      [31:0]  rd_addr,
+    input               rd_rdy,
+    input               ret_valid,
+    input               ret_last,
+    input       [31:0]  ret_data,
+    output              wr_req,
+    output      [ 2:0]  wr_type,
+    output      [31:0]  wr_addr,
+    output      [ 3:0]  wr_wstrb,
+    output reg [127:0]  wr_data,
+    input               wr_rdy
+);
+    parameter DCACHE_WAY = 4;
+
+    genvar i; // way
+    genvar j;
+    integer k; // way
+    integer t; // bank
+
+    // cache ports
+
+    wire            tagv_ena    [0:DCACHE_WAY-1];
+    wire            tagv_wea    [0:DCACHE_WAY-1];
+    wire    [ 7:0]  tagv_addra  [0:DCACHE_WAY-1];
+    wire    [20:0]  tagv_dina   [0:DCACHE_WAY-1];
+    wire    [20:0]  tagv_douta  [0:DCACHE_WAY-1];
+
+    wire            data_ena    [0:DCACHE_WAY-1][ 0:3];
+    wire            data_wea    [0:DCACHE_WAY-1][ 0:3];
+    wire    [ 7:0]  data_addra  [0:DCACHE_WAY-1][ 0:3];
+    wire    [31:0]  data_dina   [0:DCACHE_WAY-1][ 0:3];
+    wire    [31:0]  data_douta  [0:DCACHE_WAY-1][ 0:3];
+
+    reg             dirt        [0:DCACHE_WAY-1][0:255];
+    wire            dirt_wea    [0:DCACHE_WAY-1];
+    wire    [ 7:0]  dirt_addra  [0:DCACHE_WAY-1];
+    wire    [ 7:0]  dirt_addrb  [0:DCACHE_WAY-1];
+    wire            dirt_dina   [0:DCACHE_WAY-1];
+    wire            dirt_doutb  [0:DCACHE_WAY-1];
+
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            always @(posedge clock) begin
+                if (dirt_wea[i]) begin
+                    dirt[i][dirt_addra[i]] <= dirt_dina[i];
+                end
+            end
+            assign dirt_doutb[i] = dirt[i][dirt_addrb[i]];
+        end
+    endgenerate
+
+    // request
+    /* verilator lint_off UNUSED */
+    wire    [19:0]  req_tag;
+    /* verilator lint_on UNUSED */
+    wire    [ 7:0]  req_idx; 
+    wire    [ 1:0]  req_bank;
+    wire    [ 1:0]  req_off; 
+    assign {req_tag, req_idx, req_bank, req_off} = addr;
+    wire req_is_r_uc = !op && uncached;
+    wire req_is_w_uc =  op && uncached;
+    wire    [ 2:0]  req_size;
+    strb2size u_strb2size(
+        .strb   ( strb          ),
+        .off    ( req_off       ),
+        .size   ( req_size      )
+    );
+
+
+    // buffers
+    /// req_buf
+    reg             req_buf_op;
+    reg     [31:0]  req_buf_addr;
+    reg     [ 3:0]  req_buf_awstrb;
+    reg     [31:0]  req_buf_wdata;
+    wire    [19:0]  req_buf_tag;
+    wire    [ 7:0]  req_buf_idx;
+    wire    [ 1:0]  req_buf_bank;
+    /* verilator lint_off UNUSED */
+    wire    [ 1:0]  req_buf_off;
+    /* verilator lint_on UNUSED */
+    assign {req_buf_tag, req_buf_idx, req_buf_bank, req_buf_off} = req_buf_addr;
+
+    /// wr_buf
+    reg [DCACHE_WAY-1:0]    wr_buf_way;
+    reg     [19:0]          wr_buf_tag;
+    reg     [ 7:0]          wr_buf_idx;
+    reg     [ 1:0]          wr_buf_bank;
+    reg     [31:0]          wr_buf_wdata;
+
+    /// hit_buf
+
+    /// recv_buf
+    reg     [31:0]  recv_buf        [ 0:2];
+    reg     [ 1:0]  recv_cnt;
+
+
+    // Main State Machine
+    localparam      state_idle = 0;
+    localparam      state_lookup = 1;
+    localparam      state_reqw = 2;
+    localparam      state_send = 3;
+    localparam      state_reqr = 4;
+    localparam      state_recv = 5;
+    localparam      state_uncached = 6;
+    localparam      state_cacop = 7;
+    reg     [ 2:0]  state;
+    wire state_is_idle = state == state_idle;
+    wire state_is_lookup = state == state_lookup;
+    // wire state_is_reqw = state == state_reqw;
+    wire state_is_send = state == state_send;
+    wire state_is_reqr = state == state_reqr;
+    wire state_is_recv = state == state_recv;
+    wire state_is_uncached = state == state_uncached;
+    wire state_is_cacop = state == state_cacop;
+
+    wire cache_sram_rw_collision;
+    assign cache_sram_rw_collision = 
+        (valid && !uncached && wr_buf_state_is_write && wr_buf_bank == req_bank);
+
+    /// idle
+    localparam cacop_req_inv = 2'd0;
+    localparam cacop_req_idx = 2'd1;
+    localparam cacop_req_lookup = 2'd2;
+    wire cacop_is_inv = cacop_code == cacop_req_inv;
+    wire cacop_is_idx = cacop_op == cacop_req_idx;
+    wire cacop_is_lookup = cacop_op == cacop_req_lookup;
+    /// lookup
+    wire [DCACHE_WAY-1:0]   lookup_way_v;
+    wire    [19:0]          lookup_way_tag      [0:DCACHE_WAY-1];
+    wire [DCACHE_WAY-1:0]   lookup_way_d;
+    wire    [31:0]          lookup_way_data     [0:DCACHE_WAY-1];
+    wire [DCACHE_WAY-1:0]   lookup_way_hit;
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            assign {lookup_way_v[i], lookup_way_tag[i], lookup_way_data[i]}
+                =  {tagv_douta[i]                     , data_douta[i][req_buf_bank]};
+            assign lookup_way_d[i] = (wr_buf_way[i] && wr_buf_idx == req_buf_idx) ? 1'b1 : dirt_doutb[i];
+            assign lookup_way_hit[i] = lookup_way_v[i] && (lookup_way_tag[i] == req_buf_tag);
+            assign lookup_way_data[i] = data_douta[i][req_buf_bank];
+        end
+    endgenerate
+    wire lookup_hit = |lookup_way_hit;
+    // assume 2 ways
+    reg      [31:0]  lookup_hit_data;    // combinational logic
+    always @(*) begin
+        lookup_hit_data = 0;
+        for (k = 0; k < DCACHE_WAY; k = k + 1) begin
+            lookup_hit_data = lookup_hit_data |
+                ({32{lookup_way_hit[k]}} & lookup_way_data[k]);
+        end        
+    end
+    wire [DCACHE_WAY-1:0]   lookup_miss_way_replace_en_w;
+    reg  [DCACHE_WAY-1:0]   lookup_miss_way_replace_en;
+    wire                    lookup_miss_need_send;
+    wire [$clog2(DCACHE_WAY)-1:0]   lookup_hit_way;
+    generate
+        if (DCACHE_WAY == 2) begin
+            assign lookup_hit_way = lookup_way_hit[1];
+        end else if (DCACHE_WAY == 4) begin
+            encoder_4_2 u_lookup_way(
+                .in             ( lookup_way_hit),
+                .out            ( lookup_hit_way)
+            );
+        end
+    endgenerate
+    `ifdef DCACHE_LRU
+    generate
+        if (DCACHE_WAY == 2) begin
+            reg             lru     [0:255];
+            replace_lru_2 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .lru            ( lru[req_buf_idx]),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+            wire            lookup_miss_replace_way;
+            assign lookup_miss_replace_way = lookup_miss_way_replace_en[1];
+            always @(posedge clock) begin
+                case (state) 
+                state_lookup: begin
+                    if (lookup_hit) begin
+                        lru[req_buf_idx] <= ~lookup_hit_way;
+                    end
+                end
+                state_recv: begin
+                    if (recv_fin) begin
+                        lru[req_buf_idx] <= ~lookup_miss_replace_way;
+                    end
+                end
+                default: begin end
+                endcase
+            end
+        end else if (DCACHE_WAY == 4) begin
+            reg             lru_o0  [0:255];
+            reg     [ 1:0]  lru_o1  [0:255];
+            wire    [ 1:0]  lookup_miss_replace_way;
+            encoder_4_2 u_replace_way(
+                .in             ( lookup_miss_way_replace_en),
+                .out            ( lookup_miss_replace_way)
+            );
+            replace_lru_4 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .lru_o0         ( lru_o0[req_buf_idx]),
+                .lru_o1         ( lru_o1[req_buf_idx]),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+            always @(posedge clock) begin
+                case (state) 
+                state_lookup: begin
+                    if (lookup_hit) begin
+                        lru_o0[req_buf_idx] <= ~lookup_hit_way[1];
+                        lru_o1[req_buf_idx][lookup_hit_way[1]] <= ~lookup_hit_way[0];
+                    end
+                end
+                state_recv: begin
+                    if (recv_fin) begin
+                        lru_o0[req_buf_idx] <= ~lookup_miss_replace_way[1];
+                        lru_o1[req_buf_idx][lookup_miss_replace_way[1]] <= ~lookup_miss_replace_way[0];
+                    end                    
+                end
+                default: begin end
+                endcase
+            end            
+        end
+    endgenerate
+    `else
+    generate
+        if (DCACHE_WAY == 2) begin
+            replace_rand_2 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+        end else if (DCACHE_WAY == 4) begin
+            replace_rand_4 u_replace(
+                .clock          ( clock         ),
+                .reset          ( reset         ),
+                .en             ( 1'b1          ),
+                .way_v          ( lookup_way_v  ),
+                .way_d          ( lookup_way_d  ),
+                .way_replace_en ( lookup_miss_way_replace_en_w ),
+                .need_send      ( lookup_miss_need_send )
+            );
+        end
+    endgenerate
+    `endif
+    /// send
+    reg     [19:0]  send_tag; // combinational logic
+    always @(*) begin
+        send_tag = 0;
+        for (k = 0; k < DCACHE_WAY; k = k + 1) begin
+            send_tag = send_tag | 
+                ({20{lookup_miss_way_replace_en[k]}} & lookup_way_tag[k]);
+        end
+    end
+    /// recv
+    wire recv_fin = ret_valid && (ret_last || recv_cnt == 2'd3);
+    wire    [31:0]  recv_res    [ 0:3];
+    generate
+        for (j = 0; j < 3; j = j + 1) begin
+            assign recv_res[j] = (recv_cnt == j) ? ret_data : recv_buf[j];
+        end
+        assign recv_res[3] = ret_data;
+    endgenerate
+    wire    [31:0]  recv_mixed  [ 0:3];
+    generate
+        for (j = 0; j < 4; j = j + 1) begin
+            wstrb_mixer u_recv_mixer(
+                .en     ( req_buf_op && req_buf_bank == j ),
+                .x      ( req_buf_wdata     ),
+                .y      ( recv_res[j]       ),
+                .wstrb  ( req_buf_awstrb    ),
+                .f      ( recv_mixed[j]     )
+            );
+        end
+    endgenerate
+    /// cacop
+    reg                             cacop_en;
+    reg     [ 1:0]                  cacop_op;
+    reg [$clog2(DCACHE_WAY)-1:0]    cacop_way;
+    reg     [ 7:0]                  cacop_idx;
+    wire [DCACHE_WAY-1:0]           cacop_way_oh;
+    generate
+        if (DCACHE_WAY == 2) begin
+            assign cacop_way_oh = cacop_way ? 2'b10 : 2'b01;            
+        end else if (DCACHE_WAY == 4) begin
+            decoder_2_4 u_cacop_way(
+                .in     (cacop_way      ),
+                .out    (cacop_way_oh   )
+            );
+        end
+    endgenerate
+
+    always @(posedge clock) begin
+        if (reset) begin
+            state <= state_idle;
+            recv_buf[0] <= 0;
+            recv_buf[1] <= 0;
+            recv_buf[2] <= 0;
+            req_buf_op <= 0;
+            req_buf_addr <= 0;
+            req_buf_awstrb <= 0;
+            req_buf_wdata <= 0;
+            cacop_en <= 0;
+            cacop_op <= 0;
+            cacop_way <= 0;
+            cacop_idx <= 0;
+        end else case (state)
+            state_idle: begin
+                if (cacop_valid) begin
+                    cacop_op <= cacop_code;
+                    req_buf_addr <= cacop_addr;
+                    if (cacop_is_inv) begin
+                        state <= state_cacop;
+                            {cacop_way, cacop_idx}
+                        <=  {cacop_addr[$clog2(DCACHE_WAY)-1:0], cacop_addr[11:4]};
+                    end else begin
+                        state <= state_lookup;
+                        cacop_en <= 1;
+                            {req_buf_op, req_buf_addr}
+                        <=  {1'b0,       cacop_addr};
+                        cacop_idx <= cacop_addr[11:4];
+                        if (cacop_is_idx) begin
+                            cacop_way <= cacop_addr[$clog2(DCACHE_WAY)-1:0];
+                        end
+                    end
+                end
+                else if (valid) begin
+                    if (uncached) begin
+                        if (op && wr_rdy) begin
+                            state <= state_idle;
+                        end else if (!op && rd_rdy) begin
+                            state <= state_uncached;
+                        end
+                    end else if (!cache_sram_rw_collision) begin
+                        state <= state_lookup;
+                            {req_buf_op, req_buf_addr}
+                        <=  {op,         addr};
+                        if (op) begin
+                                {req_buf_awstrb, req_buf_wdata}
+                            <=  {strb,           wdata};
+                        end
+                    end
+                end
+            end 
+            state_lookup: begin
+                if (cacop_en) begin
+                    if (cacop_is_idx) begin
+                        if (lookup_way_v[cacop_way] && dirt_doutb[cacop_way]) begin
+                            state <= state_reqw;
+                            lookup_miss_way_replace_en <= cacop_way_oh;
+                        end else begin
+                            state <= state_cacop;
+                        end
+                    end else if (cacop_is_lookup) begin
+                        if (lookup_hit) begin
+                            cacop_way <= lookup_hit_way;
+                            lookup_miss_way_replace_en <= lookup_way_hit;
+                            if (dirt_doutb[lookup_hit_way]) begin
+                                state <= state_reqw;
+                            end else begin
+                                state <= state_cacop;
+                            end
+                        end else begin
+                            state <= state_idle;
+                            cacop_en <= 0;
+                        end
+                    end else begin
+                        state <= state_idle;
+                        cacop_en <= 0;
+                    end                  
+                end
+                else if (lookup_hit) begin
+                    if (cacop_valid || !valid || cache_sram_rw_collision || (valid && uncached)) begin
+                        state <= state_idle;
+                    end else begin
+                        state <= state_lookup;
+                            {req_buf_op, req_buf_addr}
+                        <=  {op,         addr};
+                        if (op) begin
+                                {req_buf_awstrb, req_buf_wdata}
+                            <=  {strb,           wdata};
+                        end
+                    end
+                end else begin
+                    lookup_miss_way_replace_en <= lookup_miss_way_replace_en_w;
+                    if (lookup_miss_need_send) begin
+                        state <= state_reqw;
+                    end else begin
+                        state <= state_reqr;
+                    end
+                end
+            end
+            state_reqw: begin
+                if (wr_rdy) begin
+                    state <= state_send;
+                end
+            end
+            state_send: begin
+                if (cacop_en) begin
+                    state <= state_cacop;                    
+                end
+                else if (rd_rdy) begin
+                    state <= state_recv;
+                    recv_cnt <= 0;
+                end else begin
+                    state <= state_reqr;
+                end
+            end
+            state_reqr: begin
+                if (rd_rdy) begin
+                    state <= state_recv;
+                    recv_cnt <= 0;
+                end
+            end
+            state_recv: begin
+                if (ret_valid) begin
+                    if (recv_fin) begin
+                        state <= state_idle;                        
+                    end else begin
+                        recv_buf[recv_cnt] <= ret_data;
+                        recv_cnt <= recv_cnt + 1;
+                    end
+                end
+            end
+            state_uncached: begin
+                if (ret_valid) begin
+                    state <= state_idle;
+                end
+            end
+            state_cacop: begin
+                state <= state_idle;
+                cacop_en <= 0;
+            end
+            default: begin
+                state <= state_idle;
+            end
+        endcase
+    end
+    
+
+    // Write Buffer State Machine
+    localparam  wr_buf_state_idle = 0;
+    localparam  wr_buf_state_write = 1;
+    reg         wr_buf_state;
+    // wire wr_buf_state_is_idle = wr_buf_state == wr_buf_state_idle;
+    wire wr_buf_state_is_write = wr_buf_state == wr_buf_state_write;
+    wire wr_buf_accept_req = state_is_lookup && lookup_hit && req_buf_op;
+    /// wr_buf_idle
+    wire    [31:0]  wr_buf_wdata_mixed;
+    wire    [31:0]  wr_buf_wdata_fwd = 
+        (wr_buf_state_is_write && 
+            ({req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank})) ?
+                wr_buf_wdata : lookup_hit_data;
+    wstrb_mixer u_wr_buf_mixer(
+        .en         ( 1'b1              ),
+        .x          ( req_buf_wdata     ),
+        .y          ( wr_buf_wdata_fwd  ),
+        .wstrb      ( req_buf_awstrb    ),
+        .f          ( wr_buf_wdata_mixed)
+    );
+    always @(posedge clock) begin
+        if (reset) begin
+            wr_buf_state <= wr_buf_state_idle;
+            wr_buf_way <= 0;
+            wr_buf_tag <= 0;
+            wr_buf_idx <= 0;
+            wr_buf_bank <= 0;
+            wr_buf_wdata <= 0;
+        end else case (wr_buf_state)
+            wr_buf_state_idle: begin
+                if (wr_buf_accept_req) begin
+                    wr_buf_state <= wr_buf_state_write;
+                        {wr_buf_way    , wr_buf_tag , wr_buf_idx,  wr_buf_bank,  wr_buf_wdata}
+                    <=  {lookup_way_hit, req_buf_tag, req_buf_idx, req_buf_bank, wr_buf_wdata_mixed};
+                end                
+            end 
+            wr_buf_state_write: begin
+                if (wr_buf_accept_req) begin
+                    wr_buf_state <= wr_buf_state_write;
+                        {wr_buf_way    , wr_buf_tag , wr_buf_idx,  wr_buf_bank,  wr_buf_wdata}
+                    <=  {lookup_way_hit, req_buf_tag, req_buf_idx, req_buf_bank, wr_buf_wdata_mixed};
+                end else begin
+                    wr_buf_state <= wr_buf_state_idle;
+                end
+            end
+            default: begin
+                wr_buf_state <= wr_buf_state_idle;
+            end
+        endcase
+    end
+
+    // i/o
+    assign ready = !cacop_valid && !cacop_en && !cache_sram_rw_collision && (
+        (state_is_idle && (
+            (!uncached) ||
+            ( uncached && ((!op && rd_rdy) || (op && wr_rdy)))
+         )
+        ) ||
+        (state_is_lookup && lookup_hit && !uncached)
+    );
+    assign rvalid = (!cacop_en && !req_buf_op && (
+        (state_is_lookup && lookup_hit) ||
+        (state_is_recv && ret_valid && recv_cnt == req_buf_bank)
+    )) || (state_is_uncached && ret_valid);
+    assign rdata = 
+        (state_is_uncached) ? ret_data :
+        ({req_buf_tag, req_buf_idx, req_buf_bank} == {wr_buf_tag, wr_buf_idx, wr_buf_bank}) ?
+            wr_buf_wdata : (
+                ({32{state_is_lookup}} & lookup_hit_data) |
+                ({32{state_is_recv}} & ret_data)
+            );
+    assign rhit = state_is_lookup && !cacop_en && !req_buf_op && lookup_hit;
+    assign whit = state_is_lookup && !cacop_en &&  req_buf_op && lookup_hit;
+    assign cacop_ready = state_is_idle;
+
+    assign rd_req = ((state_is_send && !cacop_en) || state_is_reqr) || (state_is_idle && !cacop_valid && valid && req_is_r_uc);
+    assign rd_type = (state_is_idle) ? req_size : 3'b100;
+    assign rd_addr = (state_is_idle) ? addr : {req_buf_tag, req_buf_idx, 4'b0};
+    assign wr_req = (state_is_send) || (state_is_idle && !cacop_valid && valid && req_is_w_uc);
+    assign wr_type = (state_is_idle) ? req_size : 3'b100;
+    assign wr_addr = (state_is_idle) ? addr : {send_tag, req_buf_idx, 4'b0};
+    assign wr_wstrb = (state_is_idle) ? strb : 4'hf;
+    always @(*) begin
+        wr_data = 128'b0;
+        for (k = 0; k < DCACHE_WAY; k = k + 1) begin
+            for (t = 0; t < 4; t = t + 1) begin
+                wr_data[t*32 +: 32] = wr_data[t*32 +: 32] | 
+                    ({32{lookup_miss_way_replace_en[k]}} & data_douta[k][t]);
+            end
+        end
+        if (state_is_idle && valid && uncached) begin
+            wr_data[31:0] = wdata;
+        end
+    end
+
+    // cache sram
+
+    `ifdef TEST
+
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            sram_sim #(
+                .ADDR_WIDTH     ( 8             ),
+                .DATA_WIDTH     ( 21            )
+                // v [20], tag [19:0]
+            ) u_tagv_sram(
+                .clka           ( clock         ),
+                .ena            ( tagv_ena[i]   ),
+                .wea            ( tagv_wea[i]   ),
+                .addra          ( tagv_addra[i] ),
+                .dina           ( tagv_dina[i]  ),
+                .douta          ( tagv_douta[i] )
+            );
+            
+        end
+    endgenerate
+
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            for (j = 0; j < 4; j = j + 1) begin
+                sram_sim #(
+                    .ADDR_WIDTH     ( 8             ),
+                    .DATA_WIDTH     ( 32            )
+                ) u_data_sram(
+                    .clka           ( clock             ),
+                    .ena            ( data_ena[i][j]    ),
+                    .wea            ( data_wea[i][j]    ),
+                    .addra          ( data_addra[i][j]  ),
+                    .dina           ( data_dina[i][j]   ),
+                    .douta          ( data_douta[i][j]  )
+                );
+            end
+        end
+    endgenerate
+
+    `else
+    
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            dcache_tagv_sram u_tagv_sram(
+                .clka           ( clock         ),
+                .ena            ( tagv_ena[i]   ),
+                .wea            ( tagv_wea[i]   ),
+                .addra          ( tagv_addra[i] ),
+                .dina           ( tagv_dina[i]  ),
+                .douta          ( tagv_douta[i] )
+            );
+            
+        end
+    endgenerate
+
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            for (j = 0; j < 4; j = j + 1) begin
+                dcache_data_sram u_data_sram(
+                    .clka           ( clock             ),
+                    .ena            ( data_ena[i][j]    ),
+                    .wea            ( data_wea[i][j]    ),
+                    .addra          ( data_addra[i][j]  ),
+                    .dina           ( data_dina[i][j]   ),
+                    .douta          ( data_douta[i][j]  )
+                );
+            end
+        end
+    endgenerate
+
+
+    `endif
+
+    // cache control
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            assign tagv_ena[i] = 1'b1;
+            assign tagv_wea[i] = 
+                (state_is_recv && recv_fin && lookup_miss_way_replace_en[i]) ||
+                (state_is_cacop && cacop_way_oh[i]);
+            assign tagv_addra[i] = 
+                (state_is_idle)     ?   (
+                        cacop_valid ? cacop_addr[11:4] : req_idx
+                    ) :
+                (state_is_lookup)   ?   (
+                        cacop_en ? cacop_idx :
+                        lookup_hit ? req_idx : req_buf_idx
+                    ) :
+                (state_is_cacop)    ?   cacop_idx :
+                                        req_buf_idx; 
+            assign tagv_dina[i] =
+                (state_is_recv)     ?   {1'b1, req_buf_tag} : 21'b0;
+        end
+    endgenerate
+    
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            for (j = 0; j < 4; j = j + 1) begin
+                assign data_ena[i][j] = 1'b1;
+                assign data_wea[i][j] = 
+                    (wr_buf_state_is_write && wr_buf_way[i] && wr_buf_bank == j) ||
+                    (state_is_recv && recv_fin && lookup_miss_way_replace_en[i]);
+                assign data_addra[i][j] = 
+                    (wr_buf_state_is_write && wr_buf_way[i] && wr_buf_bank == j)  ?   wr_buf_idx :
+                    (state_is_idle)     ?   req_idx :
+                    (state_is_lookup)   ?   (lookup_hit ? req_idx : req_buf_idx) :
+                    (cacop_en)          ?   cacop_idx :
+                                            req_buf_idx;
+                assign data_dina[i][j] = 
+                    (wr_buf_state_is_write && wr_buf_way[i] && wr_buf_bank == j)  ?   wr_buf_wdata :
+                    (state_is_recv)     ?   recv_mixed[j] :
+                                            32'b0;
+            end
+        end
+    endgenerate
+
+    generate
+        for (i = 0; i < DCACHE_WAY; i = i + 1) begin
+            assign dirt_wea[i] = 
+                (wr_buf_state_is_write && wr_buf_way[i]) ||
+                (state_is_recv && recv_fin && lookup_miss_way_replace_en[i]);
+            assign dirt_addra[i] = 
+                (wr_buf_state_is_write && wr_buf_way[i]) ? wr_buf_idx : req_buf_idx;
+            assign dirt_addrb[i] = (cacop_en) ? cacop_idx : req_buf_idx;
             assign dirt_dina[i] = 
                 (wr_buf_state_is_write)         ?   1'b1 :
                 (state_is_recv && req_buf_op)   ?   1'b1 : 

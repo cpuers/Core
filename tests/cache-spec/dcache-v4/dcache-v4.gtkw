@@ -278,7 +278,7 @@ TOP.cache_test_top.u_dcache.ret_last
 TOP.cache_test_top.u_dcache.ret_data[31:0]
 @1401200
 -axi_ret
-@800200
+@c00200
 -axi_wr
 @28
 [color] 2
@@ -296,8 +296,9 @@ TOP.cache_test_top.u_dcache.wr_type[2:0]
 @22
 [color] 2
 TOP.cache_test_top.u_dcache.wr_wstrb[3:0]
-@1000200
+@1401200
 -axi_wr
+@1000200
 -dcache
 @800200
 -axi_bridge
@@ -468,6 +469,25 @@ TOP.cache_test_top.u_axi_ram.s_axi_rdata[31:0]
 TOP.cache_test_top.u_axi_ram.s_axi_wdata[31:0]
 @1401200
 -axi_ram
+@800200
+-replace
+@22
+TOP.cache_test_top.u_dcache.lookup_miss_way_replace_en[3:0]
+@28
+TOP.cache_test_top.u_dcache.genblk3.u_replace.accu
+TOP.cache_test_top.u_dcache.genblk3.u_replace.clock
+TOP.cache_test_top.u_dcache.genblk3.u_replace.en
+@420
+TOP.cache_test_top.u_dcache.genblk3.u_replace.i
+@28
+TOP.cache_test_top.u_dcache.genblk3.u_replace.need_send
+TOP.cache_test_top.u_dcache.genblk3.u_replace.reset
+@22
+TOP.cache_test_top.u_dcache.genblk3.u_replace.way_d[3:0]
+TOP.cache_test_top.u_dcache.genblk3.u_replace.way_replace_en[3:0]
+TOP.cache_test_top.u_dcache.genblk3.u_replace.way_v[3:0]
+@1000200
+-replace
 [pattern_trace] 1
 !100000@@
 ?"0000DCF0
