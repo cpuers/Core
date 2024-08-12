@@ -643,7 +643,7 @@ icache_v5 icache_dummy(
     .es_to_ws_debug_bus1(es_to_ws_debug_bus1),
     .ws_debug_bus1(ws_debug_bus1),
     .es_to_ws_debug_bus2(es_to_ws_debug_bus2),
-    .ws_debug_bus2(ws_debug_bus2),
+    .ws_debug_bus2(ws_debug_bus2)
     `endif 
 
   );
@@ -784,7 +784,7 @@ icache_v5 icache_dummy(
   );
 
 `ifdef DIFFTEST_EN
-/* verilator lint_off WIDTH */
+
 
 // TODO: please connect the following wires to signals in WB stage
 //       according to the descriptions in chiplab/sims/verilator/README_DIFF.md
@@ -1002,6 +1002,6 @@ DifftestGRegState DifftestGRegState(
 );
 `endif
 
-/* verilator lint_on WIDTH */
+
 
 endmodule

@@ -26,7 +26,7 @@ module WB_stage(
     input  [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus1,
     output [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus1,
     input  [`ES_WS_DEBUG_BUS_WD-1:0] es_to_ws_debug_bus2,
-    output [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus2,
+    output [`WS_DEBUG_BUS_WD-1:0] ws_debug_bus2
     `endif 
 
 );

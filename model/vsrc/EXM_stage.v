@@ -317,7 +317,10 @@ assign es_to_ws_bus    = es_to_ws_bus_r[`ES_TO_WS_BUS_WD-1:0];
   assign cmt_estat_ecode = excp_Ecode;
   assign cmt_st_vaddr = alu_result;
   assign cmt_st_paddr = alu_result;
-  assign cmt_st_data = rkd_value;
+
+  wire [4:0] index = {3'b0,alu_result[1:0]}<<3;
+  assign cmt_st_data = ((bit_width==4'b0001) ?  {24'b0,rkd_value[7:0]} :
+                        (bit_width==4'b0011) ?   {16'b0, rkd_value[15:0]} :rkd_value) << index;
   assign cmt_ld_vaddr = alu_result;
   assign cmt_ld_paddr = alu_result; 
   assign es_to_ws_debug_bus_w = {cmt_st_vaddr, cmt_st_paddr, cmt_st_data, cmt_ld_vaddr, cmt_st_paddr,

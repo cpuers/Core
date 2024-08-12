@@ -36,8 +36,8 @@
 
 `ifdef DIFFTEST_EN
 `define DS_ES_DEBUG_BUS_WD 57
-`define ES_WS_DEBUG_BUS_WD 288
-`define WS_DEBUG_BUS_WD 353
+`define ES_WS_DEBUG_BUS_WD 363
+`define WS_DEBUG_BUS_WD 428
 `define MUL_USE_WALLACE
 `endif 
 

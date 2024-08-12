@@ -107,10 +107,15 @@ module ID_stage (
         ds_to_es_debug_r2 <= `DS_ES_DEBUG_BUS_WD'h0;
     
     end
+    else if (!EXE_ready) 
+    begin
+        ds_to_es_debug_r1 <= ds_to_es_debug_r1;
+        ds_to_es_debug_r2 <= ds_to_es_debug_r2; 
+    end
     else
     begin
         ds_to_es_debug_r1 <= ds_to_es_debug_bus1_w;
-        ds_to_es_debug_r2 <= ds_to_es_debug_bus1_w;
+        ds_to_es_debug_r2 <= ds_to_es_debug_bus2_w;
     end  
   end
   assign ds_to_es_debug_bus1 = ds_to_es_debug_r1;
@@ -175,7 +180,7 @@ module ID_stage (
       
       `ifdef DIFFTEST_EN
       ,
-      .ds_to_es_debug_bus(ds_to_es_debug_bus1)
+      .ds_to_es_debug_bus(ds_to_es_debug_bus1_w)
       `endif 
   );
   ID_decoder ID_decoder1 (
@@ -205,7 +210,7 @@ module ID_stage (
       
       `ifdef DIFFTEST_EN
       ,
-      .ds_to_es_debug_bus(ds_to_es_debug_bus2)
+      .ds_to_es_debug_bus(ds_to_es_debug_bus2_w)
       `endif 
   );
 
@@ -290,7 +295,7 @@ module ID_decoder (
     output [31:0] ds_pc
     `ifdef DIFFTEST_EN
     ,
-    output [`DS_ES_DEBUG_BUS_WD:0] ds_to_es_debug_bus
+    output [`DS_ES_DEBUG_BUS_WD-1:0] ds_to_es_debug_bus
     `endif 
 );
 
@@ -621,7 +626,9 @@ module ID_decoder (
   assign res_from_mem = inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_hu | inst_ld_bu;
   assign dst_is_r1 = inst_bl;
   assign dst_is_rj = inst_rdcntid;
-  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne & ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &~inst_syscall &~inst_ertn & |dest;
+  assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne &
+                 ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &
+                 ~inst_syscall &~inst_ertn & |dest & ~inst_cacop;
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
   assign dest = dst_is_r1 ? 5'd1 :
                 dst_is_rj  ? rj : rd;
