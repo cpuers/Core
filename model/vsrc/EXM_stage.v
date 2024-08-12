@@ -202,7 +202,7 @@ assign {
 } = ds_to_es_bus;
 
 //assign es_ready_go = 1'b1;
-assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul)&(cacop_valid & cacop_ok) ) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
+assign my_ok = (!jump_excp_fail & (dcache_ok || ~(mem_we || res_from_mem)) && (div_ok||~use_div) && (mul_ok||~use_mul)& (~cacop_valid || cacop_ok) ) || ~ds_to_es_valid ||(in_excp&~jump_excp_fail) || flush_ES;
 assign nblock = my_ok;
 assign es_to_ws_valid_w[0] = ds_to_es_valid;
 //assign es_to_ws_valid_w[1] =  state==idle || (state==wait_an_state&&another_ok) || (state==wait_me_state&&my_ok&&another_ok);

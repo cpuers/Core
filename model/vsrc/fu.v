@@ -162,7 +162,7 @@ assign write_data = wdata << index;
 assign dcache_wdata_bus = {dcache_valid, dcache_op, dcache_addr, dcache_uncached, dcache_awstrb, dcache_wdata, 
         dcache_cacop_en,icache_cacop_en, dcache_cacop_code, dcache_cacop_addr};
 
-assign {dcache_ready, dcache_rvalid, dcache_rdata,icache_cacop_ready,dcache_cacop_ready} = dcache_rdata_bus;
+assign {dcache_ready, dcache_rvalid, dcache_rdata,dcache_cacop_ready,icache_cacop_ready} = dcache_rdata_bus;
 
 assign cacop_ok = (flush_icache & icache_cacop_ready) || (flush_dcache & dcache_cacop_ready);
 assign read_data0 = dcache_rdata >> index;

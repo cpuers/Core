@@ -256,7 +256,7 @@ module ID_stage (
   assign IF_pop_op[1] = EXE_instr1_valid_w & EXE_ready;
   assign EXE_instr0_valid_w = IF_instr0_valid;
   assign EXE_instr1_valid_w = IF_instr1_valid & ~need_single & ~instr0_need_flush;
-  assign ID_flush = (instr0_need_flush& IF_instr0_valid)  | (instr1_need_flush& IF_instr1_valid);
+  assign ID_flush = (instr0_need_flush& IF_instr0_valid)  | (instr1_need_flush& IF_instr1_valid & !need_single);
   assign ID_jump_pc = (instr0_need_flush ? instr0_pc : instr1_pc) + 32'h4;
   
 endmodule
@@ -767,7 +767,7 @@ module ID_decoder (
     use_mod
   };
   
-  assign need_flush = ((pc_is_jump &  ~may_jump) | (inst_cacop & flush_icache))& ;
+  assign need_flush = ((pc_is_jump &  ~may_jump) | (inst_cacop & flush_icache)) ;
   assign guess_jump = pc_is_jump;
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;
