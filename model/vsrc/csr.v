@@ -4,6 +4,13 @@ module csr (
     input clk,
     input rst,
 
+    input [2:0]viaddrh,
+    output iuncached,
+    output [2:0]piaddrh,
+
+    input [2:0]vdaddrh,
+    output duncached,
+    output [2:0]pdaddrh,
     output csr_datf,
     output csr_datm, 
     //for ID
@@ -88,6 +95,26 @@ module csr (
     assign excp_pc = in_excp ? csr_eentry :
                      csr_wen &(csr_waddr==`ERA) ? wdata :  csr_era;
     assign have_intrpt = csr_crmd[`IE] &|(csr_ecfg[12:0]&csr_estat[12:0]);
+
+    assign iuncached = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh) ? csr_dwm0[4] :
+                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh )? csr_dwm0[4] :
+                        csr_crmd[5];
+    
+    assign piaddrh = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh) ? csr_dwm0[`DMW_PSEG] :
+                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == viaddrh )? csr_dwm0[`DMW_PSEG] :
+                        viaddrh;
+
+
+    assign duncached = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh) ? csr_dwm0[4] :
+                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh )? csr_dwm0[4] :
+                        csr_crmd[5];
+    
+    assign pdaddrh = csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh) ? csr_dwm0[`DMW_PSEG] :
+                        csr_crmd[`PG] && (csr_dwm0[`DMW_VSEG] == vdaddrh )? csr_dwm0[`DMW_PSEG] :
+                        vdaddrh;
+
+
+        
     always @(*) 
     begin
         case (csr_addr1)

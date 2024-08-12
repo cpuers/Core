@@ -12,7 +12,11 @@ module MEM_stage(
     output [`EXM_DCACHE_WD -1:0] dcache_wdata_bus,
     input csr_datm,
     input flush,
-    output excp_ale
+    output excp_ale,
+
+    input duncached,
+    input [2:0]pdaddr,
+    output [2:0]vdaddr
 );
 
 wire       flush_icache;
@@ -128,7 +132,11 @@ Agu u_agu(
     .flush_icache(flush_icache),
     .flush_dcache(flush_dcache),
     .cacop_code(cacop_code),
-    .cacop_ok(cacop_ok)
+    .cacop_ok(cacop_ok),
+
+    .duncached(duncached),
+    .pdaddr(pdaddr),
+    .vdaddr(vdaddr)
 );
 
 endmodule

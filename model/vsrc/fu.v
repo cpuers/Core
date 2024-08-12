@@ -123,6 +123,9 @@ module Agu(
     input csr_datm,
     input flush_icache,
     input flush_dcache,
+    input duncached,
+    input [2:0]pdaddr,
+    output [2:0]vdaddr,
     input [1:0] cacop_code
 );
 
@@ -137,14 +140,14 @@ reg [2:0]   waits; // 2=wready, 1=rvalid, 0=rready
 
 wire        dcache_valid = ~excp_ale&((mem_we && (waits==3'b000 || waits==3'b100)) || (mem_rd && (waits==3'b000 || waits==3'b001)));
 wire        dcache_op = (mem_rd) ? 1'b0 :1'b1;       // 0: read, 1: write
-wire [31:0] dcache_addr = mem_addr;
+wire [31:0] dcache_addr = {pdaddr,mem_addr[28:0]};
 wire        dcache_uncached = 1'b0;
 wire [ 3:0] dcache_awstrb = we;
 wire [31:0] dcache_wdata = write_data;
 wire        dcache_cacop_en = flush_dcache;
 wire        icache_cacop_en = flush_icache;
 wire [ 1:0] dcache_cacop_code = cacop_code; // code[4:3]
-wire [31:0] dcache_cacop_addr = mem_addr;
+wire [31:0] dcache_cacop_addr = {pdaddr,mem_addr[28:0]};
 
 wire        dcache_ready;
 wire        dcache_rvalid;
@@ -181,6 +184,8 @@ assign dcache_ok = !(waits==3'b000 && mem_rd && (!dcache_ready || !dcache_rvalid
                    !(waits==3'b001 && (!dcache_ready || !dcache_rvalid)) &&
                    !(waits==3'b010 && !dcache_rvalid) &&
                    !(waits==3'b100 && !dcache_ready);
+
+assign vdaddr = mem_addr[31:29];
 
 always @(posedge clk) begin
     if(reset | excp_ale) begin

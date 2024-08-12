@@ -261,6 +261,13 @@
   wire es_ok1;
   wire es_ok2;
 
+    wire duncached;
+    wire [2:0]pdaddr;
+    wire [2:0]vdaddr;
+    wire iuncached;
+    wire [2:0]piaddr;
+    wire [2:0]viaddr;
+
   wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus1;
   wire [`BPU_ES_BUS_WD-1:0] bpu_es_bus2;
   wire                      bpu_flush;
@@ -343,7 +350,11 @@ icache_v5 icache_dummy(
       .pc_valid   (pbu_pc_valid),
       .pre_nextpc (pbu_next_pc),
       .csr_datf(csr_datf),
-      .install    (bpu_install)
+      .install    (bpu_install),
+      .iuncached(iuncached),
+      .piaddrh(piaddr),
+      .viaddrh(viaddr)
+
   );
   IF_stage1 IF_stage1 (
       .clk(aclk),
@@ -419,7 +430,14 @@ icache_v5 icache_dummy(
     .intrpt(intrpt),
     .have_intrpt(have_intrpt),
     .csr_datm(csr_datm),
-    .csr_datf(csr_datf)
+    .csr_datf(csr_datf),
+    .duncached(duncached),
+    .pdaddrh(pdaddr),
+    .vdaddrh(vdaddr),
+    .iuncached(iuncached),
+    .piaddrh(piaddr),
+    .viaddrh(viaddr)
+    
 
     `ifdef DIFFTEST_EN
     ,
@@ -600,7 +618,10 @@ icache_v5 icache_dummy(
       .dcache_wdata_bus (dcache_wdata_bus),
       .csr_datm(csr_datm),
       .flush(1'b0),
-      .excp_ale(excp_ale)
+      .excp_ale(excp_ale),
+      .duncached(duncached),
+      .pdaddr(pdaddr),
+      .vdaddr(vdaddr)
   );
 
   DIV_top DIV_top (

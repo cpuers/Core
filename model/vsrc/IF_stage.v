@@ -17,6 +17,11 @@ module IF_stage0 (
 
     input addr_ok,
 
+    output [2:0]viaddrh,
+    input [2:0]piaddrh,
+    input iuncached,
+    
+
     //for IF1
     output [`IF0_TO_IF1_BUS_WD -1:0] if0_if1_bus,
     input IF1_ready,
@@ -30,13 +35,14 @@ module IF_stage0 (
 
 
 );
-    assign uncached = 1'b0;
+    assign uncached = iuncached;
     wire IF0_valid_w;
     assign IF0_valid_w = addr_ok;
   reg  [31:0] pc_r;
   wire [31:0] fs_pc;
   assign fs_pc = pc_r;
-  assign iaddr = fs_pc;
+  assign iaddr = {piaddrh,fs_pc[28:0]};
+  assign viaddrh = fs_pc[31:29];
   assign pc_to_PBU = fs_pc;
   reg IF0_valid_r;
   assign IF0_valid = IF0_valid_r;
