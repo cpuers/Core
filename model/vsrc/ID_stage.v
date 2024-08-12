@@ -566,7 +566,7 @@ module ID_decoder (
   assign alu_op[0] = inst_add_w | inst_addi_w | 
                      inst_ld_w | inst_ld_b | inst_ld_h | inst_ld_bu | inst_ld_hu | 
                      inst_st_w |inst_st_b|inst_st_h|
-                     inst_jirl | inst_bl| inst_pcaddu;
+                     inst_jirl | inst_bl| inst_pcaddu | inst_cacop;
   assign alu_op[1] = inst_sub_w | inst_beq | inst_bne;
   assign alu_op[2] = inst_slt | inst_slti | inst_blt | inst_bge;
   assign alu_op[3] = inst_sltu | inst_sltui | inst_bltu | inst_bgeu;

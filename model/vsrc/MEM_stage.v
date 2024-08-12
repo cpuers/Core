@@ -87,7 +87,7 @@ assign {
 } = es_to_ms_bus2;
 
 always @(*) begin
-    if(mem_we1 || mem_rd1) 
+    if(mem_we1 || mem_rd1 || flush_icache1 || flush_dcache1) 
     begin
     
         mem_addr = mem_addr1;
