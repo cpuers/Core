@@ -50,7 +50,7 @@
     output wire        bready
 
     //debug
-    `ifdef TEAMPACKAGE_EN
+    
     ,
     output wire [31:0] debug0_wb_pc,
     output wire  debug0_wb_rf_wen,
@@ -60,7 +60,7 @@
     output wire  debug1_wb_rf_wen,
     output wire [ 4:0] debug1_wb_rf_wnum,
     output wire [31:0] debug1_wb_rf_wdata
-    `endif
+
     `ifdef DIFFTEST_EN
     ,
     output wire [31:0] debug0_wb_pc,
@@ -671,7 +671,7 @@ icache_v5 icache_dummy(
 
   );
   
-  `ifdef TEAMPACKAGE_EN
+
   assign debug0_wb_pc            = wb_stage.ws_pc1;
   assign debug0_wb_rf_wen        = wb_stage.debug1_gr_we;
   assign debug0_wb_rf_wnum       = wb_stage.rf_waddr1;
@@ -680,7 +680,7 @@ icache_v5 icache_dummy(
   assign debug1_wb_rf_wen        = wb_stage.debug2_gr_we;
   assign debug1_wb_rf_wnum       = wb_stage.rf_waddr2;
   assign debug1_wb_rf_wdata      = wb_stage.rf_wdata2;
-  `endif
+
 
   dcache_v5 dcache(
       .clock(aclk),

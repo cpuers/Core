@@ -2439,7 +2439,7 @@ module dcache_v5(
     output reg [127:0]  wr_data,
     input               wr_rdy
 );
-    parameter DCACHE_WAY = 4;
+    parameter DCACHE_WAY = 2;
 
     genvar i; // way
     genvar j;
@@ -2467,11 +2467,18 @@ module dcache_v5(
     wire            dirt_dina   [0:DCACHE_WAY-1];
     wire            dirt_doutb  [0:DCACHE_WAY-1];
 
+    genvar l;
     generate
         for (i = 0; i < DCACHE_WAY; i = i + 1) begin
-            always @(posedge clock) begin
-                if (dirt_wea[i]) begin
-                    dirt[i][dirt_addra[i]] <= dirt_dina[i];
+            for (l = 0; l < 256; l = l + 1) begin
+                always @(posedge clock) begin
+                    if (reset) begin
+                        dirt[i][l] <= 0;
+                    end else begin
+                        if (dirt_wea[i] && (dirt_addra[i] == l)) begin
+                            dirt[i][l] <= dirt_dina[i];
+                        end
+                    end
                 end
             end
             assign dirt_doutb[i] = dirt[i][dirt_addrb[i]];
