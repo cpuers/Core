@@ -421,6 +421,9 @@ module ID_decoder (
   
   wire        inst_cacop;
 
+  wire        inst_ibar;
+  wire        inst_dbar;
+
   wire        flush_icache;
   wire        flush_dcache;
   wire  [1:0] cacop_code;
@@ -556,6 +559,8 @@ module ID_decoder (
   assign inst_rdcntvl_w = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rj_d[5'h00] & !rd_d[5'h00];
   assign inst_rdcntid = op_31_26_d[6'h00] & op_25_22_d[4'h0] & op_21_20_d[2'h0] & op_19_15_d[5'h00] & rk_d[5'h18] & rd_d[5'h00] & !rj_d[5'h00];
   assign inst_cacop      = op_31_26_d[6'h01] & op_25_22_d[4'h8];
+  assign inst_ibar       = op_31_26_d[6'h0e] & op_25_22_d[4'h1] & op_21_20_d[2'h3] & op_19_15_d[5'h05];
+  assign inst_dbar       = op_31_26_d[6'h0e] & op_25_22_d[4'h1] & op_21_20_d[2'h3] & op_19_15_d[5'h04];
   assign use_div = inst_div_w | inst_divu_w | inst_modu_w | inst_mod_w;
   assign use_mod = inst_mod_w | inst_modu_w;
 
@@ -628,7 +633,7 @@ module ID_decoder (
   assign dst_is_rj = inst_rdcntid;
   assign gr_we = ~inst_st_w &~inst_st_b & ~inst_st_h & ~inst_beq & ~inst_bne &
                  ~inst_b & ~inst_blt &~inst_bltu & ~inst_bge &~inst_bgeu &
-                 ~inst_syscall &~inst_ertn & |dest & ~inst_cacop;
+                 ~inst_syscall &~inst_ertn & |dest & ~inst_cacop & ~inst_ibar &~inst_dbar;
   assign mem_we = inst_st_w | inst_st_b | inst_st_h;
   assign dest = dst_is_r1 ? 5'd1 :
                 dst_is_rj  ? rj : rd;
@@ -647,7 +652,7 @@ module ID_decoder (
                     |inst_mulh_w|inst_mulhu_w|inst_div_w|inst_mod_w|inst_divu_w
                     |inst_modu_w|inst_csrrd|inst_csrwr|inst_csrxchg|inst_syscall
                     |inst_break |inst_ertn | inst_rdcntid | inst_rdcntvh_w | inst_rdcntvl_w
-                    | inst_cacop);
+                    | inst_cacop| inst_ibar |inst_dbar);
                       
 
   assign rj_value = forward2_gr_we&forward2_valid && forward2_dest==rf_raddr1 ? forward2_gr_data:
@@ -774,7 +779,7 @@ module ID_decoder (
     use_mod
   };
   
-  assign need_flush = ((pc_is_jump &  ~may_jump) | (inst_cacop & flush_icache)) ;
+  assign need_flush = ((pc_is_jump &  ~may_jump) | (inst_cacop & flush_icache)) |inst_ibar | inst_dbar ;
   assign guess_jump = pc_is_jump;
   assign rg_en = gr_we;
   assign use_rkd = ~(src2_is_4 | src2_is_imm) | inst_st_w |inst_st_h | inst_st_b;
