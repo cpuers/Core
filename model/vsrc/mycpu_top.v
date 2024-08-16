@@ -47,11 +47,17 @@
     input  wire [ 3:0] bid,
     input  wire [ 1:0] bresp,
     input  wire        bvalid,
-    output wire        bready
+    output wire        bready,
+
+    // debug interface
+    input  wire        break_point,
+    input  wire        infor_flag,
+    input  wire [ 4:0] reg_num,
+    output wire        ws_valid,
+    output wire [31:0] rf_rdata,
 
     //debug
     
-    ,
     output wire [31:0] debug0_wb_pc,
     output wire  debug0_wb_rf_wen,
     output wire [ 4:0] debug0_wb_rf_wnum,
