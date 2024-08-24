@@ -16,3 +16,4 @@ build/
 obj_dir/
 
 !/.corerc
+!*.pptx
